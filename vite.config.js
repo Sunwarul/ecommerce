@@ -14,7 +14,7 @@ export default defineConfig({
             host: 'localhost'
         },
         fs: {
-            allow: ['node_modules', 'resources', 'vendor'],
+            allow: ['node_modules', 'resources', 'vendor', 'Modules'],
         },
     },
     plugins: [
@@ -22,8 +22,6 @@ export default defineConfig({
             input: [
                 'resources/css/app.scss',
                 'resources/js/app.js',
-                // Add module JS files
-                'Modules/User/Resources/js/app.js',
             ],
             refresh: true,
         }),

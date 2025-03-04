@@ -21,11 +21,24 @@ const appName = import.meta.env.VITE_APP_NAME || 'E-Commerce';
 
 createInertiaApp({
     title: (title) => title ? `${title} - ${appName}` : appName,
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob('./Pages/**/*.vue'),
-        ),
+    resolve: (name) => {
+        const [module, page] = name.split('::');
+
+        console.log('Name = ');
+        console.log(name);
+        if (page) {
+            return resolvePageComponent(
+                `../../Modules/${module}/Resources/js/Pages/${page}.vue`,
+                import.meta.glob("../../Modules/**/Resources/js/Pages/**/*.vue")
+            );
+        } else {
+            return resolvePageComponent(
+                `./Pages/${name}.vue`,
+                import.meta.glob('./Pages/**/*.vue'),
+            )
+        }
+
+    },
     setup({ el, App, props, plugin }) {
         return createApp({ render: () => h(App, props) })
             .use(plugin)
