@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomePageController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TagController;
@@ -12,13 +11,6 @@ use App\Http\Controllers\SubCategoryController;
 
 # GUEST
 Route::get('/', WelcomePageController::class)->name('welcome');
-
-# AUTH (ALL)
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
 # AUTH (VERIFIED)
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -39,7 +31,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('colors', ColorController::class);
     Route::post('/colors/bulk-destroy', [ColorController::class, 'bulkDestroy'])->name('colors.bulk-destroy');
 });
-
-
-
-require __DIR__ . '/auth.php';

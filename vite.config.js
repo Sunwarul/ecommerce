@@ -19,7 +19,12 @@ export default defineConfig({
     },
     plugins: [
         laravel({
-            input: ['resources/js/app.js'],
+            input: [
+                'resources/css/app.scss',
+                'resources/js/app.js',
+                // Add module JS files
+                'Modules/User/Resources/js/app.js',
+            ],
             refresh: true,
         }),
         vue({
@@ -36,4 +41,10 @@ export default defineConfig({
             ]
         }),
     ],
+    resolve: {
+        alias: {
+            '@': '/resources/js',
+            '@modules': '/Modules',
+        },
+    },
 });
