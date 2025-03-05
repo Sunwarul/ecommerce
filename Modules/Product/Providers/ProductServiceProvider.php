@@ -36,6 +36,27 @@ class ProductServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+
+
+        $this->app->bind(CategoryServiceInterface::class, CategoryService::class);
+        $this->app->bind(TagServiceInterface::class, TagService::class);
+        $this->app->bind(CouponServiceInterface::class, CouponService::class);
+        $this->app->bind(TaxServiceInterface::class, TaxService::class);
+        $this->app->bind(BrandServiceInterface::class, BrandService::class);
+        $this->app->bind(SubCategoryServiceInterface::class, SubCategoryService::class);
+        $this->app->bind(ProductServiceInterface::class, ProductService::class);
+        $this->app->bind(CustomerServiceInterface::class, CustomerService::class);
+        $this->app->bind(SupplierServiceInterface::class, SupplierService::class);
+        $this->app->bind(ProductStockServiceInterface::class, ProductStockService::class);
+        $this->app->bind(WarehouseServiceInterface::class, WarehouseService::class);
+        $this->app->bind(UnitServiceInterface::class, UnitService::class);
+        $this->app->bind(InventoryServiceInterface::class, InventoryService::class);
+        $this->app->bind(WarrantyServiceInterface::class, WarrantyService::class);
+        $this->app->bind(ShoppingServiceInterface::class, ShoppingService::class);
+        $this->app->bind(CartServiceInterface::class, CartService::class);
+        $this->app->bind(DiscountServiceInterface::class, DiscountService::class);
+        $this->app->bind(OrderServiceInterface::class, OrderService::class);
+        $this->app->bind(PaymentServiceInterface::class, PaymentService::class);
     }
 
     /**
@@ -62,7 +83,7 @@ class ProductServiceProvider extends ServiceProvider
      */
     public function registerTranslations(): void
     {
-        $langPath = resource_path('lang/modules/'.$this->nameLower);
+        $langPath = resource_path('lang/modules/' . $this->nameLower);
 
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, $this->nameLower);
@@ -102,10 +123,10 @@ class ProductServiceProvider extends ServiceProvider
      */
     public function registerViews(): void
     {
-        $viewPath = resource_path('views/modules/'.$this->nameLower);
+        $viewPath = resource_path('views/modules/' . $this->nameLower);
         $sourcePath = module_path($this->name, 'resources/views');
 
-        $this->publishes([$sourcePath => $viewPath], ['views', $this->nameLower.'-module-views']);
+        $this->publishes([$sourcePath => $viewPath], ['views', $this->nameLower . '-module-views']);
 
         $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->nameLower);
 
@@ -125,8 +146,8 @@ class ProductServiceProvider extends ServiceProvider
     {
         $paths = [];
         foreach (config('view.paths') as $path) {
-            if (is_dir($path.'/modules/'.$this->nameLower)) {
-                $paths[] = $path.'/modules/'.$this->nameLower;
+            if (is_dir($path . '/modules/' . $this->nameLower)) {
+                $paths[] = $path . '/modules/' . $this->nameLower;
             }
         }
 
