@@ -1,5 +1,4 @@
 import './bootstrap';
-
 import '../css/app.scss';
 import 'primeicons/primeicons.css'
 
@@ -23,13 +22,10 @@ createInertiaApp({
     title: (title) => title ? `${title} - ${appName}` : appName,
     resolve: (name) => {
         const [module, page] = name.split('::');
-
-        console.log('Name = ');
-        console.log(name);
         if (page) {
             return resolvePageComponent(
-                `../../Modules/${module}/Resources/js/Pages/${page}.vue`,
-                import.meta.glob("../../Modules/**/Resources/js/Pages/**/*.vue")
+                `../../Modules/${module}/resources/js/Pages/${page}.vue`,
+                import.meta.glob("../../Modules/**/resources/js/Pages/**/*.vue")
             );
         } else {
             return resolvePageComponent(

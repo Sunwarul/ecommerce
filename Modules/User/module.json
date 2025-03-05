@@ -7,9 +7,5 @@
     "providers": [
         "Modules\\User\\Providers\\UserServiceProvider"
     ],
-    "files": [],
-    "routes": [
-        "Modules\\User\\Routes\\web.php",
-        "Modules\\User\\Routes\\auth.php"
-    ]
+    "files": []
 }

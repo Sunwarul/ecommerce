@@ -28,9 +28,6 @@ class UserServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
-        // $this->loadRoutesFrom(__DIR__ . '/../Routes/web.php');
-        $this->loadRoutesFrom(__DIR__ . '/../Routes/auth.php');
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'user');
     }
 
     /**
