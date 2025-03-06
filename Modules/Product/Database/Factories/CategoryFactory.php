@@ -3,12 +3,14 @@
 namespace Modules\Product\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Product\Models\Category;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\Category>
  */
 class CategoryFactory extends Factory
 {
+    protected $model = Category::class;
     /**
      * Define the model's default state.
      *
