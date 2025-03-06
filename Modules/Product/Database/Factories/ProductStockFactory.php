@@ -5,7 +5,7 @@ namespace Modules\Product\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductStock>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\ProductStock>
  */
 class ProductStockFactory extends Factory
 {
@@ -16,8 +16,8 @@ class ProductStockFactory extends Factory
      */
     public function definition()
     {
-        $product_ids = \App\Models\Product::pluck('id')->toArray();
-        $warehouse_ids = \App\Models\Warehouse::pluck('id')->toArray();
+        $product_ids = \Modules\Product\Models\Product::pluck('id')->toArray();
+        $warehouse_ids = \Modules\Product\Models\Warehouse::pluck('id')->toArray();
 
         return [
             'product_id' => $this->faker->randomElement($product_ids),

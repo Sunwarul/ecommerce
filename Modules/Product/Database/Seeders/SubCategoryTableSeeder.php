@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\SubCategory;
+use Modules\Product\Models\SubCategory;
 use Illuminate\Database\Seeder;
 
 class SubCategoryTableSeeder extends Seeder

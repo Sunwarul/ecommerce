@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\DiscountServiceInterface;
-use App\Models\Discount;
+use Modules\Product\Models\Discount;
 
 class DiscountService implements DiscountServiceInterface
 {

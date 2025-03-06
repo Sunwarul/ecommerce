@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\BrandServiceInterface;
-use App\Models\Brand;
+use Modules\Product\Models\Brand;
 
 class BrandService implements BrandServiceInterface
 {

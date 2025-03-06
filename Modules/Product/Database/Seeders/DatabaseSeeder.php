@@ -14,13 +14,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        \App\Models\User::factory()->create([
+        \Modules\Product\Models\User::factory()->create([
             'name' => 'Mr. Admin',
             'email' => 'admin@gmail.com',
             'password' => bcrypt('password'),
         ]);
 
-        \App\Models\User::factory(3)->create();
+        \Modules\Product\Models\User::factory(3)->create();
 
         // $this->call(CouponTableSeeder::class);
         // $this->call(CategoryTableSeeder::class);

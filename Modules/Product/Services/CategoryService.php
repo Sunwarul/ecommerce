@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\CategoryServiceInterface;
-use App\Models\Category;
+use Modules\Product\Models\Category;
 
 class CategoryService implements CategoryServiceInterface
 {

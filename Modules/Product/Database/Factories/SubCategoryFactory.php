@@ -5,7 +5,7 @@ namespace Modules\Product\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SubCategory>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\SubCategory>
  */
 class SubCategoryFactory extends Factory
 {
@@ -16,7 +16,7 @@ class SubCategoryFactory extends Factory
      */
     public function definition()
     {
-        $categoryIds = \App\Models\Category::pluck('id')->toArray();
+        $categoryIds = \Modules\Product\Models\Category::pluck('id')->toArray();
 
         return [
             'category_id' => $this->faker->randomElement($categoryIds),

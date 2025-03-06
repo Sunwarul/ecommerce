@@ -5,7 +5,7 @@ namespace Modules\Product\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\Product>
  */
 class ProductFactory extends Factory
 {
@@ -16,12 +16,12 @@ class ProductFactory extends Factory
      */
     public function definition()
     {
-        $categoryIds = \App\Models\Category::pluck('id')->toArray();
-        $subCategoryIds = \App\Models\SubCategory::pluck('id')->toArray();
-        $tagIds = \App\Models\Tag::pluck('id')->toArray();
-        $taxIds = \App\Models\Tax::pluck('id')->toArray();
-        $brandIds = \App\Models\Brand::pluck('id')->toArray();
-        $userIds = \App\Models\User::pluck('id')->toArray();
+        $categoryIds = \Modules\Product\Models\Category::pluck('id')->toArray();
+        $subCategoryIds = \Modules\Product\Models\SubCategory::pluck('id')->toArray();
+        $tagIds = \Modules\Product\Models\Tag::pluck('id')->toArray();
+        $taxIds = \Modules\Product\Models\Tax::pluck('id')->toArray();
+        $brandIds = \Modules\Product\Models\Brand::pluck('id')->toArray();
+        $userIds = \Modules\Product\Models\User::pluck('id')->toArray();
 
         return [
             'category_id' => $this->faker->randomElement($categoryIds),

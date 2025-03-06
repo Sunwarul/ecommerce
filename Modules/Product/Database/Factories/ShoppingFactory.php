@@ -5,7 +5,7 @@ namespace Modules\Product\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Shopping>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\Shopping>
  */
 class ShoppingFactory extends Factory
 {
@@ -16,7 +16,7 @@ class ShoppingFactory extends Factory
      */
     public function definition()
     {
-        $customer_ids = \App\Models\Customer::pluck('id')->toArray();
+        $customer_ids = \Modules\Product\Models\Customer::pluck('id')->toArray();
 
         return [
             'customer_id' => $this->faker->randomElement($customer_ids),

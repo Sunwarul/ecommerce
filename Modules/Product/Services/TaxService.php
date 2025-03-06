@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\TaxServiceInterface;
-use App\Models\Tax;
+use Modules\Product\Models\Tax;
 
 class TaxService implements TaxServiceInterface
 {

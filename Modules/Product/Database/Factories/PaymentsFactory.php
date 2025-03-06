@@ -5,7 +5,7 @@ namespace Modules\Product\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Payments>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Modules\Product\Models\Payments>
  */
 class PaymentsFactory extends Factory
 {
@@ -16,7 +16,7 @@ class PaymentsFactory extends Factory
      */
     public function definition()
     {
-        $order_ids = \App\Models\Order::pluck('id')->toArray();
+        $order_ids = \Modules\Product\Models\Order::pluck('id')->toArray();
 
         return [
             'order_id' => $this->faker->randomElement($order_ids),

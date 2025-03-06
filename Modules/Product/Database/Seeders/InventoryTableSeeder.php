@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\Inventory;
+use Modules\Product\Models\Inventory;
 use Illuminate\Database\Seeder;
 
 class InventoryTableSeeder extends Seeder

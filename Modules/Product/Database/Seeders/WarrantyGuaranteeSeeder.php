@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\WarrantyGuarantee;
+use Modules\Product\Models\WarrantyGuarantee;
 use Illuminate\Database\Seeder;
 
 class WarrantyGuaranteeSeeder extends Seeder

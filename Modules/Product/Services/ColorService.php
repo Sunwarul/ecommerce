@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\ColorServiceInterface;
-use App\Models\Color;
+use Modules\Product\Models\Color;
 
 class ColorService implements ColorServiceInterface
 {

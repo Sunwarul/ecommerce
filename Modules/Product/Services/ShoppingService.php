@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\ShoppingServiceInterface;
-use App\Models\Shopping;
+use Modules\Product\Models\Shopping;
 
 class ShoppingService implements ShoppingServiceInterface
 {

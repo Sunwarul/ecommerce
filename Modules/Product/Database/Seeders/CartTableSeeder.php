@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\Cart;
+use Modules\Product\Models\Cart;
 use Illuminate\Database\Seeder;
 
 class CartTableSeeder extends Seeder

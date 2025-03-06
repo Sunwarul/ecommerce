@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\InventoryServiceInterface;
-use App\Models\Inventory;
+use Modules\Product\Models\Inventory;
 
 class InventoryService implements InventoryServiceInterface
 {
