@@ -1,30 +1,28 @@
 <template>
     <AuthenticatedLayout>
         <div class="card">
-            <Toolbar class="">
+            <Toolbar class="mb-6">
                 <template #start>
                     <Button label="New" icon="pi pi-plus" class="mr-2" @click="openNew" />
                     <Button label="Delete" icon="pi pi-trash" severity="danger" outlined @click="confirmDeleteSelected"
-                        :disabled="!selectedCategories || !selectedCategories.length" />
+                        :disabled="!selectedBrands || !selectedBrands.length" />
                 </template>
 
                 <template #end>
                     <!-- <FileUpload mode="basic" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import"
                         class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" /> -->
-                    <!-- <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" /> -->
                     <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportExcel" />
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" v-model:selection="selectedCategories" :value="sub_categories.data" dataKey="id"
-                :paginator="true" :rows="15" :filters="filters"
-                @page="handlePagination($event, route('sub-categories.index'), 'sub_categories')"
+            <DataTable ref="dt" v-model:selection="selectedBrands" :value="brands.data" dataKey="id" :paginator="true"
+                :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} sub-categories">
+                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} brands">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
-                        <h1 class="text-3xl">Manage Sub-categories</h1>
+                        <h4 class="m-0">Manage Brands</h4>
                         <IconField>
                             <InputIcon>
                                 <i class="pi pi-search" />
@@ -48,27 +46,17 @@
                 <Column field="updated_at" header="Updated At" sortable></Column>
                 <Column :exportable="false" style="min-width: 12rem">
                     <template #body="slotProps">
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2"
-                            @click="editSubCategory(slotProps.data)" />
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editBrand(slotProps.data)" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger"
-                            @click="confirmDeleteSubCategory(slotProps.data)" />
+                            @click="confirmDeleteBrand(slotProps.data)" />
                     </template>
                 </Column>
             </DataTable>
         </div>
 
         <!-- Create & Edit Form Dialog -->
-        <Dialog v-model:visible="subCategoryDialog" maximizable :style="{ width: '600px' }" header="SubCategory Details"
+        <Dialog v-model:visible="brandDialog" maximizable :style="{ width: '600px' }" header="Brand Details"
             pt:mask:class="backdrop-blur-sm">
-            <!-- Category Dropdown -->
-            <div class="flex flex-col gap-6">
-                <div>
-                    <label for="category" class="block font-bold mb-2">Category</label>
-                    <Dropdown v-model="form.category_id" :options="props.categories" option-label="name"
-                        option-value="id" placeholder="Select a Category" class="w-full" />
-                    <small v-if="!form.category_id" class="text-red-500">Category is required.</small>
-                </div>
-            </div>
             <div class="flex flex-col gap-6">
                 <div>
                     <label for="name" class="block font-bold mb-2">Name</label>
@@ -80,11 +68,8 @@
 
             <div class="flex flex-col gap-6">
                 <div>
-                    <label for="description" class="block font-bold mb-2">Description</label>
-                    <textarea row="10" col="10" id="description" v-model.trim="form.description"
-                        :class="{ 'is-invalid': submitted && !form.description }" required autofocus rows="5"
-                        placeholder="Enter a description..."></textarea>
-                    <small v-if="submitted && !form.description" class="text-red-500">Description is required.</small>
+                    <label for="name" class="block font-bold mb-2">Description</label>
+                    <Textarea v-model.trim="form.description" rows="4" cols="30" id="description" class="w-full" />
                 </div>
             </div>
             <div class="flex flex-col gap-6 mt-3">
@@ -98,6 +83,7 @@
                 </div>
             </div>
             <div class="flex flex-col gap-6 mt-3">
+
                 <div>
                     <label for="photo" class="block font-bold mb-2">Photo</label>
                     <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
@@ -113,35 +99,34 @@
             <template #footer>
                 <div class="mt-3">
                     <Button label="Cancel" icon="pi pi-times" text @click="hideDialog" />
-                    <Button label="Save & Continue" text icon="pi pi-check" @click="saveSubCategory(true)"
-                        v-if="!isEdit" />
-                    <Button label="Save" icon="pi pi-check" @click="saveSubCategory(false)" v-if="!isEdit" />
-                    <Button label="Update" icon="pi pi-check" @click="updateSubCategory" v-if="isEdit" />
+                    <Button label="Save & Continue" text icon="pi pi-check" @click="saveBrand(true)" v-if="!isEdit" />
+                    <Button label="Save" icon="pi pi-check" @click="saveBrand(false)" v-if="!isEdit" />
+                    <Button label="Update" icon="pi pi-check" @click="updateBrand" v-if="isEdit" />
                 </div>
             </template>
         </Dialog>
 
         <!-- Single Delete -->
-        <Dialog v-model:visible="deleteSubCategoryDialog" :style="{ width: '450px' }" header="Confirm">
+        <Dialog v-model:visible="deleteBrandDialog" :style="{ width: '450px' }" header="Confirm">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle !text-3xl" />
                 <span>Are you sure you want to delete <b>{{ form.name }}</b>?</span>
             </div>
             <template #footer>
-                <Button label="No" icon="pi pi-times" text @click="deleteSubCategoryDialog = false" />
-                <Button label="Yes" icon="pi pi-check" @click="deleteSubCategory" />
+                <Button label="No" icon="pi pi-times" text @click="deleteBrandDialog = false" />
+                <Button label="Yes" icon="pi pi-check" @click="deleteBrand" />
             </template>
         </Dialog>
 
         <!-- Bulk Delete -->
-        <Dialog v-model:visible="deleteSubCategoriesDialog" :style="{ width: '450px' }" header="Confirm">
+        <Dialog v-model:visible="deleteBrandsDialog" :style="{ width: '450px' }" header="Confirm">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle !text-3xl" />
-                <span>Are you sure you want to delete the selected categories?</span>
+                <span>Are you sure you want to delete the selected brands?</span>
             </div>
             <template #footer>
-                <Button label="No" icon="pi pi-times" text @click="deleteSubCategoriesDialog = false" />
-                <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedSubCategories" />
+                <Button label="No" icon="pi pi-times" text @click="deleteBrandsDialog = false" />
+                <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedBrands" />
             </template>
         </Dialog>
     </AuthenticatedLayout>
@@ -155,17 +140,13 @@ import { useToast } from 'primevue/usetoast';
 import { router, useForm } from '@inertiajs/vue3';
 import { Select } from 'primevue';
 import { usePage } from '@inertiajs/vue3';
-import { resolveImagePath } from '../../Helpers/imageHelper';
-import axios from 'axios';
-import { handlePagination } from '@/Helpers/pagination';
+import { resolveImagePath } from '@/Helpers/imageHelper';
 import debounce from 'lodash/debounce';
-// import { Dropdown } from 'primevue/dropdown';
 
 const { props } = usePage();
 
 const vueProps = defineProps({
-    sub_categories: Object,
-    categories: Array,
+    brands: Object,
     filters: {
         type: Object,
         default: () => ({
@@ -176,22 +157,18 @@ const vueProps = defineProps({
 
 const toast = useToast();
 const dt = ref();
-const subCategoryDialog = ref(false);
-const deleteSubCategoryDialog = ref(false);
-const deleteSubCategoriesDialog = ref(false);
+const brandDialog = ref(false);
+const deleteBrandDialog = ref(false);
+const deleteBrandsDialog = ref(false);
 
 const form = useForm({
     name: null,
     description: null,
     is_active: 1,
     photo: null,
-    category_id: null,
 });
 
-onMounted(() => {
-    console.log('Categories:', props.categories);
-});
-const selectedCategories = ref();
+const selectedBrands = ref();
 const filters = ref({
     'global': { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
@@ -220,19 +197,19 @@ const openNew = () => {
     isEdit.value = false;
     form.reset();
     submitted.value = false;
-    subCategoryDialog.value = true;
+    brandDialog.value = true;
     photoPreview.value = null;
 };
 
 const hideDialog = () => {
-    subCategoryDialog.value = false;
+    brandDialog.value = false;
     submitted.value = false;
 };
 
-const saveSubCategory = (saveAndContinue = false) => {
+const saveBrand = (saveAndContinue = false) => {
     submitted.value = true;
 
-    form.post(route('sub-categories.store'), {
+    form.post(route('brands.store'), {
         onSuccess: () => {
             form.reset();
             photoPreview.value = null;
@@ -255,14 +232,14 @@ const saveSubCategory = (saveAndContinue = false) => {
 const isEdit = ref(false);
 const editingId = ref(null);
 
-const updateSubCategory = () => {
+const updateBrand = () => {
     submitted.value = true;
-    const url = route('sub-categories.update', { sub_category: editingId.value });
+    const url = route('brands.update', { brand: editingId.value });
 
     const data = {
         _method: 'put',
         name: form.name,
-        category_id: form.category_id,
+        description: form.description,
         is_active: form.is_active,
         photo: form.photo,
     };
@@ -280,32 +257,32 @@ const updateSubCategory = () => {
     });
 };
 
-const editSubCategory = (prod) => {
-    subCategoryDialog.value = true;
+const editBrand = (prod) => {
+    brandDialog.value = true;
     isEdit.value = true;
 
     photoPreview.value = null;
     form.name = prod.name;
-    form.category_id = prod.category_id;
+    form.description = prod.description;
     form.is_active = prod.is_active;
     form.photo = prod.photo;
     editingId.value = prod.id;
 };
 
-const confirmDeleteSubCategory = (prod) => {
-    deleteSubCategoryDialog.value = true;
+const confirmDeleteBrand = (prod) => {
+    deleteBrandDialog.value = true;
 
     photoPreview.value = null;
     form.name = prod.name;
-    form.category_id = prod.category_id;
+    form.description = prod.description;
     form.is_active = prod.is_active;
     form.photo = prod.photo;
     editingId.value = prod.id;
 };
 
-const deleteSubCategory = () => {
-    deleteSubCategoryDialog.value = false;
-    router.delete(route('sub-categories.destroy', { sub_category: editingId.value }), {
+const deleteBrand = () => {
+    deleteBrandDialog.value = false;
+    router.delete(route('brands.destroy', { brand: editingId.value }), {
         onSuccess: () => {
             toast.add({ severity: 'error', summary: 'Deleted', detail: 'Successfully Deleted', life: 3000 });
         }
@@ -319,7 +296,7 @@ const exportExcel = () => {
 
     // Create a temporary link to trigger the download
     const link = document.createElement('a');
-    link.href = `${route('sub_categories.export')}?${params}`;
+    link.href = `${route('brands.export')}?${params}`;
     link.setAttribute('download', ''); // This is optional as the server will send the filename
     document.body.appendChild(link);
     link.click();
@@ -334,17 +311,17 @@ const exportExcel = () => {
 };
 
 const confirmDeleteSelected = () => {
-    deleteSubCategoriesDialog.value = true;
+    deleteBrandsDialog.value = true;
 };
 
-const deleteSelectedSubCategories = () => {
-    const categoryIds = selectedCategories.value.map(c => c.id);
-    deleteSubCategoriesDialog.value = false;
-    selectedCategories.value = null;
-    router.post(route('sub-categories.bulk-destroy'), {
-        categoryIds: categoryIds,
+const deleteSelectedBrands = () => {
+    const brandIds = selectedBrands.value.map(c => c.id);
+    deleteBrandsDialog.value = false;
+    selectedBrands.value = null;
+    router.post(route('brands.bulk-destroy'), {
+        brandIds: brandIds,
         onSuccess: () => {
-            toast.add({ severity: 'error', summary: 'Deleted', detail: 'Selected Categories Deleted', life: 3000 });
+            toast.add({ severity: 'error', summary: 'Deleted', detail: 'Selected Brands Deleted', life: 3000 });
         }
     })
 };
@@ -352,7 +329,7 @@ const deleteSelectedSubCategories = () => {
 const debouncedSearch = debounce((e) => {
     filters.value.global.value = e.target.value;
     router.get(
-        route('sub-categories.index'),
+        route('brands.index'),
         {
             search: e.target.value,
             per_page: dt.value?.rows
@@ -360,7 +337,7 @@ const debouncedSearch = debounce((e) => {
         {
             preserveState: true,
             preserveScroll: true,
-            only: ['sub-categories']
+            only: ['brands']
         }
     );
 }, 300);
@@ -370,15 +347,4 @@ onMounted(() => {
         filters.value.global.value = vueProps.filters.search;
     }
 });
-
 </script>
-<style>
-textarea {
-    width: 100%;
-    padding: 8px;
-    font-size: 14px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    resize: vertical;
-}
-</style>

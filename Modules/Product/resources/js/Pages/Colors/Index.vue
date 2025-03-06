@@ -128,7 +128,7 @@ import { useToast } from 'primevue/usetoast';
 import { router, useForm } from '@inertiajs/vue3';
 import { Select } from 'primevue';
 import { usePage } from '@inertiajs/vue3';
-import { resolveImagePath } from '../../Helpers/imageHelper';
+import { resolveImagePath } from '@/Helpers/imageHelper';
 
 const { props } = usePage();
 

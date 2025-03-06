@@ -20,7 +20,7 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('User::Auth/Register');
+        return Inertia::render('User::User::Auth/Register');
     }
 
     /**

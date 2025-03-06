@@ -49,7 +49,7 @@
 </template>
 <script setup>
 import { router, useForm } from '@inertiajs/vue3';
-import { statuses } from '../../Helpers/enums';
+import { statuses } from '@/Helpers/enums';
 import { Link } from '@inertiajs/vue3'
 import { ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';

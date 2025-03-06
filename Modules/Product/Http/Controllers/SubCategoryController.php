@@ -31,7 +31,7 @@ class SubCategoryController extends Controller
             })
             ->paginate($perPage);
 
-        return Inertia::render('SubCategories/Index', [
+        return Inertia::render('Product::SubCategories/Index', [
             'sub_categories' => $sub_categories,
             'categories' => $categories,
             'filters' => [

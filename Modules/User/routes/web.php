@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\User\Http\Controllers\DashboardController;
-use Modules\User\Http\Controllers\WelcomePageController;
 use Modules\User\Http\Controllers\Auth\PasswordController;
 use Modules\User\Http\Controllers\Auth\NewPasswordController;
 use Modules\User\Http\Controllers\Auth\VerifyEmailController;
@@ -59,8 +58,6 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
-
-Route::get('/', WelcomePageController::class)->name('welcome');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
