@@ -8,19 +8,33 @@ use Illuminate\Http\Request;
 use Modules\Product\Models\Tag;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\Product\Exports\TagExport;
 use Modules\Product\Http\Requests\TagStoreRequest;
 use Modules\Product\Http\Requests\TagUpdateRequest;
 
 class TagController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $tags = Tag::paginate();
+        $perPage = $request->input('per_page', 15);
+        $search = $request->input('search');
+
+        $tags = Tag::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('created_at', 'like', "%{$search}%")
+                        ->orWhere('updated_at', 'like', "%{$search}%");
+                });
+            })
+            ->paginate($perPage);
+
         return Inertia::render('Tags/Index', [
             'tags' => $tags,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 
@@ -96,5 +110,12 @@ class TagController extends Controller
         }
         // Tag::destroy($tagIds);
         return to_route('tags.index')->with('success', 'Tags deleted successfully');
+    }
+
+    public function export(Request $request)
+    {
+        $search = $request->input('search');
+        $filename = 'tags-' . now()->format('Y-m-d-H-i-s') . '.xlsx';
+        return Excel::download(new TagExport($search), $filename);
     }
 }

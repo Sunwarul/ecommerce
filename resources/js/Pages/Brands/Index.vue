@@ -11,7 +11,7 @@
                 <template #end>
                     <!-- <FileUpload mode="basic" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import"
                         class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" /> -->
-                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" />
+                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportExcel" />
                 </template>
             </Toolbar>
 
@@ -27,7 +27,8 @@
                             <InputIcon>
                                 <i class="pi pi-search" />
                             </InputIcon>
-                            <InputText v-model="filters['global'].value" placeholder="Search..." />
+                            <InputText v-model="filters.global.value" type="search" @input="debouncedSearch"
+                                placeholder="Search..." clearable />
                         </IconField>
                     </div>
                 </template>
@@ -109,7 +110,7 @@
         <Dialog v-model:visible="deleteBrandDialog" :style="{ width: '450px' }" header="Confirm">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle !text-3xl" />
-                <span >Are you sure you want to delete <b>{{ form.name }}</b>?</span>
+                <span>Are you sure you want to delete <b>{{ form.name }}</b>?</span>
             </div>
             <template #footer>
                 <Button label="No" icon="pi pi-times" text @click="deleteBrandDialog = false" />
@@ -121,7 +122,7 @@
         <Dialog v-model:visible="deleteBrandsDialog" :style="{ width: '450px' }" header="Confirm">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle !text-3xl" />
-                <span >Are you sure you want to delete the selected brands?</span>
+                <span>Are you sure you want to delete the selected brands?</span>
             </div>
             <template #footer>
                 <Button label="No" icon="pi pi-times" text @click="deleteBrandsDialog = false" />
@@ -133,18 +134,25 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ref, defineProps } from 'vue';
+import { ref, defineProps, onMounted } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { router, useForm } from '@inertiajs/vue3';
 import { Select } from 'primevue';
 import { usePage } from '@inertiajs/vue3';
 import { resolveImagePath } from '../../Helpers/imageHelper';
+import debounce from 'lodash/debounce';
 
 const { props } = usePage();
 
 const vueProps = defineProps({
     brands: Object,
+    filters: {
+        type: Object,
+        default: () => ({
+            search: '',
+        }),
+    },
 });
 
 const toast = useToast();
@@ -213,8 +221,10 @@ const saveBrand = (saveAndContinue = false) => {
                 hideDialog();
             }
         },
-        onError: () => {
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Something went wrong', life: 3000 });
+        onError: (errors) => {
+            Object.entries(errors).forEach((val, key) => {
+                toast.add({ severity: 'error', summary: 'Validation Error', detail: val[1], life: 3000 });
+            })
         },
     });
 };
@@ -279,8 +289,25 @@ const deleteBrand = () => {
     });
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
+const exportExcel = () => {
+    const params = new URLSearchParams({
+        search: filters.value.global.value || ''
+    }).toString();
+
+    // Create a temporary link to trigger the download
+    const link = document.createElement('a');
+    link.href = `${route('brands.export')}?${params}`;
+    link.setAttribute('download', ''); // This is optional as the server will send the filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.add({
+        severity: 'success',
+        summary: 'Export Started',
+        detail: 'Your export will download shortly.',
+        life: 3000
+    });
 };
 
 const confirmDeleteSelected = () => {
@@ -299,4 +326,25 @@ const deleteSelectedBrands = () => {
     })
 };
 
+const debouncedSearch = debounce((e) => {
+    filters.value.global.value = e.target.value;
+    router.get(
+        route('brands.index'),
+        {
+            search: e.target.value,
+            per_page: dt.value?.rows
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['brands']
+        }
+    );
+}, 300);
+
+onMounted(() => {
+    if (vueProps.filters.search) {
+        filters.value.global.value = vueProps.filters.search;
+    }
+});
 </script>

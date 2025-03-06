@@ -7,20 +7,34 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Modules\Product\Models\Brand;
 use App\Http\Controllers\Controller;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
+use Modules\Product\Exports\BrandExport;
 use Modules\Product\Http\Requests\BrandStoreRequest;
 use Modules\Product\Http\Requests\BrandUpdateRequest;
 
 class BrandController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $brands = Brand::paginate();
+        $perPage = $request->input('per_page', 15);
+        $search = $request->input('search');
+
+        $brands = Brand::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('created_at', 'like', "%{$search}%")
+                        ->orWhere('updated_at', 'like', "%{$search}%");
+                });
+            })
+            ->paginate($perPage);
+
         return Inertia::render('Brands/Index', [
             'brands' => $brands,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 
@@ -106,5 +120,12 @@ class BrandController extends Controller
         }
         // Brand::destroy($brandIds);
         return to_route('brands.index')->with('success', 'Brands deleted successfully');
+    }
+
+    public function export(Request $request)
+    {
+        $search = $request->input('search');
+        $filename = 'brands-' . now()->format('Y-m-d-H-i-s') . '.xlsx';
+        return Excel::download(new BrandExport($search), $filename);
     }
 }

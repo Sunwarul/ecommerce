@@ -13,7 +13,7 @@
                 <template #end>
                     <!-- <FileUpload mode="basic" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import"
                         class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" /> -->
-                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" />
+                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportExcel" />
                 </template>
             </Toolbar>
 
@@ -29,7 +29,8 @@
                             <InputIcon>
                                 <i class="pi pi-search" />
                             </InputIcon>
-                            <InputText v-model="filters['global'].value" placeholder="Search..." />
+                            <InputText v-model="filters.global.value" type="search" @input="debouncedSearch"
+                                placeholder="Search..." clearable />
                         </IconField>
                     </div>
                 </template>
@@ -82,18 +83,25 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ref, defineProps } from 'vue';
+import { ref, defineProps, onMounted } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { router, useForm } from '@inertiajs/vue3';
 import { Select } from 'primevue';
 import { usePage } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3'
+import debounce from 'lodash/debounce';
 
 const { props } = usePage();
 
 const vueProps = defineProps({
     tags: Object,
+    filters: {
+        type: Object,
+        default: () => ({
+            search: '',
+        }),
+    },
 });
 
 const toast = useToast();
@@ -123,8 +131,25 @@ const deleteTag = () => {
     });
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
+const exportExcel = () => {
+    const params = new URLSearchParams({
+        search: filters.value.global.value || ''
+    }).toString();
+
+    // Create a temporary link to trigger the download
+    const link = document.createElement('a');
+    link.href = `${route('tags.export')}?${params}`;
+    link.setAttribute('download', ''); // This is optional as the server will send the filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.add({
+        severity: 'success',
+        summary: 'Export Started',
+        detail: 'Your export will download shortly.',
+        life: 3000
+    });
 };
 
 const confirmDeleteSelected = () => {
@@ -143,4 +168,25 @@ const deleteSelectedTags = () => {
     })
 };
 
+const debouncedSearch = debounce((e) => {
+    filters.value.global.value = e.target.value;
+    router.get(
+        route('tags.index'),
+        {
+            search: e.target.value,
+            per_page: dt.value?.rows
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['tags']
+        }
+    );
+}, 300);
+
+onMounted(() => {
+    if (vueProps.filters.search) {
+        filters.value.global.value = vueProps.filters.search;
+    }
+});
 </script>

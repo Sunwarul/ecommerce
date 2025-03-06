@@ -11,7 +11,8 @@
                 <template #end>
                     <!-- <FileUpload mode="basic" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import"
                         class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" /> -->
-                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" />
+                    <!-- <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" /> -->
+                    <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportExcel" />
                 </template>
             </Toolbar>
 
@@ -28,7 +29,8 @@
                             <InputIcon>
                                 <i class="pi pi-search" />
                             </InputIcon>
-                            <InputText v-model="filters['global'].value" placeholder="Search..." />
+                            <InputText v-model="filters.global.value" type="search" @input="debouncedSearch"
+                                placeholder="Search..." clearable />
                         </IconField>
                     </div>
                 </template>
@@ -156,6 +158,7 @@ import { usePage } from '@inertiajs/vue3';
 import { resolveImagePath } from '../../Helpers/imageHelper';
 import axios from 'axios';
 import { handlePagination } from '@/Helpers/pagination';
+import debounce from 'lodash/debounce';
 // import { Dropdown } from 'primevue/dropdown';
 
 const { props } = usePage();
@@ -163,6 +166,12 @@ const { props } = usePage();
 const vueProps = defineProps({
     sub_categories: Object,
     categories: Array,
+    filters: {
+        type: Object,
+        default: () => ({
+            search: '',
+        }),
+    },
 });
 
 const toast = useToast();
@@ -235,8 +244,10 @@ const saveSubCategory = (saveAndContinue = false) => {
                 hideDialog();
             }
         },
-        onError: () => {
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Something went wrong', life: 3000 });
+        onError: (errors) => {
+            Object.entries(errors).forEach((val, key) => {
+                toast.add({ severity: 'error', summary: 'Validation Error', detail: val[1], life: 3000 });
+            })
         },
     });
 };
@@ -301,8 +312,25 @@ const deleteSubCategory = () => {
     });
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
+const exportExcel = () => {
+    const params = new URLSearchParams({
+        search: filters.value.global.value || ''
+    }).toString();
+
+    // Create a temporary link to trigger the download
+    const link = document.createElement('a');
+    link.href = `${route('sub_categories.export')}?${params}`;
+    link.setAttribute('download', ''); // This is optional as the server will send the filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.add({
+        severity: 'success',
+        summary: 'Export Started',
+        detail: 'Your export will download shortly.',
+        life: 3000
+    });
 };
 
 const confirmDeleteSelected = () => {
@@ -320,6 +348,28 @@ const deleteSelectedSubCategories = () => {
         }
     })
 };
+
+const debouncedSearch = debounce((e) => {
+    filters.value.global.value = e.target.value;
+    router.get(
+        route('sub-categories.index'),
+        {
+            search: e.target.value,
+            per_page: dt.value?.rows
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['sub-categories']
+        }
+    );
+}, 300);
+
+onMounted(() => {
+    if (vueProps.filters.search) {
+        filters.value.global.value = vueProps.filters.search;
+    }
+});
 
 </script>
 <style>
