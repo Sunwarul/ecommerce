@@ -30,7 +30,7 @@ class TagController extends Controller
             })
             ->paginate($perPage);
 
-        return Inertia::render('Tags/Index', [
+        return Inertia::render('Product::Tags/Index', [
             'tags' => $tags,
             'filters' => [
                 'search' => $search,

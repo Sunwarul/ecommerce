@@ -30,7 +30,7 @@ class BrandController extends Controller
             })
             ->paginate($perPage);
 
-        return Inertia::render('Brands/Index', [
+        return Inertia::render('Product::Brands/Index', [
             'brands' => $brands,
             'filters' => [
                 'search' => $search,
