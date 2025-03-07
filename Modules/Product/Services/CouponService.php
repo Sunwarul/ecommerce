@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\CouponServiceInterface;
-use App\Models\Coupon;
+use Modules\Product\Models\Coupon;
 
 class CouponService implements CouponServiceInterface
 {

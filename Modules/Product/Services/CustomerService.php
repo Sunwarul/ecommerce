@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\CustomerServiceInterface;
-use App\Models\Customer;
+use Modules\Product\Models\Customer;
 
 class CustomerService implements CustomerServiceInterface
 {

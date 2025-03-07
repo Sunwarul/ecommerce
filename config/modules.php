@@ -147,8 +147,8 @@ return [
             'config' => ['path' => 'config', 'generate' => true],
 
             // database/
-            'factory' => ['path' => 'database/factories', 'generate' => true],
-            'migration' => ['path' => 'database/migrations', 'generate' => true],
+            'factory' => ['path' => 'Database/Factories', 'generate' => true],
+            'migration' => ['path' => 'Database/Migrations', 'generate' => true],
             'seeder' => ['path' => 'Database/Seeders', 'generate' => true],
 
             // lang/

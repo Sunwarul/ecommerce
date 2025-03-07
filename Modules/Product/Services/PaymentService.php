@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\PaymentServiceInterface;
-use App\Models\Payments;
+use Modules\Product\Models\Payments;
 
 class PaymentService implements PaymentServiceInterface
 {

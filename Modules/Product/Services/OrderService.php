@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\OrderServiceInterface;
-use App\Models\Order;
+use Modules\Product\Models\Order;
 
 class OrderService implements OrderServiceInterface
 {

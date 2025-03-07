@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\ProductStockServiceInterface;
-use App\Models\ProductStock;
+use Modules\Product\Models\ProductStock;
 
 class ProductStockService implements ProductStockServiceInterface
 {

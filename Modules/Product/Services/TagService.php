@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\TagServiceInterface;
-use App\Models\Tag;
+use Modules\Product\Models\Tag;
 
 class TagService implements TagServiceInterface
 {

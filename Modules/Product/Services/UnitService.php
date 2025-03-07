@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\UnitServiceInterface;
-use App\Models\Unit;
+use Modules\Product\Models\Unit;
 
 class UnitService implements UnitServiceInterface
 {

@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\Coupon;
+use Modules\Product\Models\Coupon;
 use Illuminate\Database\Seeder;
 
 class CouponTableSeeder extends Seeder

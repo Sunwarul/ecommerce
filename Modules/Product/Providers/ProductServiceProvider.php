@@ -2,11 +2,12 @@
 
 namespace Modules\Product\Providers;
 
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ProductServiceProvider extends ServiceProvider
 {
@@ -27,6 +28,21 @@ class ProductServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+
+
+        // Factory and model scanner code
+        $namespace = 'Modules\\' . $this->name . '\\Models\\';
+        $factoryNamespace = 'Modules\\' . $this->name . '\\Database\\Factories\\';
+        Factory::guessFactoryNamesUsing(function ($modelName) use ($namespace, $factoryNamespace) {
+            if (strpos($modelName, $namespace) === 0) {
+                $modelName = substr($modelName, strlen($namespace));
+            }
+            return $factoryNamespace . $modelName . 'Factory';
+        });
+        Factory::guessModelNamesUsing(function ($factory) use ($namespace) {
+            $modelName = Str::replaceLast('Factory', '', class_basename($factory));
+            return $namespace . $modelName;
+        });
     }
 
     /**

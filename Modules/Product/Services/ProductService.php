@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\ProductServiceInterface;
-use App\Models\Product;
+use Modules\Product\Models\Product;
 
 class ProductService implements ProductServiceInterface
 {

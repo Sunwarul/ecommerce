@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\WarehouseServiceInterface;
-use App\Models\Warehouse;
+use Modules\Product\Models\Warehouse;
 
 class WarehouseService implements WarehouseServiceInterface
 {

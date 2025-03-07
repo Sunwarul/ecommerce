@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\SubCategoryServiceInterface;
-use App\Models\SubCategory;
+use Modules\Product\Models\SubCategory;
 
 class SubCategoryService implements SubCategoryServiceInterface
 {

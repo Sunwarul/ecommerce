@@ -1,4 +1,5 @@
 {
+    "Core": true,
     "User": true,
     "Blog": true,
     "Product": true,

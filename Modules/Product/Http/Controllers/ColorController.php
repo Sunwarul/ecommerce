@@ -15,7 +15,7 @@ class ColorController extends Controller
     public function index()
     {
         $colors = Color::paginate();
-        return Inertia::render('Colors/Index', [
+        return Inertia::render('Product::Colors/Index', [
             'colors' => $colors,
         ]);
     }

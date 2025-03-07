@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\Warehouse;
+use Modules\Product\Models\Warehouse;
 use Illuminate\Database\Seeder;
 
 class WarehouseTableSeeder extends Seeder

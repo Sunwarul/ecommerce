@@ -32,7 +32,7 @@ class CategoryController extends Controller
             })
             ->paginate($perPage);
 
-        return Inertia::render('Categories/Index', [
+        return Inertia::render('Product::Categories/Index', [
             'categories' => $categories,
             'filters' => [
                 'search' => $search,

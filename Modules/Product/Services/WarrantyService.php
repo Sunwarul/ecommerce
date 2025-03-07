@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\WarrantyServiceInterface;
-use App\Models\WarrantyGuarantee;
+use Modules\Product\Models\WarrantyGuarantee;
 
 class WarrantyService implements WarrantyServiceInterface
 {

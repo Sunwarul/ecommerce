@@ -7,12 +7,13 @@ use Modules\Product\Http\Controllers\ColorController;
 use Modules\Product\Http\Controllers\CategoryController;
 use Modules\Product\Http\Controllers\SubCategoryController;
 
-# AUTH (VERIFIED)
+# AUTH & VERIFIED
 Route::middleware(['auth', 'verified'])->group(function () {
     // Categories
     Route::resource('categories', CategoryController::class);
     Route::get('/categories/export', [CategoryController::class, 'export'])->name('categories.export');
     Route::post('/categories/bulk-destroy', [CategoryController::class, 'bulkDestroy'])->name('categories.bulk-destroy');
+
     // Sub-Categories
     Route::resource('sub-categories', SubCategoryController::class);
     Route::get('/sub-categories/export', [SubCategoryController::class, 'export'])->name('sub_categories.export');

@@ -2,7 +2,7 @@
 
 namespace Modules\Product\Database\Seeders;
 
-use App\Models\Discount;
+use Modules\Product\Models\Discount;
 use Illuminate\Database\Seeder;
 
 class DiscountTableSeeder extends Seeder

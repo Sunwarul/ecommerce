@@ -3,7 +3,7 @@
 namespace Modules\Product\Services;
 
 use App\Interfaces\SupplierServiceInterface;
-use App\Models\Supplier;
+use Modules\Product\Models\Supplier;
 
 class SupplierService implements SupplierServiceInterface
 {
