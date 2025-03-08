@@ -31,10 +31,25 @@ class TagController extends Controller
             ->paginate($perPage);
 
         return Inertia::render('Product::Tags/Index', [
-            'tags' => $tags,
-            'filters' => [
-                'search' => $search,
+            // 'tags' => $tags,
+            // 'filters' => [
+            //     'search' => $search,
+            // ],
+            'config' => [
+                'entity' => 'tags',
+                'fields' => [
+                    ['name' => 'name', 'type' => 'text', 'label' => 'Tag Name', 'validation' => 'required'],
+                    ['name' => 'description', 'type' => 'textarea', 'label' => 'Description']
+                ],
+                'endpoints' => [
+                    'list' => route('tags.index'),
+                    'create' => route('tags.store'),
+                    'update' => route('tags.update', ['tag' => '__ID__']),
+                    'delete' => route('tags.destroy', ['tag' => '__ID__']),
+                    'bulkDelete' => route('tags.bulk-destroy'),
+                ]
             ],
+            'items' => Tag::all()
         ]);
     }
 
