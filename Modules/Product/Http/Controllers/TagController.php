@@ -31,15 +31,12 @@ class TagController extends Controller
             ->paginate($perPage);
 
         return Inertia::render('Product::Tags/Index', [
-            // 'tags' => $tags,
-            // 'filters' => [
-            //     'search' => $search,
-            // ],
             'config' => [
                 'entity' => 'tags',
+                'title' => 'Manage Tags',
                 'fields' => [
-                    ['name' => 'name', 'type' => 'text', 'label' => 'Tag Name', 'validation' => 'required'],
-                    ['name' => 'description', 'type' => 'textarea', 'label' => 'Description']
+                    ['name' => 'name', 'type' => 'text', 'label' => 'Tag Name', 'required' => true],
+                    ['name' => 'description', 'type' => 'textarea', 'label' => 'Description', 'required' => false]
                 ],
                 'endpoints' => [
                     'list' => route('tags.index'),
@@ -47,9 +44,10 @@ class TagController extends Controller
                     'update' => route('tags.update', ['tag' => '__ID__']),
                     'delete' => route('tags.destroy', ['tag' => '__ID__']),
                     'bulkDelete' => route('tags.bulk-destroy'),
+                    'export' => route('tags.export'),
                 ]
             ],
-            'items' => Tag::all()
+            'items' => $tags
         ]);
     }
 
@@ -114,16 +112,17 @@ class TagController extends Controller
      */
     public function bulkDestroy(Request $request)
     {
-        $request->validate(['tagIds' => 'required|array']);
-        $tagIds = $request->input('tagIds');
+        $request->validate(['ids' => 'required|array']);
+        $tagIds = $request->input('ids');
         foreach ($tagIds as $id) {
             $tag = Tag::find($id);
-            if ($tag->photo && Storage::fileExists($tag->photo)) {
-                Storage::delete($tag->photo);
+            if ($tag) {
+                if ($tag->photo && Storage::fileExists($tag->photo)) {
+                    Storage::delete($tag->photo);
+                }
+                $tag->delete();
             }
-            $tag->delete();
         }
-        // Tag::destroy($tagIds);
         return to_route('tags.index')->with('success', 'Tags deleted successfully');
     }
 

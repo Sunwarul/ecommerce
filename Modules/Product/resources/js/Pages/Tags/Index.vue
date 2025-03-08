@@ -1,14 +1,14 @@
 <template>
     <AuthenticatedLayout>
-        <CrudGenerator :config="config" />
+        <CrudGenerator :config="props.config" />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import CrudGenerator from '@/Components/CrudGenerator.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
-const page = usePage();
-const config = page.props.config;
+const props = defineProps(['config'])
 </script>

@@ -2,12 +2,55 @@
 
 namespace Modules\Product\Providers;
 
+use Illuminate\Support\Str;
 use RecursiveIteratorIterator;
+use Illuminate\Console\Command;
 use RecursiveDirectoryIterator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Schedule;
+use Modules\Product\Services\TagService;
+use Modules\Product\Services\TaxService;
+use Modules\Product\Services\CartService;
+use Modules\Product\Services\UnitService;
 use Nwidart\Modules\Traits\PathNamespace;
+use Modules\Product\Services\BrandService;
+use Modules\Product\Services\OrderService;
+use Modules\Product\Services\CouponService;
+use Modules\Product\Services\PaymentService;
+use Modules\Product\Services\ProductService;
+use Modules\Product\Services\CategoryService;
+use Modules\Product\Services\CustomerService;
+use Modules\Product\Services\DiscountService;
+use Modules\Product\Services\ShoppingService;
+use Modules\Product\Services\SupplierService;
+use Modules\Product\Services\WarrantyService;
+use Modules\Product\Services\InventoryService;
+use Modules\Product\Services\WarehouseService;
+use Modules\Product\Services\SubCategoryService;
+use Modules\Product\Services\ProductStockService;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Product\Interfaces\TagServiceInterface;
+use Modules\Product\Interfaces\TaxServiceInterface;
+use Modules\Product\Providers\EventServiceProvider;
+use Modules\Product\Providers\RouteServiceProvider;
+use Modules\Product\Interfaces\CartServiceInterface;
+use Modules\Product\Interfaces\UnitServiceInterface;
+use Modules\Product\Interfaces\BrandServiceInterface;
+use Modules\Product\Interfaces\OrderServiceInterface;
+use Modules\Product\Interfaces\CouponServiceInterface;
+use Modules\Product\Interfaces\PaymentServiceInterface;
+use Modules\Product\Interfaces\ProductServiceInterface;
+use Modules\Product\Interfaces\CategoryServiceInterface;
+use Modules\Product\Interfaces\CustomerServiceInterface;
+use Modules\Product\Interfaces\DiscountServiceInterface;
+use Modules\Product\Interfaces\ShoppingServiceInterface;
+use Modules\Product\Interfaces\SupplierServiceInterface;
+use Modules\Product\Interfaces\WarrantyServiceInterface;
+use Modules\Product\Interfaces\InventoryServiceInterface;
+use Modules\Product\Interfaces\WarehouseServiceInterface;
+use Modules\Product\Interfaces\SubCategoryServiceInterface;
+use Modules\Product\Interfaces\ProductStockServiceInterface;
 
 class ProductServiceProvider extends ServiceProvider
 {
