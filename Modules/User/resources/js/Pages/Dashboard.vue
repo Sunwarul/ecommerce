@@ -4,7 +4,7 @@
             <h1 class="text-dark text-2xl">Welcome to your Dashboard!</h1>
         </div>
         <div class="card">
-            <Chart type="bar" :data="chartData" :options="chartOptions" class="h-[30rem]" />
+            <Chart type="bar" :data="chartData" :options="chartOptions" class="h-[25rem]" />
         </div>
     </AuthenticatedLayout>
 </template>

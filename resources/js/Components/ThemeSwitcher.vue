@@ -4,24 +4,17 @@
             <li>
                 <button type="button"
                     class="inline-flex w-8 h-8 p-0 items-center justify-center surface-0 dark:surface-800 border border-surface-200 dark:border-surface-600 rounded"
-                    @click="onThemeToggler">
+                    @click="toggleTheme">
                     <i :class="`dark:text-white pi ${iconClass}`" />
                 </button>
             </li>
             <li class="relative">
-                <button v-styleclass="{
-                    selector: '@next',
-                    enterFromClass: 'hidden',
-                    enterActiveClass: 'animate-scalein',
-                    leaveToClass: 'hidden',
-                    leaveActiveClass: 'animate-fadeout',
-                    hideOnOutsideClick: true,
-                }" type="button"
+                <button @click="toggleDropdown" type="button"
                     class="inline-flex w-8 h-8 p-0 items-center justify-center surface-0 dark:surface-800 border border-surface-200 dark:border-surface-600 rounded">
                     <i class="pi pi-palette dark:text-white"></i>
                 </button>
-                <div
-                    class="absolute top-[2.5rem] right-0 hidden w-[16rem] p-3 bg-white dark:bg-surface-800 rounded-md shadow border border-surface-200 dark:border-surface-700 flex-col justify-start items-start gap-3.5 inline-flex origin-top z-10">
+                <div v-show="isDropdownOpen" v-click-outside="closeDropdown"
+                    class="absolute top-[2.5rem] right-0 w-[16rem] p-3 bg-white dark:bg-surface-800 rounded-md shadow border border-surface-200 dark:border-surface-700 flex-col justify-start items-start gap-3.5 inline-flex origin-top z-10">
                     <div class="flex-col justify-start items-start gap-2 inline-flex pr-4">
                         <span class="text-sm font-medium">Primary Colors</span>
                         <div class="self-stretch justify-start items-start gap-2 inline-flex flex-wrap">
@@ -65,20 +58,24 @@
 </template>
 
 <script>
+import { ref, onMounted } from 'vue';
 import { $t, updatePreset, updateSurfacePalette } from '@primevue/themes';
 import Aura from '@primevue/themes/aura';
 import Lara from '@primevue/themes/lara';
 import Nora from '@primevue/themes/nora';
+import Cookies from 'js-cookie';
 
 const presets = {
     Aura,
     Lara,
     Nora,
 };
+
 export default {
     data() {
         return {
             iconClass: 'pi-moon',
+            isDropdownOpen: false,
             presets: Object.keys(presets),
             selectedPrimaryColor: 'noir',
             selectedSurfaceColor: null,
@@ -481,12 +478,92 @@ export default {
             ],
         };
     },
+    created() {
+        // Load saved theme preferences
+        this.loadSavedThemePreferences();
+    },
     methods: {
-        onThemeToggler() {
+        toggleDropdown() {
+            this.isDropdownOpen = !this.isDropdownOpen;
+        },
+        closeDropdown() {
+            this.isDropdownOpen = false;
+        },
+        toggleTheme() {
             const root = document.getElementsByTagName('html')[0];
+            const isDark = root.classList.toggle('p-dark');
+            this.iconClass = isDark ? 'pi-sun' : 'pi-moon';
 
-            root.classList.toggle('p-dark');
-            this.iconClass = this.iconClass === 'pi-moon' ? 'pi-sun' : 'pi-moon';
+            // Save theme mode preference
+            Cookies.set('theme-mode', isDark ? 'dark' : 'light', { expires: 365 });
+        },
+        loadSavedThemePreferences() {
+            // Load theme mode
+            const savedThemeMode = Cookies.get('theme-mode');
+            if (savedThemeMode === 'dark') {
+                document.getElementsByTagName('html')[0].classList.add('p-dark');
+                this.iconClass = 'pi-sun';
+            }
+
+            // Load color preferences
+            const savedPrimaryColor = Cookies.get('primary-color');
+            const savedSurfaceColor = Cookies.get('surface-color');
+            const savedPreset = Cookies.get('theme-preset');
+
+            if (savedPrimaryColor) {
+                this.selectedPrimaryColor = savedPrimaryColor;
+                const color = this.primaryColors.find(c => c.name === savedPrimaryColor);
+                if (color) this.applyTheme('primary', color);
+            }
+
+            if (savedSurfaceColor) {
+                this.selectedSurfaceColor = savedSurfaceColor;
+                const surface = this.surfaces.find(s => s.name === savedSurfaceColor);
+                if (surface) this.applyTheme('surface', surface);
+            }
+
+            if (savedPreset) {
+                this.$appState.theme = savedPreset;
+                this.onPresetChange(savedPreset);
+            }
+        },
+        updateColors(type, color) {
+            if (type === 'primary') {
+                this.selectedPrimaryColor = color.name;
+                Cookies.set('primary-color', color.name, { expires: 365 });
+            }
+            else if (type === 'surface') {
+                this.selectedSurfaceColor = color.name;
+                Cookies.set('surface-color', color.name, { expires: 365 });
+            }
+
+            this.applyTheme(type, color);
+        },
+        applyTheme(type, color) {
+            if (type === 'primary') {
+                updatePreset(this.getPresetExt());
+            } else if (type === 'surface') {
+                updateSurfacePalette(color.palette);
+            }
+        },
+        onRippleChange(value) {
+            this.$primevue.config.ripple = value;
+            Cookies.set('ripple-effect', value, { expires: 365 });
+        },
+        onPresetChange(value) {
+            this.$appState.theme = value;
+            Cookies.set('theme-preset', value, { expires: 365 });
+
+            const preset = presets[value];
+            const surfacePalette = this.surfaces.find(
+                (s) => s.name === this.selectedSurfaceColor
+            )?.palette;
+
+            $t()
+                .preset(preset)
+                .preset(this.getPresetExt())
+                .surfacePalette(surfacePalette)
+                .use({ useDefaultOptions: true });
         },
         getPresetExt() {
             const color = this.primaryColors.find(
@@ -619,40 +696,65 @@ export default {
                 }
             }
         },
-        updateColors(type, color) {
-            if (type === 'primary') this.selectedPrimaryColor = color.name;
-            else if (type === 'surface') this.selectedSurfaceColor = color.name;
-
-            this.applyTheme(type, color);
-        },
-        applyTheme(type, color) {
-            if (type === 'primary') {
-                updatePreset(this.getPresetExt());
-            } else if (type === 'surface') {
-                updateSurfacePalette(color.palette);
-            }
-        },
-        onRippleChange(value) {
-            this.$primevue.config.ripple = value;
-        },
-        onPresetChange(value) {
-            this.$appState.theme = value;
-            const preset = presets[value];
-            const surfacePalette = this.surfaces.find(
-                (s) => s.name === this.selectedSurfaceColor
-            )?.palette;
-
-            $t()
-                .preset(preset)
-                .preset(this.getPresetExt())
-                .surfacePalette(surfacePalette)
-                .use({ useDefaultOptions: true });
-        }
     },
     computed: {
         rippleActive() {
             return this.$primevue.config.ripple;
         }
+    },
+    directives: {
+        clickOutside: {
+            mounted(el, binding) {
+                el.clickOutsideEvent = function (event) {
+                    if (!(el === event.target || el.contains(event.target))) {
+                        binding.value(event);
+                    }
+                };
+                document.addEventListener('click', el.clickOutsideEvent);
+            },
+            unmounted(el) {
+                document.removeEventListener('click', el.clickOutsideEvent);
+            },
+        }
+    },
+    mounted() {
+        // Load ripple effect preference
+        const savedRipple = Cookies.get('ripple-effect');
+        if (savedRipple !== undefined) {
+            this.$primevue.config.ripple = savedRipple === 'true';
+        }
     }
 };
 </script>
+
+<style scoped>
+.animate-scalein {
+    animation: scalein 0.15s ease-in;
+}
+
+.animate-fadeout {
+    animation: fadeout 0.15s ease-out;
+}
+
+@keyframes scalein {
+    0% {
+        opacity: 0;
+        transform: scaleY(0.8);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes fadeout {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+</style>

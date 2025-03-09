@@ -14,7 +14,7 @@
     align-items: center;
 
     .layout-topbar-logo-container {
-        width: 20rem;
+        width: 15rem;
         display: flex;
         align-items: center;
     }
@@ -35,6 +35,10 @@
         &:focus-visible {
             @include focused();
         }
+
+        border: 1px solid #ff000024;
+        padding: 3px 10px;
+
     }
 
     .layout-topbar-action {
