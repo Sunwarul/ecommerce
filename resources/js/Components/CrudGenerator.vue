@@ -46,8 +46,8 @@ const handleFileUpload = (event, fieldName) => {
                 </template>
             </Toolbar>
 
-            <DataTable :value="items" v-model:selection="selectedItems" ref="dt" dataKey="id" :paginator="true"
-                :rows="15" :filters="filters" :totalRecords="100" :lazy="true"
+            <DataTable :value="items.data" v-model:selection="selectedItems" ref="dt" dataKey="id" :paginator="true"
+                :rows="15" :filters="filters" :totalRecords="items.total" :lazy="true"
                 @page="handlePagination($event, props.config.endpoints.list, props.config.entity)"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"

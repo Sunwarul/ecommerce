@@ -19,7 +19,6 @@ export function useCrud(config) {
     });
 
     const fetchItems = async () => {
-        console.log('Fetching...');
         const configValue = config;
         if (!configValue?.endpoints?.list) {
             console.error('Config endpoints.list is not defined');
@@ -30,8 +29,7 @@ export function useCrud(config) {
         }, {
             preserveState: true,
             onSuccess: (page) => {
-                console.log(page);
-                items.value = page.props.items.data;
+                items.value = page.props.items;
             }
         });
     };

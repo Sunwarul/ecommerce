@@ -17,36 +17,15 @@ class TagController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 15);
-        $search = $request->input('search');
-
         $tags = Tag::query()
-            ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('created_at', 'like', "%{$search}%")
-                        ->orWhere('updated_at', 'like', "%{$search}%");
-                });
+            ->when($request->search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
             })
-            ->paginate($perPage);
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->input('per_page', 10))
+            ->withQueryString();
 
         return Inertia::render('Product::Tags/Index', [
-            'config' => [
-                'entity' => 'tags',
-                'title' => 'Manage Tags',
-                'fields' => [
-                    ['name' => 'name', 'type' => 'text', 'label' => 'Tag Name', 'required' => true],
-                    ['name' => 'description', 'type' => 'textarea', 'label' => 'Description', 'required' => false]
-                ],
-                'endpoints' => [
-                    'list' => route('tags.index'),
-                    'create' => route('tags.store'),
-                    'update' => route('tags.update', ['tag' => '__ID__']),
-                    'delete' => route('tags.destroy', ['tag' => '__ID__']),
-                    'bulkDelete' => route('tags.bulk-destroy'),
-                    'export' => route('tags.export'),
-                ]
-            ],
             'items' => $tags
         ]);
     }
