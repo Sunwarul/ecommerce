@@ -9,22 +9,19 @@
                 </template>
 
                 <template #end>
-                    <!-- <FileUpload mode="basic" :maxFileSize="1000000" label="Import" customUpload chooseLabel="Import"
-                        class="mr-2" auto :chooseButtonProps="{ severity: 'secondary' }" /> -->
-                    <!-- <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportCSV($event)" /> -->
                     <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportExcel" />
                 </template>
             </Toolbar>
 
             <DataTable ref="dt" v-model:selection="selectedCategories" :value="sub_categories.data" dataKey="id"
-                :paginator="true" :rows="15" :filters="filters"
+                :paginator="true" :rows="15" :filters="filters" :totalRecords="sub_categories?.total"
                 @page="handlePagination($event, route('sub-categories.index'), 'sub_categories')"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} sub-categories">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
-                        <h1 class="text-3xl">Manage Sub-categories</h1>
+                        <h1 class="text-3xl">Sub-categories</h1>
                         <IconField>
                             <InputIcon>
                                 <i class="pi pi-search" />
@@ -72,8 +69,8 @@
             <div class="flex flex-col gap-6">
                 <div>
                     <label for="name" class="block font-bold mb-2">Name</label>
-                    <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                        :invalid="submitted && !form.name" fluid />
+                    <InputText id="name" v-model.trim="form.name" required="true" :invalid="submitted && !form.name"
+                        fluid />
                     <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
                 </div>
             </div>
@@ -156,10 +153,8 @@ import { router, useForm } from '@inertiajs/vue3';
 import { Select } from 'primevue';
 import { usePage } from '@inertiajs/vue3';
 import { resolveImagePath } from '@/Helpers/imageHelper';
-import axios from 'axios';
 import { handlePagination } from '@/Helpers/pagination';
 import debounce from 'lodash/debounce';
-// import { Dropdown } from 'primevue/dropdown';
 
 const { props } = usePage();
 
