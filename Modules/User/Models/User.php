@@ -2,6 +2,6 @@
 
 namespace Modules\User\Models;
 
-use Modules\Product\Models\User as ModelsUser;
+use App\Models\User as ModelsUser;
 
 class User extends ModelsUser {}
