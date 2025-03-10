@@ -15,6 +15,10 @@ class ProductAttributeValue extends Model
         'color_code'
     ];
 
+    protected $casts = [
+        'color_code' => 'string'
+    ];
+
     // Relationships
     public function attribute(): BelongsTo
     {
@@ -28,7 +32,7 @@ class ProductAttributeValue extends Model
             'product_variation_attributes',
             'attribute_value_id',
             'variation_id'
-        );
+        )->withPivot('attribute_id');
     }
 
     // Helper methods
@@ -39,6 +43,26 @@ class ProductAttributeValue extends Model
 
     public function isColorAttribute(): bool
     {
-        return $this->attribute->type === 'color';
+        return $this->attribute->type === ProductAttribute::TYPE_COLOR;
+    }
+
+    public function getFormattedValue(): string
+    {
+        if ($this->isColorAttribute() && $this->color_code) {
+            return sprintf('%s (%s)', $this->getDisplayValue(), $this->color_code);
+        }
+        return $this->getDisplayValue();
+    }
+
+    public function scopeByAttribute($query, $attributeId)
+    {
+        return $query->where('attribute_id', $attributeId);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereHas('attribute', function($q) {
+            $q->where('is_active', true);
+        });
     }
 }

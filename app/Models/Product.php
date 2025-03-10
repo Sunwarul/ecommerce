@@ -45,6 +45,8 @@ class Product extends Model
         'is_active' => 'boolean',
         'base_price' => 'decimal:2',
         'base_discount_price' => 'decimal:2',
+        'dimensions' => 'array',
+        'materials' => 'array',
     ];
 
     // Relationships
@@ -75,7 +77,8 @@ class Product extends Model
 
     public function attributes(): BelongsToMany
     {
-        return $this->belongsToMany(ProductAttribute::class, 'product_variation_attributes');
+        return $this->belongsToMany(ProductAttribute::class, 'product_variation_attributes', 'product_id', 'attribute_id')
+            ->distinct();
     }
 
     // Scopes
@@ -89,6 +92,13 @@ class Product extends Model
         return $query->where('stock_status', 'in_stock');
     }
 
+    public function scopeWithActiveVariations($query)
+    {
+        return $query->whereHas('variations', function ($q) {
+            $q->where('is_active', true);
+        });
+    }
+
     // Helper methods
     public function isVariable(): bool
     {
@@ -98,6 +108,27 @@ class Product extends Model
     public function getCurrentPrice(): float
     {
         return $this->base_discount_price ?? $this->base_price;
+    }
+
+    public function hasVariations(): bool
+    {
+        return $this->variations()->count() > 0;
+    }
+
+    public function getAttributeValues(ProductAttribute $attribute)
+    {
+        return ProductAttributeValue::whereHas('variations', function ($query) {
+            $query->where('product_id', $this->id);
+        })->where('attribute_id', $attribute->id)->get();
+    }
+
+    public function findVariationByAttributes(array $attributeValueIds)
+    {
+        return $this->variations()
+            ->whereHas('attributeValues', function ($query) use ($attributeValueIds) {
+                $query->whereIn('product_attribute_values.id', $attributeValueIds);
+            }, '=', count($attributeValueIds))
+            ->first();
     }
 
     public function hasDiscount(): bool
