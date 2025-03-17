@@ -14,6 +14,7 @@ const model = ref([
             { label: 'Brand', icon: 'pi pi-fw pi-check-square', to: route('brands.index') },
             { label: 'Tag', icon: 'pi pi-fw pi-check-square', to: route('tags.index') },
             { label: 'Product', icon: 'pi pi-fw pi-check-square', to: route('products.index') },
+            { label: 'Payment Method', icon: 'pi pi-fw pi-check-square', to: route('payment-methods.index') },
         ]
     },
 ]);

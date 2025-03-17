@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\FileUploadRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PaymentMethodStoreRequest extends FormRequest
@@ -22,6 +23,7 @@ class PaymentMethodStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string'],
             'is_active' => ['required'],
+            'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
         ];
     }
 }

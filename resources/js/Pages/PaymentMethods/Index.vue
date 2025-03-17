@@ -12,7 +12,7 @@
             </template>
 
             <template #form="{ submitted, handlePhotoUpload, photoPreview, resolveImagePath }">
-                <Form :form="form" />
+                <Form :form="form" :handlePhotoUpload :photoPreview :resolveImagePath />
             </template>
         </CrudComponent>
     </div>
@@ -25,6 +25,7 @@ import { useForm } from '@inertiajs/vue3';
 const form = useForm({
     name: '',
     is_active: false,
+    photo: null
 });
 
 </script>

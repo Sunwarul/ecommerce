@@ -13,6 +13,19 @@
             </div>
             <div v-if="form?.errors?.is_active" class="text-red-500 text-sm mt-1">{{ form?.errors?.is_active }}</div>
         </div>
+
+        <div class="flex flex-col gap-6 mt-3">
+            <div>
+                <label for="photo" class="block font-bold mb-2">Photo</label>
+                <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
+                    accept="image/*" chooseLabel="Choose Image" class="w-full" />
+            </div>
+            <div>
+                <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)" alt="Image"
+                    class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
+            </div>
+        </div>
+
         <!--
     <div class="flex flex-col gap-6">
         <div>
@@ -23,40 +36,12 @@
         </div>
     </div>
     -->
-        <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    -->
 
     </div>
 </template>
 
 <script setup>
-import { resolveImagePath } from '@/Helpers/imageHelper.js';
+// import { resolveImagePath } from '@/Helpers/imageHelper.js';
 
-defineProps({
-    form: {
-        type: Object,
-        required: true
-    }
-});
+const { form, submitted, handlePhotoUpload, photoPreview, resolveImagePath } = defineProps(['form', 'submitted', 'handlePhotoUpload', 'photoPreview', 'resolveImagePath']);
 </script>
