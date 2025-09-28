@@ -26,8 +26,8 @@ use App\Utils\CrudRouter;
 use Illuminate\Support\Facades\Route;
 
 // Authentication using Sanctum JWT strategy
-Route::post('login', [LoginController::class, 'login'])->name('login');
-Route::post('register', [RegistrationController::class, 'register'])->name('register');
+// Route::post('login', [LoginController::class, 'login'])->name('login');
+// Route::post('register', [RegistrationController::class, 'register'])->name('register');
 
 Route::middleware(['auth:sanctum', 'verified'])->name('api.')->group(function () {
     CrudRouter::setApiFor('categories', CategoryController::class);

@@ -49,8 +49,6 @@ trait HasCrud
             ...$this->addProps(),
         ];
 
-        // dd($dataArray);
-
         return Inertia::render($this->componentPath, $dataArray);
     }
 

@@ -4,7 +4,7 @@
             <template #columns>
                 <Column field="name" header="Name"></Column>
                 <Column field="email" header="Email"></Column>
-                <Column field="created_at" header="Created At" sortable></Column>
+                <Column field="updated_at" header="Created At" sortable></Column>
             </template>
             <template #form="{ submitted }">
                 <Form :form="form" v-bind="{ submitted, permissions }" />
