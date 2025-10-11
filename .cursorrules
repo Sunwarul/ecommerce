@@ -1,8 +1,8 @@
 # Cursor Project Rules (ALWAYS FOLLOW)
 
-- Laravel 11 + PHP 8.2+; Eloquent-first.
+- Laravel 12 + PHP 8.3+; Eloquent-first.
 - Vue 3 + Inertia 2 + PrimeVue + Tailwind.
-- MySQL 8; ULIDs for PKs; soft deletes; foreign keys ON.
+- MySQL 8; soft deletes; foreign keys ON.
 - Multi-branch: all tenant data has branch_id; use server-side BranchContext; add BelongsToBranch trait + global scope where safe.
 - Stock: mutate only via StockLedger; `stocks` is derived/materialized from `stock_ledger_entries`.
 - Security: Policies + Form Requests for every write. Never trust client-provided branch_id/user_id.
