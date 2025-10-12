@@ -25,6 +25,12 @@ const model = ref([
             { label: 'User', icon: 'pi pi-fw pi-id-card', to: route('users.index') },
         ]
     },
+    {
+        label: 'Setup',
+        items: [
+            { label: 'Branches', icon: 'pi pi-fw pi-id-card', to: route('branches.index') },
+        ]
+    },
 ]);
 </script>
 

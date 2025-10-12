@@ -4,7 +4,7 @@
 
 ### Foundation Setup
 
--   [x] Laravel 11+ project setup with PHP 8.2+
+-   [x] Laravel 12+ project setup with PHP 8.3+
 -   [x] Vue 3 + Inertia 2 + PrimeVue + Tailwind CSS integration
 -   [x] Docker setup (nginx, php, mysql, node)
 -   [x] Basic authentication with Laravel Breeze
