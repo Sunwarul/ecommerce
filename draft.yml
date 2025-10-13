@@ -1,0 +1,15 @@
+models:
+  Setting:
+    name: string min:5 max:255 required
+    is_active: boolean default:true
+    photo: file nullable
+    softDeletes: true
+
+controllers:
+  Setting:
+    store: 
+      validate: name is_active photo
+    update:
+      validate: name is_active photo
+
+inertia_vue:
