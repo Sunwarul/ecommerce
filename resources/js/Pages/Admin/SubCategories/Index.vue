@@ -71,7 +71,9 @@
 import CrudComponent from '@/Components/CrudComponent.vue';
 import { useForm } from '@inertiajs/vue3';
 
-defineProps(['categories']);
+const { categories } = defineProps(['categories']);
+
+console.log(categories);
 const form = useForm({
     name: '',
     description: '',

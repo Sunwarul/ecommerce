@@ -28,6 +28,7 @@ class CategoryStoreRequest extends FormRequest
             'name' => 'required|string|unique:categories,name',
             'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'parent_id' => 'nullable|exists:categories,id'
         ];
     }
 }
