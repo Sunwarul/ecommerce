@@ -21,6 +21,11 @@ class RolePermissionSeeder extends Seeder
 
         if (Role::count() == 0) {
             $role = Role::create(['name' => 'Super Admin']);
+            $role = Role::create(['name' => 'Branch Manager']);
+            $role = Role::create(['name' => 'Sales']);
+            $role = Role::create(['name' => 'Inventory']);
+            $role = Role::create(['name' => 'Accounts']);
+            $role = Role::create(['name' => 'Service']);
             $permissions = Permission::all();
             $role->syncPermissions($permissions);
         }
