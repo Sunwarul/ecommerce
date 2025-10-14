@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('photo')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('set null');
             $table->softDeletes();
             $table->timestamps();
         });
