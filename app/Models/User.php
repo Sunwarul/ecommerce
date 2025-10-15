@@ -28,6 +28,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'is_super_admin',
         'password',
     ];
 
@@ -52,6 +54,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class)
+            ->withPivot('role_id')
+            ->withTimestamps();
     }
 
     // public function createdAt(): Attribute
