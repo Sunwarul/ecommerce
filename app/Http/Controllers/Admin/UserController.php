@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\UserExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserStoreRequest;
 use App\Http\Requests\Admin\UserUpdateRequest;
@@ -22,6 +23,7 @@ class UserController extends Controller
             updateRequestClass: UserUpdateRequest::class,
             componentPath: 'Admin/Users/Index',
             searchColumns: ['name', 'email'],
+            exportClass: UserExport::class,
 
         ));
     }
