@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\User;
-use App\Traits\HasCrud;
-use App\Utils\CrudConfig;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserStoreRequest;
 use App\Http\Requests\Admin\UserUpdateRequest;
+use App\Models\User;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class UserController extends Controller
 {
@@ -25,5 +24,19 @@ class UserController extends Controller
             searchColumns: ['name', 'email'],
 
         ));
+    }
+
+    public function destroy($id)
+    {
+        if( auth()->id() == $id) {
+            throw new \Exception("You can't delete yourself");
+        }
+        $model = $this->modelClass::findOrFail($id);
+        // if ($model->photo && Storage::exists($model->photo)) {
+        //     Storage::delete($model->photo);
+        // }
+        $model->delete();
+
+        return to_route($this->resource.'.index')->with('success', 'Deleted successfully');
     }
 }
