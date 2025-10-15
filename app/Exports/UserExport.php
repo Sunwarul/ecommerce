@@ -11,7 +11,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class userExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
+class UserExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
     protected $search;
 
@@ -42,7 +42,6 @@ class userExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMa
             'ID',
             'Name',
             'Email',
-            'Status',
             'Created At',
             'Updated At',
         ];
