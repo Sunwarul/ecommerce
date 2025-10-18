@@ -1,9 +1,8 @@
-import { router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/react';
 
-export const handlePagination = (event, routeName, resourceName) => {
-    const page = (event.first / event.rows) + 1;
-    router.get(routeName, {
-        page: page,
+export const handlePagination = (event, indexRoute, resource) => {
+    router.get(indexRoute, {
+        page: event.page + 1,
         per_page: event.rows
     }, {
         preserveState: true,

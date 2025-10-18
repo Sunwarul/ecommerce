@@ -1,51 +1,64 @@
-<template>
-  <div>
+import React from 'react';
+import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { InputNumber } from 'primereact/inputnumber';
+import { Calendar } from 'primereact/calendar';
+import { Checkbox } from 'primereact/checkbox';
+import { Password } from 'primereact/password';
+import { FileUpload } from 'primereact/fileupload';
+import { Dropdown } from 'primereact/dropdown';
+
+const {{ ModelName }}Form = ({ form, submitted }) => {
+    return (
+        <div>
 {{ formFields }}
 
-    <!--
-    <div class="flex flex-col gap-6">
-        <div>
-            <label for="name" class="block font-bold mb-2">Name</label>
-            <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                :invalid="submitted && !form.name" fluid />
-            <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
-        </div>
-    </div>
-    -->
-    <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    -->
+            {/* Example form fields - uncomment and modify as needed:
 
-  </div>
-</template>
+            <div className="mb-4">
+                <label htmlFor="name" className="block font-bold mb-2">Name</label>
+                <InputText
+                    id="name"
+                    value={form.data.name}
+                    onChange={(e) => form.setData('name', e.target.value)}
+                    className="w-full"
+                    required
+                />
+                {form.errors.name && <small className="text-red-500">{form.errors.name}</small>}
+            </div>
 
-<script setup>
-import { resolveImagePath } from '@/Helpers/imageHelper.js';
+            <div className="mb-4">
+                <label htmlFor="photo" className="block font-bold mb-2">Photo</label>
+                <FileUpload
+                    mode="basic"
+                    name="photo"
+                    customUpload
+                    onSelect={(e) => form.setData('photo', e.files[0])}
+                    auto
+                    accept="image/*"
+                    chooseLabel="Choose Image"
+                    className="w-full"
+                />
+            </div>
 
-defineProps({
-  form: {
-    type: Object,
-    required: true
-  }
-});
-</script>
+            <div className="mb-4">
+                <label htmlFor="is_active" className="block font-bold mb-2">Status</label>
+                <Dropdown
+                    id="is_active"
+                    value={form.data.is_active}
+                    options={[
+                        { label: 'Active', value: 1 },
+                        { label: 'Inactive', value: 0 }
+                    ]}
+                    onChange={(e) => form.setData('is_active', e.value)}
+                    placeholder="Select a status"
+                    className="w-full"
+                />
+                {form.errors.is_active && <small className="text-red-500">{form.errors.is_active}</small>}
+            </div>
+            */}
+        </div>
+    );
+};
+
+export default {{ ModelName }}Form;

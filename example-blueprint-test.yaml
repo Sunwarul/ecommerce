@@ -1,0 +1,33 @@
+# Example Blueprint file to test React CRUD generation
+# Run: php artisan blueprint:build example-blueprint-test.yaml
+
+models:
+  TestItem:
+    name: string:100
+    description: text nullable
+    price: decimal:10,2
+    quantity: integer default:0
+    is_active: boolean default:true
+    published_at: timestamp nullable
+    timestamps: true
+    softDeletes: true
+
+controllers:
+  TestItem:
+    index:
+      query: all
+      render: TestItems.Index with:items,config,filters
+    store:
+      validate: name, price
+      save: testItem
+      flash: testItem.name
+      redirect: testItems.index
+    update:
+      validate: name, price
+      update: testItem
+      flash: testItem.name
+      redirect: testItems.index
+    destroy:
+      delete: testItem
+      redirect: testItems.index
+

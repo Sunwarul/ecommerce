@@ -1,10 +1,6 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import vue from '@vitejs/plugin-vue';
-
-// PrimeVue related imports
-import Components from 'unplugin-vue-components/vite';
-import { PrimeVueResolver } from '@primevue/auto-import-resolver';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
     server: {
@@ -21,23 +17,11 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.scss',
-                'resources/js/app.js',
+                'resources/js/app.jsx',
             ],
             refresh: true,
         }),
-        vue({
-            template: {
-                transformAssetUrls: {
-                    base: null,
-                    includeAbsolute: false,
-                },
-            },
-        }), // primevue related starts
-        Components({
-            resolvers: [
-                PrimeVueResolver()
-            ]
-        }),
+        react(),
     ],
     resolve: {
         alias: {

@@ -2,7 +2,7 @@
 
 use App\Generators\ControllerGenerator;
 use App\Generators\InertiaPageGenerator;
-use App\Generators\InertiaVueGenerator;
+use App\Generators\InertiaReactGenerator;
 use App\Generators\ResourceGenerator;
 use App\Generators\RouteGenerator;
 
@@ -178,7 +178,7 @@ return [
         // 'resource' => \Blueprint\Generators\Statements\ResourceGenerator::class,
         'view' => \Blueprint\Generators\Statements\ViewGenerator::class,
         'inertia_page' => InertiaPageGenerator::class,
-        'vue' => InertiaVueGenerator::class,
+        'react' => InertiaReactGenerator::class,
         'policy' => \Blueprint\Generators\PolicyGenerator::class,
     ],
 
