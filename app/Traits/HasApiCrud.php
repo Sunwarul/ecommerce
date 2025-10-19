@@ -33,7 +33,7 @@ trait HasApiCrud
         });
 
         if ($request->has('trashed')) {
-            $query->when($request->trashed, fn ($query) => $query->onlyTrashed());
+            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
         }
 
         $query = $this->modifyQuery($query);
@@ -95,7 +95,7 @@ trait HasApiCrud
 
     public function bulkDestroy(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         foreach ($request->ids as $id) {
             $model = $this->modelClass::find($id);
             if ($model) {
@@ -108,15 +108,15 @@ trait HasApiCrud
 
     public function bulkRestore(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         $this->modelClass::whereIn('id', $request->ids)->restore();
 
-        return ApiResponse::updated($model, __('Items restored successfully'));
+        return ApiResponse::updated(null, __('Items restored successfully'));
     }
 
     public function bulkForceDelete(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         // $this->modelClass::whereIn('id', $request->ids)->forceDelete();
         foreach ($request->ids as $id) {
             $model = $this->modelClass::find($id);
@@ -134,7 +134,7 @@ trait HasApiCrud
     public function export(Request $request)
     {
         $search = $request->input('search');
-        $filename = strtolower(class_basename($this->modelClass)).'-'.now()->format('Y-m-d-H-i-s').'.xlsx';
+        $filename = strtolower(class_basename($this->modelClass)) . '-' . now()->format('Y-m-d-H-i-s') . '.xlsx';
 
         return Excel::download(new $this->exportClass($search), $filename);
     }
