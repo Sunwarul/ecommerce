@@ -32,6 +32,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
     CrudRouter::setFor('branches', App\Http\Controllers\BranchController::class);
+    CrudRouter::setFor('warehouses', App\Http\Controllers\WarehouseController::class);
 
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);

@@ -3,26 +3,28 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+use App\Models\Warehouse;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Warehouse>
- */
 class WarehouseFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * The name of the factory's corresponding model.
      *
-     * @return array<string, mixed>
+     * @var string
      */
-    public function definition()
+    protected $model = Warehouse::class;
+
+    /**
+     * Define the model's default state.
+     */
+    public function definition(): array
     {
         return [
-            'name' => $this->faker->name(),
-            'code' => $this->faker->randomNumber(),
-            'address' => $this->faker->address(),
-            'description' => $this->faker->paragraph(),
-            'under_business' => $this->faker->word(),
-            'is_active' => $this->faker->boolean(90),
+            'name' => fake()->name(),
+            'address' => fake()->word(),
+            'phone' => fake()->phoneNumber(),
+            'status' => fake()->boolean(),
         ];
     }
 }

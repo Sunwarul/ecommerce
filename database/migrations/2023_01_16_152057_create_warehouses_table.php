@@ -16,13 +16,11 @@ return new class extends Migration
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('code');
-            $table->text('address')->nullable();
-            $table->longText('description')->nullable();
-            $table->string('under_business')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
+            $table->string('address');
+            $table->string('phone');
+            $table->boolean('status')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

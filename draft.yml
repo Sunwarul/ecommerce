@@ -1,0 +1,16 @@
+models:
+  Warehouse:
+    name: string min:3 max:255
+    address: string min:3 max:255
+    phone: string min:3 max:255
+    status: nullable boolean
+    softDeletes: true
+
+controllers:
+  Warehouse:
+    store:
+      validate: name address status
+    update:
+      validate: name address status
+
+inertia_vue:
