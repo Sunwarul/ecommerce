@@ -1,6 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
 @use "./layout/layout.scss";
-@use "primeicons/primeicons.css";
 @use "./demo/demo.scss";
 
 @tailwind base;
@@ -8,7 +7,6 @@
 @tailwind utilities;
 
 @import "./flags.css";
-// @import "https://unpkg.com/primeicons/primeicons.css";
 
 .hello {
     color: red;
