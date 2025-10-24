@@ -167,7 +167,7 @@ return [
         'model' => \Blueprint\Generators\ModelGenerator::class,
         'route' => RouteGenerator::class,
         'seeder' => \Blueprint\Generators\SeederGenerator::class,
-        'test' => \Blueprint\Generators\PhpUnitTestGenerator::class,
+        // 'test' => \Blueprint\Generators\PhpUnitTestGenerator::class,
         // 'test' => \Blueprint\Generators\PestTestGenerator::class,
         'event' => \Blueprint\Generators\Statements\EventGenerator::class,
         'form_request' => \Blueprint\Generators\Statements\FormRequestGenerator::class,

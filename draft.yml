@@ -1,16 +1,17 @@
 models:
-  Warehouse:
+  Supplier:
+    code: string min:3 max:20 unique
     name: string min:3 max:255
-    address: string min:3 max:255
+    address: nullable min:3 max:255
     phone: string min:3 max:255
-    status: nullable boolean
+    status: nullable boolean default:true
     softDeletes: true
 
 controllers:
-  Warehouse:
+  Supplier:
     store:
-      validate: name address status
+      validate: code name address phone status
     update:
-      validate: name address status
+      validate: code name address phone status
 
 inertia_vue:
