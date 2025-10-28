@@ -55,26 +55,26 @@ trait HasCrudConfig
         ];
 
         $config = [
-            'title' => Str::title($this->resource),
+            'title' => Str::of($this->resource)->title()->replace('_', ' '),
             'modelSingular' => $modelLowerCase,
             'modelRaw' => $modelRawName,
             'resource' => $this->resource,
         ];
 
         foreach ($routes as $key => $route) {
-            if ($key === 'indexRouteTrashed' && Route::has($route)) {
-                $config[$key] = route($route, ['trashed' => true]);
-            } elseif (in_array($key, ['updateRoute', 'deleteRoute']) && Route::has($route)) {
-                $config[$key] = route($route, [$modelLowerCase => '__ID__']);
+            $sanitizedRoute = str_replace('_', '-', $route);
+            if ($key === 'indexRouteTrashed' && Route::has($sanitizedRoute)) {
+                $config[$key] = route($sanitizedRoute, ['trashed' => true]);
+            } elseif (in_array($key, ['updateRoute', 'deleteRoute']) && Route::has($sanitizedRoute)) {
+                $config[$key] = route($sanitizedRoute, [$modelLowerCase => '__ID__']);
             } elseif ($key === 'exportRoute') {
-                $config[$key] = Route::has($route) ? route($route) : '';
+                $config[$key] = Route::has($sanitizedRoute) ? route($sanitizedRoute) : '';
                 $config[$key] = isset($this->exportClass) && ! empty($this->exportClass) ? $config[$key] : '';
             } else {
-                $config[$key] = Route::has($route) ? route($route) : '';
+                $config[$key] = Route::has($sanitizedRoute) ? route($sanitizedRoute) : '';
             }
         }
 
-        // dd($config);
         return $config;
     }
 }

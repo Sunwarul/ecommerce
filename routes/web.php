@@ -1,19 +1,21 @@
 <?php
 
-use App\Http\Controllers\Admin\BrandController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\PaymentMethodController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\SubCategoryController;
+use App\Utils\CrudRouter;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BranchController;
+use App\Http\Controllers\BaseUnitController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\TodoController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\SubCategoryController;
+use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Frontend\WelcomePageController;
-use App\Utils\CrudRouter;
-use Illuminate\Support\Facades\Route;
 
 require_once __DIR__ . '/auth.php';
 
@@ -31,7 +33,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('todos', TodoController::class);
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
-    CrudRouter::setFor('branches', App\Http\Controllers\BranchController::class);
+    CrudRouter::setFor('branches',BranchController::class);
+    CrudRouter::setFor('base-units',BaseUnitController::class);
+    CrudRouter::setFor('units',UnitController::class);
 
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);

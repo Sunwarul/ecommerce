@@ -29,6 +29,8 @@ const model = ref([
         label: 'Setup',
         items: [
             { label: 'Branches', icon: 'pi pi-fw pi-id-card', to: route('branches.index') },
+            { label: 'Base Units', icon: 'pi pi-fw pi-id-card', to: route('base-units.index') },
+            { label: 'Units', icon: 'pi pi-fw pi-id-card', to: route('units.index') },
         ]
     },
 ]);
