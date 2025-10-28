@@ -2,9 +2,12 @@
 
 use App\Utils\CrudRouter;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BaseUnitController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\TodoController;
@@ -12,6 +15,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
@@ -34,10 +38,11 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
     CrudRouter::setFor('branches',BranchController::class);
-    CrudRouter::setFor('warehouses', App\Http\Controllers\WarehouseController::class);
-    CrudRouter::setFor('suppliers', App\Http\Controllers\SupplierController::class);
+    CrudRouter::setFor('warehouses', WarehouseController::class);
+    CrudRouter::setFor('suppliers', SupplierController::class);
     CrudRouter::setFor('base-units',BaseUnitController::class);
     CrudRouter::setFor('units',UnitController::class);
+    CrudRouter::setFor('expense-categories', ExpenseCategoryController::class);
 
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);

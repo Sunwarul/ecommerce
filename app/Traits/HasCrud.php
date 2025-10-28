@@ -91,7 +91,7 @@ trait HasCrud
         }
         $res = $model->update($validatedData);
 
-        return to_route($this->resource.'.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
     }
 
     public function destroy($id)
@@ -102,7 +102,7 @@ trait HasCrud
         // }
         $model->delete();
 
-        return to_route($this->resource.'.index')->with('success', 'Deleted successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Deleted successfully');
     }
 
     public function bulkDestroy(Request $request)
@@ -115,7 +115,7 @@ trait HasCrud
             }
         }
 
-        return to_route($this->resource.'.index')->with('success', 'Items deleted successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Items deleted successfully');
     }
 
     public function bulkRestore(Request $request)
