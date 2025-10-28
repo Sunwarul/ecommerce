@@ -10,5 +10,33 @@ class Warehouse extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'code', 'address', 'description', 'under_business', 'is_active'];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'name',
+        'address',
+        'phone',
+        'status',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'id' => 'integer',
+            'status' => 'boolean',
+        ];
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return $this->status ? 'Active' : 'Inactive';
+    }
 }

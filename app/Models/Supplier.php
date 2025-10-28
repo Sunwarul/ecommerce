@@ -4,23 +4,35 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Supplier extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
+        'code',
         'name',
-        'phone',
-        'secur_number',
-        'nid_number',
-        'email',
         'address',
-        'city',
-        'country',
-        'zip_code',
-        'group',
-        'land_mark',
-        'is_active',
+        'phone',
+        'status',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'id' => 'integer',
+            'status' => 'boolean',
+        ];
+    }
 }

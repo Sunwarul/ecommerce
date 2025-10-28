@@ -31,6 +31,7 @@ const model = ref([
             { label: 'Branches', icon: 'pi pi-fw pi-id-card', to: route('branches.index') },
             { label: 'Base Units', icon: 'pi pi-fw pi-id-card', to: route('base-units.index') },
             { label: 'Units', icon: 'pi pi-fw pi-id-card', to: route('units.index') },
+            { label: 'Suppliers', icon: 'pi pi-fw pi-id-card', to: route('suppliers.index') },
         ]
     },
 ]);

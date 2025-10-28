@@ -3,32 +3,29 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+use App\Models\Supplier;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Supplier>
- */
 class SupplierFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * The name of the factory's corresponding model.
      *
-     * @return array<string, mixed>
+     * @var string
      */
-    public function definition()
+    protected $model = Supplier::class;
+
+    /**
+     * Define the model's default state.
+     */
+    public function definition(): array
     {
         return [
-            'name' => $this->faker->name(),
-            'phone' => $this->faker->phoneNumber(),
-            'secur_number' => $this->faker->phoneNumber(),
-            'nid_number' => $this->faker->randomNumber(),
-            'email' => $this->faker->email(),
-            'address' => $this->faker->address(),
-            'city' => $this->faker->city(),
-            'country' => $this->faker->country(),
-            'zip_code' => $this->faker->postcode(),
-            'group' => $this->faker->word(),
-            'land_mark' => $this->faker->word(),
-            'is_active' => $this->faker->boolean(90),
+            'code' => fake()->word(),
+            'name' => fake()->name(),
+            'address' => fake()->word(),
+            'phone' => fake()->phoneNumber(),
+            'status' => fake()->boolean(),
         ];
     }
 }

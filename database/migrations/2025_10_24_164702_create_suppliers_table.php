@@ -8,17 +8,16 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('warehouses', function (Blueprint $table) {
+        Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
+            $table->string('code')->unique();
             $table->string('name');
-            $table->string('address');
+            $table->string('address')->nullable();
             $table->string('phone');
-            $table->boolean('status')->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
@@ -26,11 +25,9 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('warehouses');
+        Schema::dropIfExists('suppliers');
     }
 };

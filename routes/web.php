@@ -34,6 +34,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
     CrudRouter::setFor('branches',BranchController::class);
+    CrudRouter::setFor('warehouses', App\Http\Controllers\WarehouseController::class);
+    CrudRouter::setFor('suppliers', App\Http\Controllers\SupplierController::class);
     CrudRouter::setFor('base-units',BaseUnitController::class);
     CrudRouter::setFor('units',UnitController::class);
 
