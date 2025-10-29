@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Admin;
+namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -8,25 +8,22 @@ class UnitUpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array<string, mixed>
      */
-    public function rules()
+    public function rules(): array
     {
         return [
-            'name' => 'required|string'.$this->id,
-            'short_name' => 'nullable',
-            'is_active' => 'nullable|boolean',
+            'name' => ['required', 'string'],
+            'short_code' => ['required', 'string'],
+            'status' => ['required'],
+            'base_unit_id' => ['required', 'integer', 'exists:base_units,id'],
         ];
     }
 }

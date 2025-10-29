@@ -1,17 +1,14 @@
 models:
-  Supplier:
-    code: string min:3 max:20 unique
+  ExpenseCategory:
     name: string min:3 max:255
-    address: nullable min:3 max:255
-    phone: string min:3 max:255
     status: nullable boolean default:true
     softDeletes: true
 
 controllers:
-  Supplier:
+  ExpenseCategory:
     store:
-      validate: code name address phone status
+      validate: code status
     update:
-      validate: code name address phone status
+      validate: code status
 
 inertia_vue:

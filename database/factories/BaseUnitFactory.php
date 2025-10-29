@@ -5,16 +5,15 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use App\Models\BaseUnit;
-use App\Models\Unit;
 
-class UnitFactory extends Factory
+class BaseUnitFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = Unit::class;
+    protected $model = BaseUnit::class;
 
     /**
      * Define the model's default state.
@@ -23,9 +22,7 @@ class UnitFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'short_code' => fake()->word(),
             'status' => fake()->boolean(),
-            'base_unit_id' => BaseUnit::factory(),
         ];
     }
 }

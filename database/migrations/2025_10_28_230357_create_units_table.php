@@ -8,27 +8,24 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('units', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('short_name')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
+            $table->string('short_code');
+            $table->boolean('status')->default(true);
+            $table->foreignId('base_unit_id');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('units');
     }
