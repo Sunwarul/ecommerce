@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('base-units',BaseUnitController::class);
     CrudRouter::setFor('units',UnitController::class);
     CrudRouter::setFor('expense-categories', ExpenseCategoryController::class);
+    CrudRouter::setFor('expenses', App\Http\Controllers\ExpenseController::class);
 
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);

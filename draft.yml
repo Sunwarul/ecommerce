@@ -1,14 +1,20 @@
 models:
-  ExpenseCategory:
-    name: string min:3 max:255
+  Expense:
+    title: string min:2 max:255
+    date: nullable date
+    amount: nullable decimal precision:10 scale:2
+    details: nullable text
     status: nullable boolean default:true
     softDeletes: true
 
+    relationships:
+      belongsTo: ExpenseCategory, User, Warehouse
+
 controllers:
-  ExpenseCategory:
+  Expense:
     store:
-      validate: code status
+      validate: title date amount details status category_id user_id warehouse_id
     update:
-      validate: code status
+      validate: title date amount details status category_id user_id warehouse_id
 
 inertia_vue:
