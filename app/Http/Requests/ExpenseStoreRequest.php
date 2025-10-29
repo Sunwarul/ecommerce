@@ -21,13 +21,14 @@ class ExpenseStoreRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string'],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date:Y-m-d'],
             'amount' => ['required', 'numeric'],
             'details' => ['nullable', 'string'],
             'status' => ['nullable'],
             'expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
+            'attachment' => ['nullable', 'file', 'mimes:png,jpg,pdf,xlsx,csv'],
         ];
     }
 }

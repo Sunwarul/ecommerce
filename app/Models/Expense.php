@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Expense extends Model
 {
@@ -25,6 +27,7 @@ class Expense extends Model
         'expense_category_id',
         'user_id',
         'warehouse_id',
+        'attachment',
     ];
 
     /**
@@ -32,17 +35,19 @@ class Expense extends Model
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    // protected function casts(): array
+    // {
+    //     return [
+    //         'date' => 'timestamp:Y-m-d',
+    //     ];
+    // }
+
+    public function date() : Attribute
     {
-        return [
-            'id' => 'integer',
-            'date' => 'date',
-            'amount' => 'decimal',
-            'status' => 'boolean',
-            'expense_category_id' => 'integer',
-            'user_id' => 'integer',
-            'warehouse_id' => 'integer',
-        ];
+        return Attribute::make(
+            set: fn($value) => Carbon::parse($value)->format('Y-m-d'),
+            get: fn($value) => Carbon::parse($value)->format('Y-m-d'),
+        );
     }
 
     public function expenseCategory(): BelongsTo

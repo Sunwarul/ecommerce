@@ -28,6 +28,7 @@ class ExpenseUpdateRequest extends FormRequest
             'expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
+            'attachment' => ['nullable', 'file', 'mimes:png,jpg,pdf,xlsx,csv'],
         ];
     }
 }

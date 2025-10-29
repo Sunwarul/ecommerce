@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('expense_category_id');
             $table->foreignId('user_id');
             $table->foreignId('warehouse_id');
+            $table->string('attachment')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
