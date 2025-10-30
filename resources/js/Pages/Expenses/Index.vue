@@ -5,6 +5,15 @@
                 <Column field="title" header="Title"></Column>
                 <Column field="date" header="Date"></Column>
                 <Column field="amount" header="Amount"></Column>
+                <Column field="is_active" header="Status">
+                    <template #body="{ data }">
+                        <Badge
+                            :severity="data.is_active ? 'success' : 'danger'"
+                        >
+                            {{ data.is_active ? "Active" : "Inactive" }}
+                        </Badge>
+                    </template>
+                </Column>
                 <Column
                     field="created_at"
                     header="Created At"
