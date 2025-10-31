@@ -70,6 +70,7 @@ trait HasCrud
 
     public function store(Request $request)
     {
+        dd($request->all());
         $this->ensureModelClass();
         $validatedData = app($this->storeRequestClass)->validated();
         if ($request->file('photo')) {
