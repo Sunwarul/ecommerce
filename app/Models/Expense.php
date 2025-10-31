@@ -28,6 +28,7 @@ class Expense extends Model
         'user_id',
         'warehouse_id',
         'attachment',
+        'photo',
     ];
 
     /**

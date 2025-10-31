@@ -76,8 +76,8 @@
 
         <div class="flex flex-col gap-6 mt-3">
             <div>
-                <label for="attachment" class="block font-bold mb-2">Attachment</label>
-                <FileUpload mode="basic" name="attachment" customUpload @select="handlePhotoUpload" :auto="true" chooseLabel="Choose File" class="w-full" />
+                <label for="photo" class="block font-bold mb-2">Attachment</label>
+                <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true" chooseLabel="Choose File" class="w-full" />
             </div>
             <div>
                 <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)" alt="File"

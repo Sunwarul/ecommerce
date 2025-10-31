@@ -59,5 +59,6 @@ const form = useForm({
     expense_category_id: "",
     user_id: "",
     warehouse_id: "",
+    photo: null,
 });
 </script>
