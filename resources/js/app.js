@@ -1,26 +1,27 @@
-import './bootstrap';
-import '../css/app.scss';
-import 'primeicons/primeicons.css'
-import Theme from './Helpers/Theme';
+import "primeicons/primeicons.css";
+import "../css/app.scss";
+import "./bootstrap";
+import Theme from "./Helpers/Theme";
 
-import { createInertiaApp } from '@inertiajs/vue3';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createApp, h } from 'vue';
-import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { createInertiaApp } from "@inertiajs/vue3";
+import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
+import { createApp, h } from "vue";
+import { ZiggyVue } from "../../vendor/tightenco/ziggy";
 
-import PrimeVue from 'primevue/config';
+import PrimeVue from "primevue/config";
 
-import ConfirmationService from 'primevue/confirmationservice';
-import DialogService from 'primevue/dialogservice';
-import ToastService from 'primevue/toastservice';
-import AppState from './Helpers/AppState';
+import ConfirmationService from "primevue/confirmationservice";
+import DialogService from "primevue/dialogservice";
+import ToastService from "primevue/toastservice";
+import AppState from "./Helpers/AppState";
+import { resolveImagePath } from "./Helpers/ResolveImage";
 
-const appName = import.meta.env.VITE_APP_NAME || 'E-Commerce';
+const appName = import.meta.env.VITE_APP_NAME || "E-Commerce";
 
 createInertiaApp({
-    title: (title) => title ? `${title} - ${appName}` : appName,
+    title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => {
-        const [module, page] = name.split('::');
+        const [module, page] = name.split("::");
         if (page) {
             return resolvePageComponent(
                 `../../Modules/${module}/resources/js/Pages/${page}.vue`,
@@ -29,13 +30,31 @@ createInertiaApp({
         } else {
             return resolvePageComponent(
                 `./Pages/${name}.vue`,
-                import.meta.glob('./Pages/**/*.vue'),
-            )
+                import.meta.glob("./Pages/**/*.vue")
+            );
         }
-
     },
+    // setup({ el, App, props, plugin }) {
+    //     return createApp({ render: () => h(App, props) })
+    //         .use(plugin)
+    //         .use(ZiggyVue)
+    //         .use(ConfirmationService)
+    //         .use(ToastService)
+    //         .use(DialogService)
+    //         .use(AppState)
+    //         .use(PrimeVue, {
+    //             theme: {
+    //                 preset: Theme,
+    //                 options: {
+    //                     darkModeSelector: '.app-dark'
+    //                 }
+    //             }
+    //         })
+    //           .config.globalProperties.$resolveImagePath = resolveImagePath;
+    //         .mount(el);
+    // },
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .use(ConfirmationService)
@@ -46,13 +65,19 @@ createInertiaApp({
                 theme: {
                     preset: Theme,
                     options: {
-                        darkModeSelector: '.app-dark'
-                    }
-                }
-            })
-            .mount(el);
+                        darkModeSelector: ".app-dark",
+                    },
+                },
+            });
+
+        // ✅ set global property before mounting
+        app.config.globalProperties.$resolveImagePath = resolveImagePath;
+
+        // ✅ return the mounted app
+        return app.mount(el);
     },
+
     progress: {
-        color: '#4B5563',
+        color: "#4B5563",
     },
 });

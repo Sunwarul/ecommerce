@@ -24,7 +24,15 @@ class CategoryController extends Controller
             searchColumns: ['name'],
             exportClass: CategoryExport::class,
             componentPath: 'Admin/Categories/Index',
-            withRelations: [],
+            withRelations: ['parent'],
+            addProps: $this->addProps(),
         ));
+    }
+    protected function addProps(): array
+    {
+        $parentCategories = Category::select('id', 'name')->whereNull('parent_id')->get();
+        return [
+            'parentCategories' => $parentCategories,
+        ];
     }
 }
