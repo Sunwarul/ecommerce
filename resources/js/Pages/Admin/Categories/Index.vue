@@ -153,6 +153,4 @@ const { categories, parentCategories } = defineProps({
     parentCategories: Object,
 });
 
-// ✅ log full array/object
-console.log("Full props.data:", parentCategories);
 </script>

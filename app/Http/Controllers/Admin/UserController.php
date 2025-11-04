@@ -39,6 +39,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+
         $this->ensureModelClass();
         $validatedData = app($this->storeRequestClass)->validated();
         if ($request->file('photo')) {
