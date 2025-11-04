@@ -26,6 +26,7 @@ class CategoryUpdateRequest extends FormRequest
     {
         return [
             'name' => 'required|string|unique:categories,name,'.$this->id,
+            'parent_id' => ['nullable', 'exists:categories,id', 'not_in:'.$this->id],
             'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
             'is_active' => 'nullable|boolean',
         ];

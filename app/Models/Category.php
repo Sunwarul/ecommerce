@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Category extends BaseModel
 {
@@ -20,5 +21,12 @@ class Category extends BaseModel
     public function parent()
     {
         return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    // mutator for convert title to slug
+    public function setNameAttribute($value)
+    {
+        $this->attributes['name'] = $value;
+        $this->attributes['slug'] = Str::slug($value);
     }
 }
