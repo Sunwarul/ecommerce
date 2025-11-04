@@ -26,6 +26,7 @@ class CategoryStoreRequest extends FormRequest
     {
         return [
             'name' => 'required|string|unique:categories,name',
+            'parent_id' => ['nullable', 'exists:categories,id'],
             'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
             'is_active' => 'nullable|boolean',
         ];

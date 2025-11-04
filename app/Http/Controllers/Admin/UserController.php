@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserStoreRequest;
 use App\Http\Requests\Admin\UserUpdateRequest;
+use App\Models\Role;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -23,7 +25,52 @@ class UserController extends Controller
             updateRequestClass: UserUpdateRequest::class,
             componentPath: 'Admin/Users/Index',
             searchColumns: ['name', 'email'],
-
+            addProps: $this->addProps(),
+            withRelations: ['roles:id,name'],
         ));
+    }
+    protected function addProps(): array
+    {
+        $roles = Role::all();
+        return [
+            'roles' => $roles,
+        ];
+    }
+
+    public function store(Request $request)
+    {
+        $this->ensureModelClass();
+        $validatedData = app($this->storeRequestClass)->validated();
+        if ($request->file('photo')) {
+            $validatedData['photo'] = $request->file('photo')->store($this->resource);
+        }
+        $model = new $this->modelClass;
+        $model->fill($validatedData);
+        $model->save();
+
+        // Assign roles if provided
+        if (isset($validatedData['roles'])) {
+            $model->roles()->sync($validatedData['roles']);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validatedData = app($this->updateRequestClass)->validated();
+        $model = $this->modelClass::findOrFail($id);
+        if ($request->file('photo')) {
+            $validatedData['photo'] = $request->file('photo')->store($this->resource);
+            if ($model->photo && Storage::fileExists($model->photo)) {
+                Storage::delete($model->photo);
+            }
+        }
+        $res = $model->update($validatedData);
+
+        // Update roles if provided
+        if (isset($validatedData['roles'])) {
+            $model->roles()->sync($validatedData['roles']);
+        }
+
+        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Updated successfully');
     }
 }

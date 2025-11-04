@@ -12,7 +12,9 @@ use App\Utils\CrudConfig;
 
 class CategoryController extends Controller
 {
+
     use HasCrud;
+
 
     public function __construct()
     {
