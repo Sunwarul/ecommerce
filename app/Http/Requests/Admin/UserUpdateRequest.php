@@ -27,6 +27,8 @@ class UserUpdateRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $this->route('user')],
             // 'password' => ['nullable'],
             'roles' => ['nullable', 'array', 'exists:roles,id'],
+
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone', 'not_in:' . $this->phone],
         ];
     }
 }

@@ -1,9 +1,21 @@
 <template>
     <div>
-        <CrudComponent :form="form">
+        <CrudComponent :form="form" @editingItem="handleEditingItem">
             <template #columns>
+                <Column field="photo" header="Photo">
+                    <template #body="{ data }">
+                        <img
+                            :src="$resolveImagePath(data.photo)"
+                            alt="Category Photo"
+                            class="shadow-md rounded-xl w-16 h-16"
+                            style="filter: grayscale(100%)"
+                            @click="() => console.log('data', data)"
+                        />
+                    </template>
+                </Column>
                 <Column field="name" header="Name"></Column>
                 <Column field="email" header="Email"></Column>
+                <Column field="photo" header="Photo"></Column>
                 <!-- roles column -->
                 <Column field="roles" header="Roles">
                     <template #body="slotProps">
@@ -24,11 +36,23 @@
                     sortable
                 ></Column>
             </template>
-            <template #form="{ submitted }">
+            <template
+                #form="{
+                    submitted,
+                    handlePhotoUpload,
+                    photoPreview,
+                    resolveImagePath,
+                }"
+            >
                 <Form
                     :form="form"
                     :roles="roles"
-                    v-bind="{ submitted, permissions }"
+                    v-bind="{
+                        submitted,
+                        handlePhotoUpload,
+                        photoPreview,
+                        resolveImagePath,
+                    }"
                 />
             </template>
         </CrudComponent>
@@ -37,6 +61,7 @@
 <script setup>
 import CrudComponent from "@/Components/CrudComponent.vue";
 import { useForm } from "@inertiajs/vue3";
+import { nextTick } from "vue";
 import Form from "./Form.vue";
 const { permissions, roles } = defineProps(["permissions", "roles"]);
 
@@ -46,5 +71,16 @@ const form = useForm({
     password: "",
     password_confirmation: "",
     roles: [],
+    phone: "",
+    photo: "",
 });
+const handleEditingItem = async (user) => {
+    console.log("user.roles:", user.roles);
+    form.name = user.name;
+    form.email = user.email;
+    // form.phone = user.phone;
+    await nextTick();
+    form.roles = user.roles?.map((role) => role.id) || [];
+    console.log("form.roles updated:", form.roles);
+};
 </script>
