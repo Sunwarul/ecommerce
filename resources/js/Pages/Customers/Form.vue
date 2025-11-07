@@ -94,18 +94,19 @@
             </div>
         </div>
 
-        <div class="mb-4">
-            <label for="currency_id" class="">Currency Id</label>
-            <InputText
-                id="currency_id"
-                v-model="form.currency_id"
-                class="mt-1 block w-full"
-            />
-            <div
-                v-if="form?.errors?.currency_id"
-                class="text-red-500 text-sm mt-1"
-            >
-                {{ form?.errors?.currency_id }}
+        <div class="flex flex-col gap-6 mt-3 mb-4">
+            <div>
+                <label for="currency_id" class="block font-bold mb-2"
+                    >Currency</label
+                >
+                <Select
+                    v-model="form.currency_id"
+                    :options="currencies"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select a currency"
+                    class="w-full"
+                />
             </div>
         </div>
 
@@ -225,15 +226,28 @@
             </div>
         </div>
 
-        <div class="mb-4">
-            <label for="photo" class="">Photo</label>
-            <InputText
-                id="photo"
-                v-model="form.photo"
-                class="mt-1 block w-full"
-            />
-            <div v-if="form?.errors?.photo" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.photo }}
+        <div class="flex flex-col gap-6 mt-3">
+            <div>
+                <label for="photo" class="block font-bold mb-2">Photo</label>
+                <FileUpload
+                    mode="basic"
+                    name="photo"
+                    customUpload
+                    @select="handlePhotoUpload"
+                    :auto="true"
+                    accept="image/*"
+                    chooseLabel="Choose Image"
+                    class="w-full"
+                />
+            </div>
+            <div>
+                <img
+                    v-if="form.photo || photoPreview"
+                    :src="photoPreview ?? resolveImagePath(form.photo)"
+                    alt="Image"
+                    class="shadow-md rounded-xl w-[200px]"
+                    style="filter: grayscale(100%)"
+                />
             </div>
         </div>
 
@@ -249,21 +263,7 @@
             </div>
         </div>
 
-        <div class="mb-4">
-            <label for="created_by" class="">Created By</label>
-            <InputText
-                id="created_by"
-                v-model="form.created_by"
-                class="mt-1 block w-full"
-            />
-            <div
-                v-if="form?.errors?.created_by"
-                class="text-red-500 text-sm mt-1"
-            >
-                {{ form?.errors?.created_by }}
-            </div>
-        </div>
-
+     
         <div class="mb-4">
             <div class="flex items-center">
                 <Checkbox
@@ -318,6 +318,10 @@
 defineProps({
     form: {
         type: Object,
+        required: true,
+    },
+    currencies: {
+        type: Array,
         required: true,
     },
 });
