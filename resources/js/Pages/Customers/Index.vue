@@ -21,7 +21,16 @@
                     resolveImagePath,
                 }"
             >
-                <Form :form="form" />
+                <Form
+                    :form="form"
+                    :currencies="currencies"
+                    v-bind="{
+                        submitted,
+                        handlePhotoUpload,
+                        photoPreview,
+                        resolveImagePath,
+                    }"
+                />
             </template>
         </CrudComponent>
     </div>
@@ -50,6 +59,5 @@ const form = useForm({
     has_credit_limit: "",
     photo: "",
     file: "",
-    created_by: "",
 });
 </script>
