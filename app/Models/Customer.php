@@ -10,16 +10,45 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable =
-        [
-            'name',
-            'phone',
-            'email',
-            'address',
-            'city',
-            'country',
-            'zip_code',
-            'land_mark',
-            'is_active',
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'customer_type',
+        'name',
+        'email',
+        'phone',
+        'mobile',
+        'whatsapp_number',
+        'tax_number',
+        'currency_id',
+        'status',
+        'billing_address',
+        'shipping_address',
+        'opening_balance',
+        'opening_balance_date',
+        'opening_balance_type',
+        'credit_limit',
+        'has_credit_limit',
+        'photo',
+        'file',
+        'created_by',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'id' => 'integer',
+            'status' => 'boolean',
+            'opening_balance_date' => 'date',
+            'has_credit_limit' => 'boolean',
         ];
+    }
 }

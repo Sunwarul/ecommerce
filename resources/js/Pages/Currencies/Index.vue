@@ -2,8 +2,12 @@
   <div>
     <CrudComponent :form="form">
       <template #columns>
-        <!-- <Column field="name" header="Name"></Column> -->
-        <!-- <Column field="created_at" header="Created At" sortable></Column> -->
+        <Column field="title" header="Title"></Column>
+        <Column field="short_code" header="Short Code"></Column>
+        <Column field="date" header="Date"></Column>
+        <Column field="symbol" header="Symbol"></Column>
+        <Column field="exchange_rate" header="Exchange Rate"></Column>
+        <Column field="created_at" header="Created At" sortable></Column>
       </template>
 
       <template #form="{ submitted, handlePhotoUpload, photoPreview, resolveImagePath }">
