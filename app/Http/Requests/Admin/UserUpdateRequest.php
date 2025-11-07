@@ -28,7 +28,7 @@ class UserUpdateRequest extends FormRequest
             // 'password' => ['nullable'],
             'roles' => ['nullable', 'array', 'exists:roles,id'],
 
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone', 'not_in:' . $this->phone],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
         ];
     }
 }
