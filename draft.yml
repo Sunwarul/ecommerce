@@ -1,20 +1,18 @@
 models:
-  Expense:
+  Currency:
     title: string min:2 max:255
+    short_code: string max:10 nullable
     date: nullable date
-    amount: nullable decimal precision:10 scale:2
-    details: nullable text
+    symbol: string max:10
+    exchange_rate: decimal default:0.00
     status: nullable boolean default:true
     softDeletes: true
 
-    relationships:
-      belongsTo: ExpenseCategory, User, Warehouse
-
 controllers:
-  Expense:
+  Currency:
     store:
-      validate: title date amount details status category_id user_id warehouse_id
+      validate: title short_code date symbol exchange_rate status
     update:
-      validate: title date amount details status category_id user_id warehouse_id
+      validate: title short_code date symbol exchange_rate status
 
 inertia_vue:

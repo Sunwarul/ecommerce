@@ -99,6 +99,16 @@ const model = ref([
                 icon: "pi pi-fw pi-id-card",
                 to: route("expenses.index"),
             },
+            {
+                label: "Currencies",
+                icon: "pi pi-fw pi-id-card",
+                to: route("currencies.index"),
+            },
+            {
+                label: "Customers",
+                icon: "pi pi-fw pi-id-card",
+                to: route("customers.index"),
+            }
         ],
     },
 ]);
