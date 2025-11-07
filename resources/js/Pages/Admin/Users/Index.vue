@@ -15,7 +15,7 @@
                 </Column>
                 <Column field="name" header="Name"></Column>
                 <Column field="email" header="Email"></Column>
-                <Column field="photo" header="Photo"></Column>
+                <Column field="phone" header="Phone"></Column>
                 <!-- roles column -->
                 <Column field="roles" header="Roles">
                     <template #body="slotProps">

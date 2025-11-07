@@ -23,68 +23,60 @@ class CategorySeeder extends Seeder
 
     public function run(): void
     {
+        // Define parent categories
         $parents = [
-            'Home Appliances',
-            'Kitchen Appliances',
-            'Electronics',
-            'Personal Care',
-            'Cleaning & Laundry',
+            'Home Appliances' => [
+                'Air Conditioner' => ['Split Type', 'Window Type'],
+                'Refrigerator' => ['Single Door', 'Double Door', 'Mini Fridge'],
+                'Ceiling Fan' => ['Decorative Fan', 'Energy Saving Fan'],
+            ],
+            'Kitchen Appliances' => [
+                'Rice Cooker' => ['Small', 'Medium', 'Large'],
+                'Microwave Oven' => ['Convection', 'Grill'],
+                'Blender & Juicer' => ['Hand Blender', 'Juicer'],
+            ],
+            'Electronics' => [
+                'Television' => ['LED TV', 'Smart TV', '4K TV'],
+                'Laptop' => ['Gaming Laptop', 'Ultrabook', 'Business Laptop'],
+            ],
+            'Personal Care' => [
+                'Hair Dryer' => ['Compact Dryer', 'Professional Dryer'],
+                'Trimmer' => ['Beard Trimmer', 'Body Groomer'],
+            ],
+            'Cleaning & Laundry' => [
+                'Vacuum Cleaner' => ['Cordless', 'Robotic', 'Wet & Dry'],
+                'Washing Machine' => ['Front Load', 'Top Load', 'Twin Tub'],
+            ],
         ];
 
-        foreach ($parents as $name) {
-            Category::create([
-                'name' => $name,
-                'slug' => Str::slug($name),
+        // Loop through all levels
+        foreach ($parents as $parentName => $children) {
+            $parent = Category::create([
+                'name' => $parentName,
+                'slug' => $this->uniqueSlug($parentName),
                 'photo' => null,
                 'is_active' => true,
             ]);
-        }
 
-        $children = [
-            // Home Appliances
-            ['Air Conditioner', 1],
-            ['Refrigerator', 1],
-            ['Ceiling Fan', 1],
-            ['Washing Machine', 1],
-            ['Water Heater', 1],
+            foreach ($children as $childName => $grandChildren) {
+                $child = Category::create([
+                    'parent_id' => $parent->id,
+                    'name' => $childName,
+                    'slug' => $this->uniqueSlug($childName),
+                    'photo' => null,
+                    'is_active' => true,
+                ]);
 
-            // Kitchen Appliances
-            ['Rice Cooker', 2],
-            ['Microwave Oven', 2],
-            ['Blender & Juicer', 2],
-            ['Electric Kettle', 2],
-            ['Induction Cooker', 2],
-
-            // Electronics
-            ['Television', 3],
-            ['Home Theater', 3],
-            ['Smart Watch', 3],
-            ['Laptop', 3],
-            ['Mobile Phone', 3],
-
-            // Personal Care
-            ['Hair Dryer', 4],
-            ['Hair Straightener', 4],
-            ['Electric Shaver', 4],
-            ['Trimmer', 4],
-            ['Massager', 4],
-
-            // Cleaning & Laundry
-            ['Iron Machine', 5],
-            ['Vacuum Cleaner', 5],
-            ['Steam Cleaner', 5],
-            ['Garment Steamer', 5],
-            ['Dishwasher', 5],
-        ];
-
-        foreach ($children as [$name, $parentId]) {
-            Category::create([
-                'parent_id' => $parentId,
-                'name' => $name,
-                'slug' =>  $this->uniqueSlug($name),
-                'photo' => null,
-                'is_active' => true,
-            ]);
+                foreach ($grandChildren as $grandChildName) {
+                    Category::create([
+                        'parent_id' => $child->id,
+                        'name' => $grandChildName,
+                        'slug' => $this->uniqueSlug($grandChildName),
+                        'photo' => null,
+                        'is_active' => true,
+                    ]);
+                }
+            }
         }
     }
 }
