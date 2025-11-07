@@ -48,4 +48,5 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);
     CrudRouter::setFor('currencies', App\Http\Controllers\CurrencyController::class);
+    CrudRouter::setFor('customers', App\Http\Controllers\CustomerController::class);
 });

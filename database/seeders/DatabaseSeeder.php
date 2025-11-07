@@ -25,6 +25,9 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             WarehouseSeeder::class,
             ExpenseSeeder::class,
+            CurrencySeeder::class,
+            CustomerSeeder::class,
+
         ]);
 
         // $this->call(CategoryTableSeeder::class);
