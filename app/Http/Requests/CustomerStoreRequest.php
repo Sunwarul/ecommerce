@@ -20,14 +20,14 @@ class CustomerStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_type' => ['required', 'in:Retailer,Wholesaler'],
+            'customer_type' => ['required', 'in:retailer,wholesaler'],
             'name' => ['required', 'string'],
             'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string'],
+            'phone' => ['required', 'max:20', 'string'],
             'mobile' => ['nullable', 'string'],
             'whatsapp_number' => ['nullable', 'string'],
             'tax_number' => ['nullable', 'string'],
-            'currency_id' => ['nullable', 'string'],
+            'currency_id' => ['nullable'],
             'status' => ['required'],
             'billing_address' => ['nullable', 'string'],
             'shipping_address' => ['nullable', 'string'],
@@ -36,8 +36,8 @@ class CustomerStoreRequest extends FormRequest
             'opening_balance_type' => ['required', 'in:to_pay,to_receive'],
             'credit_limit' => ['nullable', 'string'],
             'has_credit_limit' => ['required'],
-            'photo' => ['nullable', 'string'],
-            'file' => ['nullable', 'string'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:7048'],
+            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:7048'],
             'created_by' => ['nullable', 'string'],
         ];
     }

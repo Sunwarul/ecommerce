@@ -34,7 +34,8 @@ class CustomerController extends Controller
 
     protected function addProps(): array
     {
-        $currencies = Currency::all();
+        $currencies = Currency::select('id', 'title')->get();
+
         return [
             'currencies' => $currencies,
         ];
@@ -47,6 +48,9 @@ class CustomerController extends Controller
         $validatedData = app($this->storeRequestClass)->validated();
         if ($request->file('photo')) {
             $validatedData['photo'] = $request->file('photo')->store($this->resource);
+        }
+        if ($request->file('file')) {
+            $validatedData['file'] = $request->file('file')->store($this->resource);
         }
         $model = new $this->modelClass;
         $model->fill($validatedData);
@@ -63,6 +67,12 @@ class CustomerController extends Controller
             $validatedData['photo'] = $request->file('photo')->store($this->resource);
             if ($model->photo && Storage::fileExists($model->photo)) {
                 Storage::delete($model->photo);
+            }
+        }
+        if ($request->file('file')) {
+            $validatedData['file'] = $request->file('file')->store($this->resource);
+            if ($model->file && Storage::fileExists($model->file)) {
+                Storage::delete($model->file);
             }
         }
         $res = $model->update($validatedData);

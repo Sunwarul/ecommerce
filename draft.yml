@@ -1,6 +1,6 @@
 models:
   Customer:
-    customer_type: enum:Retailer,Wholesaler default:Retailer
+    customer_type: enum:retailer,wholesaler default:retailer
     name: string min:2 max:100
     email: string nullable email
     phone: string max:20 nullable
@@ -17,7 +17,7 @@ models:
     credit_limit: decimal(15,2) nullable
     has_credit_limit: boolean default:false
     photo: string nullable
-    file: string nullable               # Any document (PDF, image, docx, etc.)
+    file: string nullable # Any document (PDF, image, docx, etc.)
     created_by: foreignId nullable references:users
     softDeletes: true
 

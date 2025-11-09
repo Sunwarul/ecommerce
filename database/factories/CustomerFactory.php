@@ -21,7 +21,7 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
-            'customer_type' => fake()->randomElement(["Retailer","Wholesaler"]),
+            'customer_type' => fake()->randomElement(["retailer", "wholesaler"]),
             'name' => fake()->name(),
             'email' => fake()->safeEmail(),
             'phone' => fake()->phoneNumber(),
@@ -34,7 +34,7 @@ class CustomerFactory extends Factory
             'shipping_address' => fake()->text(),
             'opening_balance' => fake()->word(),
             'opening_balance_date' => fake()->date(),
-            'opening_balance_type' => fake()->randomElement(["to_pay","to_receive"]),
+            'opening_balance_type' => fake()->randomElement(["to_pay", "to_receive"]),
             'credit_limit' => fake()->word(),
             'has_credit_limit' => fake()->boolean(),
             'photo' => fake()->word(),
