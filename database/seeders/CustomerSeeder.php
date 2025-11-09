@@ -12,7 +12,7 @@ class CustomerSeeder extends Seeder
     {
         $customers = [
             [
-                'customer_type' => 'Retailer',
+                'customer_type' => 'retailer',
                 'name' => 'John Smith',
                 'email' => 'john@example.com',
                 'phone' => '01711000001',
@@ -33,7 +33,7 @@ class CustomerSeeder extends Seeder
                 'created_by' => '1',
             ],
             [
-                'customer_type' => 'Wholesaler',
+                'customer_type' => 'wholesaler',
                 'name' => 'GreenMart Distribution',
                 'email' => 'sales@greenmart.com',
                 'phone' => '01712000002',
@@ -54,7 +54,7 @@ class CustomerSeeder extends Seeder
                 'created_by' => '1',
             ],
             [
-                'customer_type' => 'Retailer',
+                'customer_type' => 'retailer',
                 'name' => 'Mizan Electronics',
                 'email' => 'info@mizanstore.com',
                 'phone' => '01713000003',

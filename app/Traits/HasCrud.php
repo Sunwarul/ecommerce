@@ -41,6 +41,7 @@ trait HasCrud
 
         $query = $this->modifyQuery($query);
         $items = $query->latest()->paginate($perPage);
+        $x = [...$this->addProps()];
 
         $dataArray = [
             'items' => $items,

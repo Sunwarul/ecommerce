@@ -1,11 +1,14 @@
 <template>
     <div class="grid grid-cols-2 gap-4">
         <div class="mb-4">
-            <label for="customer_type" class="">Customer Type</label>
-            <InputText
-                id="customer_type"
+            <label for="customer_type" class="mb-1">Customer Type</label>
+            <Select
                 v-model="form.customer_type"
-                class="mt-1 block w-full"
+                :options="customerTypes"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select a customer type"
+                class="w-full"
             />
             <div
                 v-if="form?.errors?.customer_type"
@@ -94,15 +97,15 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3 mb-4">
+        <div class="flex flex-col gap-6 mb-4">
             <div>
-                <label for="currency_id" class="block font-bold mb-2"
+                <label for="currency_id" class="block font-bold mb-1"
                     >Currency</label
                 >
                 <Select
                     v-model="form.currency_id"
                     :options="currencies"
-                    optionLabel="name"
+                    optionLabel="title"
                     optionValue="id"
                     placeholder="Select a currency"
                     class="w-full"
@@ -175,14 +178,29 @@
         </div>
 
         <div class="mb-4">
-            <label for="opening_balance_type" class=""
-                >Opening Balance Type</label
-            >
-            <InputText
-                id="opening_balance_type"
-                v-model="form.opening_balance_type"
-                class="mt-1 block w-full"
-            />
+            <label for="opening_balance_type">Opening Balance is</label>
+            <div class="flex items-center gap-4 mt-2">
+                <div class="flex items-center">
+                    <RadioButton
+                        inputId="to_pay"
+                        v-model="form.opening_balance_type"
+                        name="opening_balance_type"
+                        value="to_pay"
+                    />
+                    <label for="to_pay" class="ml-2">To Pay</label>
+                </div>
+
+                <div class="flex items-center">
+                    <RadioButton
+                        inputId="to_receive"
+                        v-model="form.opening_balance_type"
+                        name="opening_balance_type"
+                        value="to_receive"
+                    />
+                    <label for="to_receive" class="ml-2">To Receive</label>
+                </div>
+            </div>
+
             <div
                 v-if="form?.errors?.opening_balance_type"
                 class="text-red-500 text-sm mt-1"
@@ -226,7 +244,7 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3">
+        <!-- <div class="flex flex-col gap-6 mt-3">
             <div>
                 <label for="photo" class="block font-bold mb-2">Photo</label>
                 <FileUpload
@@ -249,9 +267,9 @@
                     style="filter: grayscale(100%)"
                 />
             </div>
-        </div>
+        </div> -->
 
-        <div class="mb-4">
+        <!-- <div class="mb-4">
             <label for="file" class="">File</label>
             <InputText
                 id="file"
@@ -261,9 +279,8 @@
             <div v-if="form?.errors?.file" class="text-red-500 text-sm mt-1">
                 {{ form?.errors?.file }}
             </div>
-        </div>
+        </div> -->
 
-     
         <div class="mb-4">
             <div class="flex items-center">
                 <Checkbox
@@ -279,39 +296,49 @@
             </div>
         </div>
 
-        <!--
-    <div class="flex flex-col gap-6">
-        <div>
-            <label for="name" class="block font-bold mb-2">Name</label>
-            <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                :invalid="submitted && !form.name" fluid />
-            <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
+        <div class="flex flex-col gap-6">
+            <div>
+                <label for="file" class="block font-bold mb-2">File (NID, Passport, Driving License etc)</label>
+                <InputText
+                    id="file"
+                    v-model.trim="form.file"
+                    required="true"
+                    autofocus
+                    :invalid="submitted && !form.file"
+                    fluid
+                    type="file"
+                />
+                <small v-if="submitted && !form.file" class="text-red-500"
+                    >File is required.</small
+                >
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-6 mt-3">
+            <div>
+                <label for="photo" class="block font-bold mb-2">Avatar</label>
+                <FileUpload
+                    mode="basic"
+                    name="photo"
+                    customUpload
+                    @select="handlePhotoUpload"
+                    :auto="true"
+                    accept="image/*"
+                    chooseLabel="Choose Image"
+                    class="w-full"
+                />
+            </div>
+            <div>
+                <img
+                    v-if="form.photo || photoPreview"
+                    :src="photoPreview ?? resolveImagePath(form.photo)"
+                    alt="Image"
+                    class="shadow-md rounded-xl w-[100px]"
+                    style="filter: grayscale(100%)"
+                />
+            </div>
         </div>
     </div>
-    -->
-        <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    --></div>
 </template>
 
 <script setup>
@@ -321,8 +348,22 @@ defineProps({
         required: true,
     },
     currencies: {
-        type: Array,
+        type: Object,
         required: true,
     },
+    submitted: Boolean,
+    photoPreview: String,
+    resolveImagePath: Function,
+    handlePhotoUpload: Function,
 });
+const customerTypes = [
+    {
+        label: "Retailer",
+        value: "retailer",
+    },
+    {
+        label: "Wholesaler",
+        value: "wholesaler",
+    },
+];
 </script>

@@ -42,13 +42,13 @@ class Customer extends Model
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'id' => 'integer',
-            'status' => 'boolean',
-            'opening_balance_date' => 'date',
-            'has_credit_limit' => 'boolean',
-        ];
-    }
+    // protected function casts(): array
+    // {
+    //     return [
+    //         'id' => 'integer',
+    //         'status' => 'boolean',
+    //         'opening_balance_date' => 'date',
+    //         'has_credit_limit' => 'boolean',
+    //     ];
+    // }
 }

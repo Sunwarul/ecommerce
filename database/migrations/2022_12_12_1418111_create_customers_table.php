@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->enum('customer_type', ["Retailer","Wholesaler"])->default('Retailer');
+            $table->enum('customer_type', ["retailer", "wholesaler"])->default('retailer');
             $table->string('name');
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
@@ -26,7 +25,7 @@ return new class extends Migration
             $table->text('shipping_address')->nullable();
             $table->string('opening_balance')->default('0.00');
             $table->date('opening_balance_date')->nullable();
-            $table->enum('opening_balance_type', ["to_pay","to_receive"])->default('to_receive');
+            $table->enum('opening_balance_type', ["to_pay", "to_receive"])->default('to_receive');
             $table->string('credit_limit')->nullable();
             $table->boolean('has_credit_limit')->default(false);
             $table->string('photo')->nullable();
