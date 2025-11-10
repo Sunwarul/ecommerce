@@ -108,7 +108,12 @@ const model = ref([
                 label: "Customers",
                 icon: "pi pi-fw pi-id-card",
                 to: route("customers.index"),
-            }
+            },
+            {
+                label: "Settings",
+                icon: "pi pi-fw pi-id-card",
+                to: route("settings.general"),
+            },
         ],
     },
 ]);

@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Frontend\WelcomePageController;
+use App\Http\Controllers\SettingController;
 
 require_once __DIR__ . '/auth.php';
 
@@ -37,11 +38,11 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('todos', TodoController::class);
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
-    CrudRouter::setFor('branches',BranchController::class);
+    CrudRouter::setFor('branches', BranchController::class);
     CrudRouter::setFor('warehouses', WarehouseController::class);
     CrudRouter::setFor('suppliers', SupplierController::class);
-    CrudRouter::setFor('base-units',BaseUnitController::class);
-    CrudRouter::setFor('units',UnitController::class);
+    CrudRouter::setFor('base-units', BaseUnitController::class);
+    CrudRouter::setFor('units', UnitController::class);
     CrudRouter::setFor('expense-categories', ExpenseCategoryController::class);
     CrudRouter::setFor('expenses', App\Http\Controllers\ExpenseController::class);
 
@@ -49,4 +50,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::resource('permissions', PermissionController::class);
     CrudRouter::setFor('currencies', App\Http\Controllers\CurrencyController::class);
     CrudRouter::setFor('customers', App\Http\Controllers\CustomerController::class);
+
+    Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
+    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+
 });
