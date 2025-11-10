@@ -1,31 +1,13 @@
 models:
-  Customer:
-    customer_type: enum:retailer,wholesaler default:retailer
-    name: string min:2 max:100
-    email: string nullable email
-    phone: string max:20 nullable
-    mobile: string max:20 nullable
-    whatsapp_number: string max:20 nullable
-    tax_number: string max:50 nullable
-    currency_id: foreignId nullable references:currencies
-    status: boolean default:true
-    billing_address: text nullable
-    shipping_address: text nullable
-    opening_balance: decimal(15,2) default:0.00
-    opening_balance_date: date nullable
-    opening_balance_type: enum:to_pay,to_receive default:to_receive
-    credit_limit: decimal(15,2) nullable
-    has_credit_limit: boolean default:false
-    photo: string nullable
-    file: string nullable # Any document (PDF, image, docx, etc.)
-    created_by: foreignId nullable references:users
-    softDeletes: true
+  Setting:
+    key: string nullable
+    value: text nullable
 
 controllers:
-  Customer:
+  Setting:
     store:
-      validate: customer_type name email phone mobile whatsapp_number tax_number currency_id status billing_address shipping_address opening_balance opening_balance_date opening_balance_type credit_limit has_credit_limit photo file created_by
+      validate: key value
     update:
-      validate: customer_type name email phone mobile whatsapp_number tax_number currency_id status billing_address shipping_address opening_balance opening_balance_date opening_balance_type credit_limit has_credit_limit photo file created_by
+      validate: key value
 
 inertia_vue:
