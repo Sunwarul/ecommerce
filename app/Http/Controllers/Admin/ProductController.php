@@ -9,7 +9,6 @@ use App\Http\Requests\Admin\ProductUpdateRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\SubCategory;
 use App\Models\Tag;
 use App\Traits\HasCrud;
 use App\Utils\CrudConfig;
@@ -30,7 +29,7 @@ class ProductController extends Controller
             componentPath: 'Admin/Products/Index',
             searchColumns: ['name', 'description'],
             exportClass: ProductExport::class,
-            withRelations: ['category:id,name', 'brand:id,name', 'subCategory:id,name', 'tags:id,name'],
+            withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
             addProps: $this->addProps(),
         ));
     }
@@ -40,7 +39,6 @@ class ProductController extends Controller
         return [
             'categories' => Category::select('id', 'name')->get(),
             'brands' => Brand::select('id', 'name')->get(),
-            'subCategories' => SubCategory::select('id', 'name')->get(),
             'tags' => Tag::select('id', 'name')->get(),
         ];
     }
@@ -51,7 +49,7 @@ class ProductController extends Controller
         $search = $request->input('search');
 
         $query = Product::query();
-        $query->with(['category:id,name', 'brand:id,name', 'subCategory:id,name', 'tags:id,name']);
+        $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
 
         $searchColumns = ['name', 'slug'];
 
@@ -79,9 +77,8 @@ class ProductController extends Controller
         ]);
     }
 
-
-    // ...
-    public function store(StoreProductRequest $request)
+    public function storeOld(ProductStoreRequest $request)
+    // public function store(StoreProductRequest $request)
     {
         $data = $request->validated();
         return DB::transaction(function () use ($data, $request) {
