@@ -16,8 +16,8 @@ return new class extends Migration
         Schema::create('taxes', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->float('type');
-            $table->boolean('is_active')->default(true);
+            $table->enum('rate_type', ['percent', 'flat'])->default('percent');
+            $table->decimal('rate_value', 10, 4);
             $table->softDeletes();
             $table->timestamps();
         });
