@@ -16,15 +16,17 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('CASCADE');
-            $table->foreignId('sub_category_id')->nullable()->constrained('sub_categories')->onDelete('CASCADE');
-            $table->foreignId('tax_id')->nullable()->constrained('taxes')->onDelete('CASCADE');
             $table->foreignId('brand_id')->nullable()->constrained('brands')->onDelete('CASCADE');
+            $table->foreignId('base_unit_id')->nullable()->constrained('units')->nullOnDelete();
+            $table->foreignId('tax_id')->nullable()->constrained('taxes')->onDelete('CASCADE');
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('CASCADE');
 
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('thumbnail')->nullable();
             $table->text('images')->nullable();
+            $table->text('description')->nullable();
+
             $table->string('sku')->nullable()->unique();
             $table->string('barcode')->nullable()->unique();
             $table->string('code')->nullable()->unique();
@@ -45,8 +47,8 @@ return new class extends Migration
             $table->string('materials')->nullable();
 
             $table->longText('description')->nullable();
-            $table->longText('additional_info')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('has_variants')->default(false);
 
             // SEO fields
             $table->string('meta_title')->nullable();
