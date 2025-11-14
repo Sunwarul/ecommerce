@@ -29,19 +29,6 @@ class CustomTestSeeder extends Seeder
             'photo' => fake()->imageUrl(),
         ]);
 
-        SubCategory::create([
-            'category_id' => 1,
-            'name' => 'Mobile',
-            'is_active' => true,
-            'photo' => fake()->imageUrl(),
-        ]);
-        SubCategory::create([
-            'category_id' => 1,
-            'name' => 'Laptop',
-            'is_active' => true,
-            'photo' => fake()->imageUrl(),
-        ]);
-
         Brand::create([
             'name' => 'Apple',
             'is_active' => true,
@@ -73,7 +60,6 @@ class CustomTestSeeder extends Seeder
 
         $productAttr = [
             'category_id' => 1,
-            'sub_category_id' => 1,
             'brand_id' => 1,
             'name' => 'iPhone 13',
             'description' => 'The iPhone 13 is a smartphone designed, developed, and marketed by Apple Inc. It is the fourteenth generation of the iPhone, succeeding the iPhone 12 and preceding the iPhone 14.',

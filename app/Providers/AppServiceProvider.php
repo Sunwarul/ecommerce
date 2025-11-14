@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Support\SettingLoader;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -10,17 +11,15 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-
-    }
+    public function register(): void {}
 
     /**
      * Bootstrap any application services.
      */
     public function boot(): void
     {
-
-        SettingLoader::load();
+        if (Schema::hasTable('settings')) {
+            SettingLoader::load();
+        }
     }
 }

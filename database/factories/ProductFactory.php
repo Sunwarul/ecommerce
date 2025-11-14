@@ -17,7 +17,6 @@ class ProductFactory extends Factory
     public function definition()
     {
         $categoryIds = \App\Models\Category::pluck('id')->toArray();
-        $subCategoryIds = \App\Models\SubCategory::pluck('id')->toArray();
         $tagIds = \App\Models\Tag::pluck('id')->toArray();
         $taxIds = \App\Models\Tax::pluck('id')->toArray();
         $brandIds = \App\Models\Brand::pluck('id')->toArray();
@@ -25,7 +24,6 @@ class ProductFactory extends Factory
 
         return [
             'category_id' => $this->faker->randomElement($categoryIds),
-            'sub_category_id' => $this->faker->randomElement($subCategoryIds),
             'tax_id' => $this->faker->randomElement($taxIds),
             'brand_id' => $this->faker->randomElement($brandIds),
             'tag_id' => $this->faker->randomElement($tagIds),
