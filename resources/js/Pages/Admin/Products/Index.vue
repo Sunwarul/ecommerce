@@ -4,7 +4,6 @@
             <template #columns>
                 <Column field="name" header="Name"></Column>
                 <Column field="category.name" header="Category"></Column>
-                <Column field="sub_category.name" header="Sub-Category"></Column>
                 <Column field="brand.name" header="Brand"></Column>
                 <Column field="thumbnail" header="Brand">
                     <template #body="{ data }">
@@ -112,13 +111,6 @@
                         <label for="category_id" class="block font-bold mb-2">Category</label>
                         <Select id="category_id" v-model="form.category_id" :options="categories" optionLabel="name"
                             optionValue="id" placeholder="Select Category" class="w-full" @change="loadSubCategories" />
-                    </div>
-
-                    <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                        <label for="sub_category_id" class="block font-bold mb-2">Sub-Category</label>
-                        <Select id="sub_category_id" v-model="form.sub_category_id" :options="subCategories"
-                            optionLabel="name" optionValue="id" placeholder="Select Sub-Category" class="w-full"
-                            :disabled="!form.category_id" />
                     </div>
 
                     <!-- Two-column layout for Brand and Tax -->
@@ -257,7 +249,6 @@ const form = useForm({
     meta_description: '',
     meta_keywords: '',
     category_id: null,
-    sub_category_id: null,
     tax_id: null,
     brand_id: null,
 });
@@ -285,7 +276,6 @@ const loadSubCategories = () => {
     if (form.category_id) {
         // In a real app, you'd fetch subcategories from the server
         // For now, just reset the subcategory selection
-        form.sub_category_id = null;
         // Fetch subcategories based on category_id
         // Example: axios.get(`/api/categories/${form.category_id}/subcategories`)
         //   .then(response => {
@@ -293,7 +283,6 @@ const loadSubCategories = () => {
         //   });
     } else {
         subCategories.value = [];
-        form.sub_category_id = null;
     }
 };
 

@@ -27,7 +27,6 @@ class ProductUpdateRequest extends FormRequest
 
         return [
             'category_id' => 'nullable|exists:categories,id',
-            'sub_category_id' => 'nullable|exists:sub_categories,id',
             'tax_id' => 'nullable|exists:taxes,id',
             'brand_id' => 'nullable|exists:brands,id',
 
