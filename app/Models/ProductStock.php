@@ -9,5 +9,5 @@ class ProductStock extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['product_id', 'quantity', 'alert_quantity'];
+    protected $fillable = ['product_id', 'warehouse_id', 'quantity', 'alert_quantity'];
 }
