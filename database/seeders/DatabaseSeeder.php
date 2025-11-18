@@ -29,7 +29,8 @@ class DatabaseSeeder extends Seeder
             CustomerSeeder::class,
             ProductAttributeSeeder::class,
             SupplierSeeder::class,
-            
+            ProductSeeder::class
+
 
         ]);
 
