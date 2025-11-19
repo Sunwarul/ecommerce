@@ -18,6 +18,9 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('CASCADE');
             $table->foreignId('tax_id')->nullable()->constrained('taxes')->onDelete('CASCADE');
             $table->foreignId('brand_id')->nullable()->constrained('brands')->onDelete('CASCADE');
+            $table->foreignId('unit_id')->nullable()->constrained('units')->nullOnDelete();
+            $table->foreignId('tax_id')->nullable()->constrained('taxes')->onDelete('CASCADE');
+            $table->foreignId('brand_id')->nullable()->constrained('brands')->onDelete('CASCADE');
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('CASCADE');
 
             $table->string('name');
