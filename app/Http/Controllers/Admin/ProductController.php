@@ -11,13 +11,18 @@ use App\Http\Requests\StoreProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
 use App\Models\Tag;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use App\Traits\HasCrud;
 use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -43,11 +48,99 @@ class ProductController extends Controller
     protected function addProps(): array
     {
         return [
-            'categories' => Category::select('id', 'name')->get(),
+            // CATEGORIES WITH CHILDREN
+            'categories' => Category::select('id', 'name', 'parent_id')
+                ->with('children:id,name,parent_id')
+                ->whereNull('parent_id')
+                ->get(),
+
+            // BRANDS
             'brands' => Brand::select('id', 'name')->get(),
+
+            // TAGS
             'tags' => Tag::select('id', 'name')->get(),
+
+            // TAXES
+            'taxes' => Tax::select('id', 'name', 'rate_value', 'rate_type')->get(),
+
+            // WAREHOUSES
+            'warehouses' => Warehouse::select('id', 'name')->get(),
+
+            // ATTRIBUTES
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
         ];
     }
+
+
+    public function store(Request $request)
+    {
+        dd($request->all());
+        return DB::transaction(function () use ($request) {
+            $data = $request->validated();
+
+            // Clean product inputs
+            $productData = Arr::except($data, ['tag_ids', 'variations', 'warehouse_id']);
+
+            $productData['created_by'] = auth()->id();
+            $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
+            $productData['is_active'] = $request->boolean('is_active');
+
+            // CREATE PRODUCT
+            $product = Product::create($productData);
+
+            // TAG RELATION
+            if (!empty($data['tag_ids'])) {
+                $product->tags()->sync($data['tag_ids']);
+            }
+
+            // SIMPLE PRODUCT STOCK (uses warehouse)
+            if ($data['type'] === 'simple') {
+                ProductStock::create([
+                    'product_id' => $product->id,
+                    'warehouse_id' => $data['warehouse_id'],
+                    'quantity' => $data['stock_quantity'] ?? 0,
+                    'alert_quantity' => 10,
+                ]);
+            }
+
+            // VARIABLE PRODUCT → variations
+            if ($data['type'] === 'variable' && !empty($data['variations'])) {
+                foreach ($data['variations'] as $variationInput) {
+
+                    $variation = ProductVariation::create([
+                        'product_id' => $product->id,
+                        'sku' => $variationInput['sku'],
+                        'price' => $variationInput['price'],
+                        'discount_price' => $variationInput['discount_price'] ?? null,
+                        'stock_quantity' => $variationInput['stock_quantity'],
+                        'stock_status' => $variationInput['stock_status'],
+                        'image' => $variationInput['image'] ?? null,
+                        'is_active' => true,
+                    ]);
+
+                    // Attach attribute values
+                    foreach ($variationInput['attribute_value_ids'] as $valueId) {
+                        $value = ProductAttributeValue::findOrFail($valueId);
+
+                        $variation->attributeValues()->attach($valueId, [
+                            'attribute_id' => $value->attribute_id,
+                            'product_id' => $product->id,
+                        ]);
+                    }
+                }
+            }
+
+            return response()->json([
+                'message' => 'Product created successfully',
+                'product' => $product->load('tags', 'variations.attributeValues.attribute'),
+            ]);
+        });
+    }
+
+
+
 
     public function indexDisabledForNow(Request $request)
     {
@@ -82,73 +175,6 @@ class ProductController extends Controller
             ...$this->addProps(),
         ]);
     }
-
-    public function store(AdminStoreProductRequest $request)
-    {
-        $data = $request->validated();
-
-        $data["created_by"] = auth()->id();
-        $data["slug"] = $data["slug"] ?? Str::slug($data["name"]);
-        $data["is_active"] = $request->boolean("is_active");
-
-        // ----------------------------------------------
-        // CREATE PRODUCT
-        // ----------------------------------------------
-        $product = Product::create($data);
-
-        // TAG SYNC
-        if (!empty($data["tag_ids"])) {
-            $product->tags()->sync($data["tag_ids"]);
-        }
-
-        // ----------------------------------------------
-        // SIMPLE PRODUCT → USE product_stocks TABLE
-        // ----------------------------------------------
-        if ($data["type"] === "simple") {
-            ProductStock::create([
-                "product_id" => $product->id,
-                "quantity" => $data["stock_quantity"] ?? 0,
-                "alert_quantity" => 10
-            ]);
-        }
-
-        // ----------------------------------------------
-        // VARIABLE PRODUCT → CREATE VARIATIONS
-        // ----------------------------------------------
-        if ($data["type"] === "variable" && isset($data["variations"])) {
-
-            foreach ($data["variations"] as $variationInput) {
-
-                $variation = ProductVariation::create([
-                    "product_id" => $product->id,
-                    "sku" => $variationInput["sku"],
-                    "price" => $variationInput["price"],
-                    "discount_price" => $variationInput["discount_price"] ?? null,
-                    "stock_quantity" => $variationInput["stock_quantity"],
-                    "stock_status" => $variationInput["stock_status"],
-                    "image" => $variationInput["image"] ?? null,
-                    "is_active" => true,
-                ]);
-
-                // attach attribute_value_ids → pivot table
-                foreach ($variationInput["attribute_value_ids"] as $valueId) {
-
-                    $value = ProductAttributeValue::find($valueId);
-
-                    $variation->attributeValues()->attach($valueId, [
-                        "attribute_id" => $value->attribute_id,
-                        "product_id" => $product->id
-                    ]);
-                }
-            }
-        }
-
-        return response()->json([
-            "message" => "Product created successfully",
-            "product" => $product->load("variations.attributeValues")
-        ]);
-    }
-
 
     // public function storeOld(ProductStoreRequest $request)
     // // public function store(StoreProductRequest $request)

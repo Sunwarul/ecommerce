@@ -102,7 +102,7 @@
                         <label for="type" class="block font-bold mb-2"
                             >Product Type *</label
                         >
-                        <Select
+                        <Dropdown
                             id="type"
                             v-model="form.type"
                             :options="productTypes"
@@ -117,12 +117,12 @@
                         </small>
                     </div>
 
-                    <!-- Stock Status (for simple) -->
-                    <div class="field col-12 md:col-4 mb-4 pl-md-2">
+                    <!-- Stock Status (top-level, required by request) -->
+                    <div class="field col-12 md:col-4 mb-4 px-md-2">
                         <label for="stock_status" class="block font-bold mb-2"
-                            >Stock Status</label
+                            >Stock Status *</label
                         >
-                        <Select
+                        <Dropdown
                             id="stock_status"
                             v-model="form.stock_status"
                             :options="stockStatuses"
@@ -130,15 +130,24 @@
                             optionValue="value"
                             placeholder="Select Status"
                             class="w-full"
+                            :class="{
+                                'p-invalid': submitted && !form.stock_status,
+                            }"
                         />
+                        <small
+                            v-if="submitted && !form.stock_status"
+                            class="p-error"
+                        >
+                            Stock status is required.
+                        </small>
                     </div>
 
                     <!-- Active / Inactive -->
-                    <div class="field col-12 md:col-4 mb-4 px-md-2">
+                    <div class="field col-12 md:col-4 mb-4 pl-md-2">
                         <label for="status" class="block font-bold mb-2"
                             >Status</label
                         >
-                        <div class="pt-2">
+                        <div class="pt-2 flex items-center">
                             <ToggleSwitch v-model="form.is_active" />
                             <span class="ml-2">{{
                                 form.is_active ? "Active" : "Inactive"
@@ -147,7 +156,7 @@
                     </div>
                 </div>
 
-                <!-- Pricing Section -->
+                <!-- Pricing & Inventory Section -->
                 <div class="col-12 mb-3 mt-3">
                     <h3 class="text-xl font-semibold uppercase">
                         Pricing & Inventory
@@ -205,7 +214,7 @@
                     <!-- Stock Quantity (used for simple) -->
                     <div class="field col-12 sm:col-6 mb-4">
                         <label for="stock_quantity" class="block font-bold mb-2"
-                            >Stock Quantity</label
+                            >Stock Quantity (simple)</label
                         >
                         <InputNumber
                             id="stock_quantity"
@@ -213,6 +222,41 @@
                             class="w-full"
                             :min="0"
                         />
+                    </div>
+
+                    <!-- Warehouse (required_if:type,simple) -->
+                    <div
+                        class="field col-12 sm:col-6 mb-4"
+                        v-if="form.type === 'simple'"
+                    >
+                        <label for="warehouse_id" class="block font-bold mb-2"
+                            >Warehouse *</label
+                        >
+                        <Dropdown
+                            id="warehouse_id"
+                            v-model="form.warehouse_id"
+                            :options="warehouses"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="Select Warehouse"
+                            class="w-full"
+                            :class="{
+                                'p-invalid':
+                                    submitted &&
+                                    form.type === 'simple' &&
+                                    !form.warehouse_id,
+                            }"
+                        />
+                        <small
+                            v-if="
+                                submitted &&
+                                form.type === 'simple' &&
+                                !form.warehouse_id
+                            "
+                            class="p-error"
+                        >
+                            Warehouse is required for simple products.
+                        </small>
                     </div>
                 </div>
 
@@ -224,21 +268,28 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Category -->
+                    <!-- Category (TreeSelect) -->
                     <div class="field col-12 sm:col-6 mb-4 pr-md-2">
                         <label for="category_id" class="block font-bold mb-2"
-                            >Category</label
+                            >Category *</label
                         >
-                        <Select
+                        <TreeSelect
                             id="category_id"
-                            v-model="form.category_id"
-                            :options="categories"
-                            optionLabel="name"
-                            optionValue="id"
+                            v-model="selectedCategoryKey"
+                            :options="categoryTreeNodes"
                             placeholder="Select Category"
                             class="w-full"
-                            @change="loadSubCategories"
+                            selectionMode="single"
+                            :class="{
+                                'p-invalid': submitted && !form.category_id,
+                            }"
                         />
+                        <small
+                            v-if="submitted && !form.category_id"
+                            class="p-error"
+                        >
+                            Category is required.
+                        </small>
                     </div>
 
                     <!-- Brand -->
@@ -246,7 +297,7 @@
                         <label for="brand_id" class="block font-bold mb-2"
                             >Brand</label
                         >
-                        <Select
+                        <Dropdown
                             id="brand_id"
                             v-model="form.brand_id"
                             :options="brands"
@@ -262,7 +313,7 @@
                         <label for="tax_id" class="block font-bold mb-2"
                             >Tax</label
                         >
-                        <Select
+                        <Dropdown
                             id="tax_id"
                             v-model="form.tax_id"
                             :options="taxes"
@@ -372,7 +423,7 @@
                         <label for="thumbnail" class="block font-bold mb-2"
                             >Thumbnail</label
                         >
-                        <div class="flex align-items-center gap-4">
+                        <div class="flex items-center gap-4">
                             <div
                                 v-if="photoPreview || form.thumbnail"
                                 class="thumbnail-preview mb-3"
@@ -418,18 +469,31 @@
                             class="p-button-sm"
                             @click="addVariation"
                         />
+                        <small
+                            v-if="
+                                submitted &&
+                                form.type === 'variable' &&
+                                !form.variations.length
+                            "
+                            class="p-error ml-3"
+                        >
+                            At least one variation is required for variable
+                            products.
+                        </small>
                     </div>
 
                     <div v-if="form.variations.length" class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="border-b">
-                                    <th class="p-2 text-left">SKU</th>
-                                    <th class="p-2 text-left">Price</th>
+                                    <th class="p-2 text-left">SKU *</th>
+                                    <th class="p-2 text-left">Price *</th>
                                     <th class="p-2 text-left">Discount</th>
-                                    <th class="p-2 text-left">Stock</th>
-                                    <th class="p-2 text-left">Status</th>
-                                    <th class="p-2 text-left">Attributes</th>
+                                    <th class="p-2 text-left">Stock *</th>
+                                    <th class="p-2 text-left">Status *</th>
+                                    <th class="p-2 text-left">
+                                        Attribute Values *
+                                    </th>
                                     <th class="p-2 text-left">Image Path</th>
                                     <th class="p-2 text-left"></th>
                                 </tr>
@@ -448,6 +512,12 @@
                                             v-model.trim="variation.sku"
                                             class="w-full"
                                             placeholder="Variation SKU"
+                                            :class="{
+                                                'p-invalid':
+                                                    submitted &&
+                                                    form.type === 'variable' &&
+                                                    !variation.sku,
+                                            }"
                                         />
                                     </td>
 
@@ -457,6 +527,12 @@
                                             v-model.number="variation.price"
                                             class="w-full"
                                             :min="0"
+                                            :class="{
+                                                'p-invalid':
+                                                    submitted &&
+                                                    form.type === 'variable' &&
+                                                    !variation.price,
+                                            }"
                                         />
                                     </td>
 
@@ -479,17 +555,34 @@
                                             "
                                             class="w-full"
                                             :min="0"
+                                            :class="{
+                                                'p-invalid':
+                                                    submitted &&
+                                                    form.type === 'variable' &&
+                                                    (variation.stock_quantity ===
+                                                        null ||
+                                                        variation.stock_quantity ===
+                                                            '' ||
+                                                        variation.stock_quantity <
+                                                            0),
+                                            }"
                                         />
                                     </td>
 
                                     <!-- Stock Status -->
                                     <td class="p-2">
-                                        <Select
+                                        <Dropdown
                                             v-model="variation.stock_status"
                                             :options="stockStatuses"
                                             optionLabel="label"
                                             optionValue="value"
                                             class="w-full"
+                                            :class="{
+                                                'p-invalid':
+                                                    submitted &&
+                                                    form.type === 'variable' &&
+                                                    !variation.stock_status,
+                                            }"
                                         />
                                     </td>
 
@@ -505,6 +598,15 @@
                                             display="chip"
                                             placeholder="Select attribute values"
                                             class="w-full"
+                                            :class="{
+                                                'p-invalid':
+                                                    submitted &&
+                                                    form.type === 'variable' &&
+                                                    (!variation.attribute_value_ids ||
+                                                        !variation
+                                                            .attribute_value_ids
+                                                            .length),
+                                            }"
                                         />
                                     </td>
 
@@ -612,27 +714,40 @@
 </template>
 
 <script setup>
-import CrudComponent from "@/Components/CrudComponent.vue";
-import { resolveImagePath } from "@/Helpers/imageHelper";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, ref, watch } from "vue";
 
-// props coming from backend
-const { categories, subCategories, brands, taxes, tags, attributes } =
-    defineProps([
-        "categories",
-        "subCategories",
-        "brands",
-        "taxes",
-        "tags",
-        "attributes",
-    ]);
+import CrudComponent from "@/Components/CrudComponent.vue";
+import { resolveImagePath } from "@/Helpers/imageHelper";
+
+// PrimeVue
+import Button from "primevue/button";
+import Column from "primevue/column";
+import Dropdown from "primevue/dropdown";
+import Editor from "primevue/editor";
+import FileUpload from "primevue/fileupload";
+import InputNumber from "primevue/inputnumber";
+import InputText from "primevue/inputtext";
+import MultiSelect from "primevue/multiselect";
+import Textarea from "primevue/textarea";
+import ToggleSwitch from "primevue/toggleswitch";
+import TreeSelect from "primevue/treeselect";
+
+const props = defineProps({
+    categories: { type: Array, default: () => [] },
+    brands: { type: Array, default: () => [] },
+    taxes: { type: Array, default: () => [] },
+    tags: { type: Array, default: () => [] },
+    attributes: { type: Array, default: () => [] },
+    warehouses: { type: Array, default: () => [] },
+});
 
 // main form (Inertia)
 const form = useForm({
     category_id: null,
     brand_id: null,
     tax_id: null,
+    warehouse_id: null,
 
     name: "",
     slug: "",
@@ -685,11 +800,66 @@ const stockStatuses = [
     { label: "Pre-Order", value: "pre_order" },
 ];
 
+// category tree for TreeSelect
+// category tree for TreeSelect
+const selectedCategoryKey = ref(null);
+
+const categoryTreeNodes = computed(() => {
+    const mapCategory = (cat) => ({
+        key: String(cat.id),
+        label: cat.name,
+        data: cat,
+        children: (cat.children || []).map(mapCategory),
+    });
+
+    return props.categories.map(mapCategory);
+});
+
+watch(
+    selectedCategoryKey,
+    (newVal) => {
+        if (!newVal) {
+            form.category_id = null;
+            return;
+        }
+
+        // Case 1: TreeSelect returns a primitive key like "3"
+        if (typeof newVal === "string" || typeof newVal === "number") {
+            form.category_id = Number(newVal);
+            return;
+        }
+
+        // Case 2: TreeSelect returns a node object like { key: '3', label: '...' }
+        if (typeof newVal === "object" && newVal.key) {
+            form.category_id = Number(newVal.key);
+            return;
+        }
+
+        // Fallback
+        form.category_id = null;
+    },
+    { immediate: true }
+);
+
+// On edit, pre-select category in TreeSelect
+onMounted(() => {
+    if (form.category_id) {
+        // If TreeSelect expects just key, this works
+        selectedCategoryKey.value = String(form.category_id);
+        // If it expects a node object, the watcher above
+        // will still map the selected node back correctly.
+    }
+
+    if (Array.isArray(form.materials) && form.materials.length) {
+        materialsInput.value = form.materials.join(", ");
+    }
+});
+
 // attribute value options for variations
 const attributeValueOptions = computed(() => {
-    if (!attributes) return [];
+    if (!props.attributes) return [];
     const opts = [];
-    attributes.forEach((attr) => {
+    props.attributes.forEach((attr) => {
         (attr.values || []).forEach((val) => {
             opts.push({
                 id: val.id,
@@ -714,12 +884,12 @@ watch(materialsInput, (value) => {
         : [];
 });
 
-// Auto-generate slug from name
+// Auto-generate slug from name if empty
 watch(
     () => form.name,
     (newValue) => {
         if (!form.slug || form.slug === "") {
-            form.slug = newValue
+            form.slug = (newValue || "")
                 .toLowerCase()
                 .replace(/\s+/g, "-")
                 .replace(/[^\w\-]+/g, "")
@@ -729,17 +899,6 @@ watch(
         }
     }
 );
-
-// Subcategories loader stub
-const loadSubCategories = () => {
-    if (form.category_id) {
-        // fetch subcategories here if needed
-    } else {
-        if (subCategories) {
-            subCategories.value = [];
-        }
-    }
-};
 
 // variations methods
 const addVariation = () => {
@@ -762,6 +921,10 @@ const removeVariation = (index) => {
 onMounted(() => {
     if (Array.isArray(form.materials) && form.materials.length) {
         materialsInput.value = form.materials.join(", ");
+    }
+
+    if (form.category_id) {
+        selectedCategoryKey.value = String(form.category_id);
     }
 });
 </script>

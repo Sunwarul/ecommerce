@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             CustomerSeeder::class,
             ProductAttributeSeeder::class,
             SupplierSeeder::class,
+            TaxSeeder::class,
             ProductSeeder::class
 
 
