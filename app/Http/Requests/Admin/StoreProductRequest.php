@@ -36,6 +36,9 @@ class StoreProductRequest extends FormRequest
 
             "type" => "required|in:simple,variable",
 
+            // warehouse usage for simple product
+            "warehouse_id" => "required_if:type,simple|nullable|exists:warehouses,id",
+
             "weight" => "nullable|numeric",
             "dimensions" => "nullable|array",
             "materials" => "nullable|array",
@@ -48,15 +51,15 @@ class StoreProductRequest extends FormRequest
             "tag_ids" => "nullable|array",
             "tag_ids.*" => "exists:tags,id",
 
-            // VARIATIONS IF VARIABLE
+            // VARIATIONS (if variable)
             "variations" => "required_if:type,variable|array",
-            "variations.*.sku" => "required|string",
-            "variations.*.price" => "required|numeric",
+            "variations.*.sku" => "required_if:type,variable|string",
+            "variations.*.price" => "required_if:type,variable|numeric",
             "variations.*.discount_price" => "nullable|numeric",
-            "variations.*.stock_quantity" => "required|integer",
-            "variations.*.stock_status" => "required|string",
+            "variations.*.stock_quantity" => "required_if:type,variable|integer",
+            "variations.*.stock_status" => "required_if:type,variable|string",
             "variations.*.image" => "nullable|string",
-            "variations.*.attribute_value_ids" => "required|array|min:1",
+            "variations.*.attribute_value_ids" => "required_if:type,variable|array|min:1",
             "variations.*.attribute_value_ids.*" => "exists:product_attribute_values,id",
         ];
     }
