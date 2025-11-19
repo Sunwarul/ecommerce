@@ -41,6 +41,7 @@ class ProductController extends Controller
             searchColumns: ['name', 'description'],
             exportClass: ProductExport::class,
             withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
+            withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
             addProps: $this->addProps(),
         ));
     }
@@ -149,6 +150,7 @@ class ProductController extends Controller
 
         $query = Product::query();
         $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
+        $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
 
         $searchColumns = ['name', 'slug'];
 
@@ -162,6 +164,7 @@ class ProductController extends Controller
         });
 
         if ($request->has('trashed')) {
+            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
             $query->when($request->trashed, fn($query) => $query->onlyTrashed());
         }
 
