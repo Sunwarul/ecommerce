@@ -41,7 +41,6 @@ class ProductController extends Controller
             searchColumns: ['name', 'description'],
             exportClass: ProductExport::class,
             withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
-            withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
             addProps: $this->addProps(),
         ));
     }
@@ -75,9 +74,8 @@ class ProductController extends Controller
     }
 
 
-    public function store(Request $request)
+    public function store(\App\Http\Requests\Admin\StoreProductRequest $request)
     {
-        dd($request->all());
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 

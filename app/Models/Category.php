@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use Illuminate\Support\Str;
 
 class Category extends BaseModel
 {
@@ -13,9 +12,7 @@ class Category extends BaseModel
 
     protected $fillable = [
         'parent_id',
-        'parent_id',
         'name',
-        'slug',
         'slug',
         'photo',
         'is_active',
