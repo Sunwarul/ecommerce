@@ -74,9 +74,8 @@ class ProductController extends Controller
     }
 
 
-    public function store(Request $request)
+    public function store(\App\Http\Requests\Admin\StoreProductRequest $request)
     {
-        dd($request->all());
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 
