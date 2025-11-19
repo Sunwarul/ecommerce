@@ -23,6 +23,12 @@ class Category extends BaseModel
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
+    // children
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
+
     // mutator for convert title to slug
     public function setNameAttribute($value)
     {
