@@ -23,6 +23,7 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "@esbuild/win32-x64": "^0.27.0",
         "@primevue/forms": "^4.2.5",
         "@primevue/themes": "^4.2.5",
         "chart.js": "^4.4.7",
@@ -31,6 +32,7 @@
         "pinia": "^3.0.3",
         "primeicons": "^7.0.0",
         "primevue": "^4.2.5",
-        "quill": "^2.0.3"
+        "quill": "^2.0.3",
+        "sass-embedded-win32-x64": "^1.93.3"
     }
 }
