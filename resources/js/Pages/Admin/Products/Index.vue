@@ -275,7 +275,7 @@
                         >
                         <TreeSelect
                             id="category_id"
-                            v-model="selectedCategoryKey"
+                            v-model="form.category_id"
                             :options="categoryTreeNodes"
                             placeholder="Select Category"
                             class="w-full"
@@ -284,6 +284,7 @@
                                 'p-invalid': submitted && !form.category_id,
                             }"
                         />
+
                         <small
                             v-if="submitted && !form.category_id"
                             class="p-error"
@@ -460,6 +461,51 @@
                         <h3 class="text-xl font-semibold uppercase">
                             Variations
                         </h3>
+                    </div>
+
+                    <!-- AUTO COMBINATION PICKERS -->
+                    <div class="mb-4 border rounded p-3">
+                        <h4 class="font-semibold mb-3">Variant Attributes</h4>
+
+                        <div
+                            v-for="attr in props.attributes"
+                            :key="attr.id"
+                            class="mb-3"
+                        >
+                            <label class="block font-bold mb-2">
+                                {{ attr.display_name || attr.name }}
+                            </label>
+
+                            <MultiSelect
+                                v-model="selectedAttrValues[attr.id]"
+                                :options="
+                                    (attr.values || []).map((v) => ({
+                                        id: v.id,
+                                        label: v.display_value || v.value,
+                                    }))
+                                "
+                                optionLabel="label"
+                                optionValue="id"
+                                display="chip"
+                                placeholder="Select values"
+                                class="w-full"
+                            />
+                        </div>
+
+                        <div class="flex gap-2 mt-3">
+                            <Button
+                                label="Generate Variations"
+                                icon="pi pi-sitemap"
+                                class="p-button-sm"
+                                @click="generateVariations"
+                            />
+                            <Button
+                                label="Clear"
+                                icon="pi pi-times"
+                                class="p-button-sm p-button-secondary"
+                                @click="clearGeneratedVariations"
+                            />
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -801,12 +847,11 @@ const stockStatuses = [
 ];
 
 // category tree for TreeSelect
-// category tree for TreeSelect
 const selectedCategoryKey = ref(null);
 
 const categoryTreeNodes = computed(() => {
     const mapCategory = (cat) => ({
-        key: String(cat.id),
+        key: String(cat.id), // keep string key
         label: cat.name,
         data: cat,
         children: (cat.children || []).map(mapCategory),
@@ -814,6 +859,14 @@ const categoryTreeNodes = computed(() => {
 
     return props.categories.map(mapCategory);
 });
+
+// watch(
+//     () => form.category_id,
+//     (v) => {
+//         if (v === null || v === undefined || v === "") return;
+//         form.category_id = Number(v);
+//     }
+// );
 
 watch(
     selectedCategoryKey,
@@ -823,37 +876,47 @@ watch(
             return;
         }
 
-        // Case 1: TreeSelect returns a primitive key like "3"
+        // Case 1: TreeSelect returns primitive key like "3"
         if (typeof newVal === "string" || typeof newVal === "number") {
             form.category_id = Number(newVal);
             return;
         }
 
-        // Case 2: TreeSelect returns a node object like { key: '3', label: '...' }
+        // Case 2: TreeSelect returns node object like { key: "3" }
         if (typeof newVal === "object" && newVal.key) {
             form.category_id = Number(newVal.key);
             return;
         }
 
-        // Fallback
+        // ✅ Case 3: TreeSelect returns selectionKeys object like { "3": true }
+        if (typeof newVal === "object") {
+            const keys = Object.keys(newVal);
+            form.category_id = keys.length ? Number(keys[0]) : null;
+            return;
+        }
+
         form.category_id = null;
     },
     { immediate: true }
 );
 
 // On edit, pre-select category in TreeSelect
+
 onMounted(() => {
     if (form.category_id) {
-        // If TreeSelect expects just key, this works
         selectedCategoryKey.value = String(form.category_id);
-        // If it expects a node object, the watcher above
-        // will still map the selected node back correctly.
-    }
-
-    if (Array.isArray(form.materials) && form.materials.length) {
-        materialsInput.value = form.materials.join(", ");
     }
 });
+
+// onMounted(() => {
+//     if (form.category_id) {
+//         selectedCategoryKey.value = String(form.category_id);
+//     }
+
+//     if (Array.isArray(form.materials) && form.materials.length) {
+//         materialsInput.value = form.materials.join(", ");
+//     }
+// });
 
 // attribute value options for variations
 const attributeValueOptions = computed(() => {
@@ -900,11 +963,11 @@ watch(
     }
 );
 
-// variations methods
+// variations methods (manual add/remove)
 const addVariation = () => {
     form.variations.push({
         sku: "",
-        price: null,
+        price: form.base_price || null,
         discount_price: null,
         stock_quantity: 0,
         stock_status: "in_stock",
@@ -927,6 +990,122 @@ onMounted(() => {
         selectedCategoryKey.value = String(form.category_id);
     }
 });
+
+/* ===========================
+   AUTO COMBINATION LOGIC
+=========================== */
+
+// selected values per attribute
+const selectedAttrValues = ref({});
+
+// init attribute keys
+onMounted(() => {
+    props.attributes.forEach((a) => {
+        if (!selectedAttrValues.value[a.id]) {
+            selectedAttrValues.value[a.id] = [];
+        }
+    });
+});
+
+// cartesian product
+const cartesian = (arrays) => {
+    if (!arrays.length) return [];
+    return arrays.reduce(
+        (acc, curr) => {
+            const res = [];
+            acc.forEach((a) => {
+                curr.forEach((c) => res.push([...a, c]));
+            });
+            return res;
+        },
+        [[]]
+    );
+};
+
+// stable combo key
+const comboKey = (valueIds) =>
+    valueIds
+        .slice()
+        .sort((a, b) => a - b)
+        .join("-");
+
+// labels map for SKU generator
+const valueIdToLabel = computed(() => {
+    const map = new Map();
+    props.attributes.forEach((a) => {
+        (a.values || []).forEach((v) => {
+            map.set(v.id, (v.display_value || v.value || "").toString());
+        });
+    });
+    return map;
+});
+
+const makeSku = (valueIds) => {
+    const parts = valueIds
+        .map((id) => valueIdToLabel.value.get(id))
+        .filter(Boolean);
+    return `${form.slug || form.name || "product"}-${parts.join("-")}`
+        .toUpperCase()
+        .replace(/\s+/g, "");
+};
+
+// preserve edited fields when regenerating
+const mergeExisting = (newVariations) => {
+    const existingMap = new Map(
+        form.variations.map((v) => [comboKey(v.attribute_value_ids || []), v])
+    );
+
+    return newVariations.map((v) => {
+        const key = comboKey(v.attribute_value_ids);
+        const old = existingMap.get(key);
+        if (!old) return v;
+
+        return {
+            ...v,
+            sku: old.sku || v.sku,
+            price: old.price ?? v.price,
+            discount_price: old.discount_price ?? v.discount_price,
+            stock_quantity: old.stock_quantity ?? v.stock_quantity,
+            stock_status: old.stock_status || v.stock_status,
+            image: old.image || v.image,
+        };
+    });
+};
+
+// generate variations from selected attributes
+const generateVariations = () => {
+    const groups = Object.entries(selectedAttrValues.value)
+        .map(([, valueIds]) => valueIds)
+        .filter((arr) => Array.isArray(arr) && arr.length);
+
+    if (!groups.length) {
+        form.variations = [];
+        return;
+    }
+
+    const combos = cartesian(groups);
+
+    const basePrice = form.base_price || null;
+
+    const newVars = combos.map((valueIds) => ({
+        sku: makeSku(valueIds),
+        price: basePrice,
+        discount_price: null,
+        stock_quantity: 0,
+        stock_status: "in_stock",
+        image: null,
+        attribute_value_ids: valueIds,
+    }));
+
+    form.variations = mergeExisting(newVars);
+};
+
+const clearGeneratedVariations = () => {
+    form.variations = [];
+    Object.keys(selectedAttrValues.value).forEach((k) => {
+        selectedAttrValues.value[k] = [];
+    });
+};
 </script>
 
 <style scoped>
