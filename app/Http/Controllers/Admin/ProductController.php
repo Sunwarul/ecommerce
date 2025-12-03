@@ -78,7 +78,7 @@ class ProductController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
-
+// dd($data);
             // Clean product inputs
             $productData = Arr::except($data, ['tag_ids', 'variations', 'warehouse_id']);
 
@@ -86,28 +86,76 @@ class ProductController extends Controller
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
 
-            // CREATE PRODUCT
-            $product = Product::create($productData);
-
-            // TAG RELATION
-            if (!empty($data['tag_ids'])) {
-                $product->tags()->sync($data['tag_ids']);
+            // 🔧 FIX: make sure *_id fields are SCALARS, not arrays
+            foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
+                if (isset($productData[$key]) && is_array($productData[$key])) {
+                    // take first value if it's an array like [3]
+                    $productData[$key] = $productData[$key][0] ?? null;
+                }
             }
 
+            // These are fine as arrays – your seeder uses same style and casts handle them
+            $productData['images'] = $productData['images'] ?? [];
+            $productData['dimensions'] = $productData['dimensions'] ?? [];
+            $productData['materials'] = $productData['materials'] ?? [];
+
+            // --------------------------------------------
+            // CREATE PRODUCT (same shape as seeder)
+            // --------------------------------------------
+            $product = Product::create([
+                'category_id' => $productData['category_id'],
+                'tax_id' => $productData['tax_id'] ?? null,
+                'brand_id' => $productData['brand_id'] ?? null,
+                'created_by' => $productData['created_by'],
+
+                'name' => $productData['name'],
+                'slug' => $productData['slug'],
+                'thumbnail' => $productData['thumbnail'] ?? null,
+                'images' => $productData['images'],
+
+                'sku' => $productData['sku'] ?? null,
+                'barcode' => $productData['barcode'] ?? null,
+                'code' => $productData['code'] ?? null,
+
+                'base_price' => $productData['base_price'],
+                'base_discount_price' => $productData['base_discount_price'] ?? null,
+
+                'stock_quantity' => $productData['stock_quantity'] ?? 0,
+                'stock_status' => $productData['stock_status'],
+                'type' => $productData['type'],
+
+                'weight' => $productData['weight'] ?? null,
+                'dimensions' => $productData['dimensions'],
+                'materials' => $productData['materials'],
+
+                'description' => $productData['description'] ?? null,
+                'additional_info' => $productData['additional_info'] ?? null,
+                'is_active' => $productData['is_active'],
+
+                'meta_title' => $productData['meta_title'] ?? null,
+                'meta_description' => $productData['meta_description'] ?? null,
+                'meta_keywords' => $productData['meta_keywords'] ?? null,
+            ]);
+
             // SIMPLE PRODUCT STOCK (uses warehouse)
-            if ($data['type'] === 'simple') {
+            if ($product->type === 'simple') {
                 ProductStock::create([
                     'product_id' => $product->id,
-                    'warehouse_id' => $data['warehouse_id'],
+                    'warehouse_id' => $data['warehouse_id'] ?? null,
                     'quantity' => $data['stock_quantity'] ?? 0,
                     'alert_quantity' => 10,
                 ]);
             }
 
-            // VARIABLE PRODUCT → variations
-            if ($data['type'] === 'variable' && !empty($data['variations'])) {
-                foreach ($data['variations'] as $variationInput) {
+            // TAG RELATION
+            if (!empty($data['tag_ids'] ?? null)) {
+                $tagIds = is_array($data['tag_ids']) ? $data['tag_ids'] : [$data['tag_ids']];
+                $product->tags()->sync($tagIds);
+            }
 
+            // VARIABLE PRODUCT → variations
+            if ($product->type === 'variable' && !empty($data['variations'] ?? null)) {
+                foreach ($data['variations'] as $variationInput) {
                     $variation = ProductVariation::create([
                         'product_id' => $product->id,
                         'sku' => $variationInput['sku'],
@@ -119,25 +167,28 @@ class ProductController extends Controller
                         'is_active' => true,
                     ]);
 
-                    // Attach attribute values
-                    foreach ($variationInput['attribute_value_ids'] as $valueId) {
-                        $value = ProductAttributeValue::findOrFail($valueId);
+                    $attributeValueIds = $variationInput['attribute_value_ids'] ?? [];
+                    if (!is_array($attributeValueIds)) {
+                        $attributeValueIds = [$attributeValueIds];
+                    }
 
-                        $variation->attributeValues()->attach($valueId, [
+                    $attachData = [];
+                    foreach ($attributeValueIds as $valueId) {
+                        $value = ProductAttributeValue::findOrFail($valueId);
+                        $attachData[$value->id] = [
                             'attribute_id' => $value->attribute_id,
                             'product_id' => $product->id,
-                        ]);
+                        ];
+                    }
+
+                    if (!empty($attachData)) {
+                        $variation->attributeValues()->attach($attachData);
                     }
                 }
             }
 
-            return response()->json([
-                'message' => 'Product created successfully',
-                'product' => $product->load('tags', 'variations.attributeValues.attribute'),
-            ]);
         });
     }
-
 
 
 

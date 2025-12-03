@@ -14,53 +14,63 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "category_id" => "required|exists:categories,id",
-            "brand_id" => "nullable|exists:brands,id",
-            "tax_id" => "nullable|exists:taxes,id",
+            // Basic relations
+            'category_id' => ['required', 'exists:categories,id'],
+            'brand_id' => ['nullable', 'exists:brands,id'],
+            'tax_id' => ['nullable', 'exists:taxes,id'],
 
-            "name" => "required|string|max:255",
-            "slug" => "nullable|string|max:255|unique:products,slug",
-            "thumbnail" => "nullable|string",
-            "images" => "nullable|array",
-            "images.*" => "string",
+            // Basic info
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:products,slug'],
+            'thumbnail' => ['nullable', 'string'],
 
-            "sku" => "nullable|string|max:255|unique:products,sku",
-            "barcode" => "nullable|string|max:255|unique:products,barcode",
-            "code" => "nullable|string|max:255",
+            'images' => ['nullable', 'array'],
+            'images.*' => ['string'],
 
-            "base_price" => "required|numeric|min:0",
-            "base_discount_price" => "nullable|numeric|min:0",
+            'sku' => ['nullable', 'string', 'max:255', 'unique:products,sku'],
+            'barcode' => ['nullable', 'string', 'max:255', 'unique:products,barcode'],
+            'code' => ['nullable', 'string', 'max:255'],
 
-            "stock_status" => "required|string",
-            "stock_quantity" => "nullable|numeric",
+            // Pricing
+            'base_price' => ['required', 'numeric', 'min:0'],
+            'base_discount_price' => ['nullable', 'numeric', 'min:0'],
 
-            "type" => "required|in:simple,variable",
+            // Stock (for simple product)
+            'stock_status' => ['required', 'string'],
+            'stock_quantity' => ['nullable', 'numeric'],
+
+            // Product type
+            'type' => ['required', 'in:simple,variable'],
 
             // warehouse usage for simple product
-            "warehouse_id" => "required_if:type,simple|nullable|exists:warehouses,id",
+            'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
 
-            "weight" => "nullable|numeric",
-            "dimensions" => "nullable|array",
-            "materials" => "nullable|array",
+            // Other fields
+            'weight' => ['nullable', 'numeric'],
+            'dimensions' => ['nullable', 'array'],
+            'materials' => ['nullable', 'array'],
 
-            "description" => "nullable|string",
-            "additional_info" => "nullable|string",
+            'description' => ['nullable', 'string'],
+            'additional_info' => ['nullable', 'string'],
 
-            "is_active" => "nullable|boolean",
+            'is_active' => ['nullable', 'boolean'],
 
-            "tag_ids" => "nullable|array",
-            "tag_ids.*" => "exists:tags,id",
+            // TAGS (must always be array when present)
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['integer', 'exists:tags,id'],
 
-            // VARIATIONS (if variable)
-            "variations" => "required_if:type,variable|array",
-            "variations.*.sku" => "required_if:type,variable|string",
-            "variations.*.price" => "required_if:type,variable|numeric",
-            "variations.*.discount_price" => "nullable|numeric",
-            "variations.*.stock_quantity" => "required_if:type,variable|integer",
-            "variations.*.stock_status" => "required_if:type,variable|string",
-            "variations.*.image" => "nullable|string",
-            "variations.*.attribute_value_ids" => "required_if:type,variable|array|min:1",
-            "variations.*.attribute_value_ids.*" => "exists:product_attribute_values,id",
+            // VARIATIONS (only when type = variable)
+            'variations' => ['required_if:type,variable', 'array'],
+            'variations.*.sku' => ['required_if:type,variable', 'string'],
+            'variations.*.price' => ['required_if:type,variable', 'numeric'],
+            'variations.*.discount_price' => ['nullable', 'numeric'],
+            'variations.*.stock_quantity' => ['required_if:type,variable', 'integer'],
+            'variations.*.stock_status' => ['required_if:type,variable', 'string'],
+            'variations.*.image' => ['nullable', 'string'],
+
+            // attribute_value_ids MUST be array, each id must be integer + exist
+            'variations.*.attribute_value_ids' => ['required_if:type,variable', 'array', 'min:1'],
+            'variations.*.attribute_value_ids.*' => ['integer', 'exists:product_attribute_values,id'],
         ];
     }
 }

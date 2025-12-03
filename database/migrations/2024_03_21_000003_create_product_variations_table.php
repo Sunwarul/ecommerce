@@ -11,7 +11,7 @@ class CreateProductVariationsTable extends Migration
         Schema::create('product_variations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('CASCADE');
-            $table->string('sku')->unique()->nullable();
+            $table->string('sku')->nullable();
             $table->decimal('price', 10, 2);
             $table->decimal('discount_price', 10, 2)->nullable();
             $table->integer('stock_quantity')->default(0);

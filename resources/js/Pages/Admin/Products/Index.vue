@@ -275,7 +275,7 @@
                         >
                         <TreeSelect
                             id="category_id"
-                            v-model="form.category_id"
+                            v-model="selectedCategoryKey"
                             :options="categoryTreeNodes"
                             placeholder="Select Category"
                             class="w-full"
@@ -888,7 +888,7 @@ watch(
             return;
         }
 
-        // ✅ Case 3: TreeSelect returns selectionKeys object like { "3": true }
+        // Case 3: TreeSelect returns selectionKeys object like { "3": true }
         if (typeof newVal === "object") {
             const keys = Object.keys(newVal);
             form.category_id = keys.length ? Number(keys[0]) : null;
