@@ -19,6 +19,8 @@ use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\PosOrderController;
+use App\Http\Controllers\Admin\PosSessionController;
 use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\SettingController;
 
@@ -53,6 +55,33 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+    // POS
+    Route::get('/pos', [PosOrderController::class, 'index'])->name('pos.index');
+    Route::post('/pos/orders', [PosOrderController::class, 'store'])->name('pos.orders.store');
+
+    Route::get('/pos/session/current', [PosSessionController::class, 'current'])->name('pos.session.current');
+    Route::post('/pos/session/open', [PosSessionController::class, 'open'])->name('pos.session.open');
+    Route::post('/pos/session/close', [PosSessionController::class, 'close'])->name('pos.session.close');
+
+
+    // POS
+    Route::get('/pos/sales', [PosOrderController::class, 'list'])->name('pos.sales.list');
+    Route::get('/pos/orders/{order}/invoice', [PosOrderController::class, 'invoice'])->name('pos.orders.invoice');
+    // POS orders list (sales history)
+    Route::get('/pos/orders', [PosOrderController::class, 'orders'])->name('pos.orders.index');
+
+    // Route::post('/pos/orders/{order}/refund', [PosRefundController::class, 'refund'])->name('pos.orders.refund');
+    // Route::get('/pos/report/daily', [PosReportController::class, 'daily'])->name('pos.report.daily');
+
+
+
+
+
+
+
+
+
 
 
 });

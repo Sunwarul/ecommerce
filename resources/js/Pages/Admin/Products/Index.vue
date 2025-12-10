@@ -1,11 +1,8 @@
 <template>
     <div>
-        <CrudComponent :form="form" formWidth="90vw">
+        <CrudComponent :form="form" >
             <!-- TABLE COLUMNS -->
             <template #columns>
-                <Column field="name" header="Name"></Column>
-                <Column field="category.name" header="Category"></Column>
-                <Column field="brand.name" header="Brand"></Column>
                 <Column field="thumbnail" header="Thumbnail">
                     <template #body="{ data }">
                         <img
@@ -15,6 +12,11 @@
                         />
                     </template>
                 </Column>
+                <Column field="name" header="Name"></Column>
+                <Column field="sku" header="SKU"></Column>
+                <Column field="category.name" header="Category"></Column>
+                <Column field="brand.name" header="Brand"></Column>
+                <Column field="base_price" header="Base Price"></Column>
             </template>
 
             <!-- FORM -->
@@ -859,14 +861,6 @@ const categoryTreeNodes = computed(() => {
 
     return props.categories.map(mapCategory);
 });
-
-// watch(
-//     () => form.category_id,
-//     (v) => {
-//         if (v === null || v === undefined || v === "") return;
-//         form.category_id = Number(v);
-//     }
-// );
 
 watch(
     selectedCategoryKey,
