@@ -62,13 +62,13 @@ const isActive = (name) => current.value.startsWith(name);
             </button>
 
             <!-- MESSAGES BUTTON -->
-            <button
+            <!-- <button
                 type="button"
                 class="layout-topbar-action flex items-center gap-2 hover:text-primary"
             >
                 <i class="pi pi-inbox text-lg"></i>
                 <span class="hidden md:block text-sm">Messages</span>
-            </button>
+            </button> -->
 
             <!-- PROFILE DROPDOWN -->
             <Menu
