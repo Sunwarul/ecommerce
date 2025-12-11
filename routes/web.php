@@ -32,6 +32,9 @@ Route::get('/', WelcomePageController::class)->name('welcome');
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('products', ProductController::class);
+    Route::get('/admin/products/{product}/edit-data', [ProductController::class, 'editData'])
+        ->name('products.edit-data');
+
     CrudRouter::setFor('categories', CategoryController::class);
     CrudRouter::setFor('tags', TagController::class);
     CrudRouter::setFor('brands', BrandController::class);

@@ -4,13 +4,14 @@ import { useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { computed, ref } from "vue";
 
+import { resolveImagePath } from "@/Helpers/imageHelper";
 const props = defineProps({
     products: Array,
     customers: Array,
     paymentMethods: Array,
     currentSession: Object,
 });
-
+console.log(props.products)
 const toast = useToast();
 
 const search = ref("");
@@ -325,18 +326,19 @@ function submitOrder() {
                                         <!-- product image placeholder -->
                                         <span
                                             class="text-slate-300 text-xs uppercase tracking-wide"
+                                            v-if="!product.thumbnail"
                                         >
                                             {{
                                                 product.thumbnail ? "" : "Image"
                                             }}
                                         </span>
-                                        <!--
-                                        <img v-if="product.thumbnail"
-                                             :src="product.thumbnail"
-                                             alt=""
-                                             class="w-full h-full object-cover"
+
+                                        <img
+                                            v-if="product.thumbnail"
+                                            :src="resolveImagePath(product.thumbnail)"
+                                            alt=""
+                                            class="h-full object-contain"
                                         />
-                                        -->
                                     </div>
 
                                     <div

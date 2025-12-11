@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariation extends Model
 {
@@ -68,6 +69,11 @@ class ProductVariation extends Model
             ->where('stock_quantity', '>', 0);
     }
 
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
     // Helper methods
     public function getCurrentPrice(): float
     {
@@ -76,12 +82,12 @@ class ProductVariation extends Model
 
     public function hasDiscount(): bool
     {
-        return ! is_null($this->discount_price);
+        return !is_null($this->discount_price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (! $this->hasDiscount()) {
+        if (!$this->hasDiscount()) {
             return null;
         }
 

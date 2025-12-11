@@ -21,7 +21,7 @@ class PosOrderController extends Controller
     public function index()
     {
         $products = Product::where('is_active', true)
-            ->select('id', 'name', 'sku', 'barcode', 'base_price', 'stock_quantity')
+            ->select('id', 'name', 'sku', 'barcode', 'base_price', 'stock_quantity', 'thumbnail')
             ->orderBy('name')
             ->get();
 
