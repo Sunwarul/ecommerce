@@ -88,11 +88,48 @@ class ProductController extends Controller
             'brands' => Brand::all(),
             'taxes' => Tax::all(),
             'tags' => Tag::all(),
-            'attributes' => ProductAttribute::with('values')->get(),
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
             'warehouses' => Warehouse::all(),
         ]);
     }
 
+    public function create()
+    {
+        return Inertia::render('Admin/Products/FormPage', [
+            'categories' => Category::with('children')->get(),
+            'brands' => Brand::all(),
+            'taxes' => Tax::all(),
+            'tags' => Tag::all(),
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
+            'warehouses' => Warehouse::all(),
+        ]);
+    }
+
+    public function edit(Product $product)
+    {
+        return Inertia::render('Admin/Products/FormPage', [
+            'product' => $product->load([
+                'category',
+                'brand',
+                'tax',
+                'tags',
+                'variations.attributeValues.attribute',
+                'stocks.warehouse',
+            ]),
+            'categories' => Category::with('children')->get(),
+            'brands' => Brand::all(),
+            'taxes' => Tax::all(),
+            'tags' => Tag::all(),
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
+            'warehouses' => Warehouse::all(),
+        ]);
+    }
 
     public function store(\App\Http\Requests\Admin\StoreProductRequest $request)
     {
@@ -212,7 +249,12 @@ class ProductController extends Controller
                 }
             }
 
+            return redirect()
+                ->route('products.index')
+                ->with('success', 'Product created successfully.');
         });
+
+
     }
 
 

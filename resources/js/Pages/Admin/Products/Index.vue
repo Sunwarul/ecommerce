@@ -1,7 +1,6 @@
 <script setup>
 import { router } from "@inertiajs/vue3";
-import axios from "axios";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
 
@@ -9,20 +8,12 @@ import { resolveImagePath } from "@/Helpers/imageHelper";
 import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import Dialog from "primevue/dialog";
 
 // Local
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import ProductForm from "./ProductForm.vue";
 
 const props = defineProps({
     products: { type: Object, required: true }, // paginator from controller
-    categories: { type: Array, default: () => [] },
-    brands: { type: Array, default: () => [] },
-    taxes: { type: Array, default: () => [] },
-    tags: { type: Array, default: () => [] },
-    attributes: { type: Array, default: () => [] },
-    warehouses: { type: Array, default: () => [] },
 });
 
 // ============ TABLE & PAGINATION ============
@@ -37,64 +28,26 @@ const visitLink = (url) => {
     });
 };
 
-// ============ MODAL / FORM STATE ============
+// ============ PAGE NAVIGATION ============
 
-const showFormDialog = ref(false);
-const isEditing = ref(false);
-const editingProduct = ref(null);
-const isFormLoading = ref(false); // 👈 loading state for edit
-
-const openCreate = () => {
-    isEditing.value = false;
-    editingProduct.value = null;
-    isFormLoading.value = false; // no need to load anything
-    showFormDialog.value = true;
+const goCreate = () => {
+    router.visit(route("products.create"));
 };
 
-const openEdit = async (rowProduct) => {
-    isEditing.value = true;
-    showFormDialog.value = true;
-    isFormLoading.value = true;
-    editingProduct.value = null;
-
-    try {
-        // call API to get full product with relationships
-        const response = await axios.get(
-            route("products.edit-data", rowProduct.id)
-        );
-
-        editingProduct.value = response.data;
-    } catch (error) {
-        console.error("Failed to load product edit data", error);
-        // optional: show toast / alert
-        showFormDialog.value = false;
-    } finally {
-        isFormLoading.value = false;
-    }
+const goEdit = (rowProduct) => {
+    router.visit(route("products.edit", rowProduct.id));
 };
 
-const closeDialog = () => {
-    showFormDialog.value = false;
-};
-
-const handleSaved = () => {
-    showFormDialog.value = false;
-    // reload to see updated table
-    router.reload({ preserveScroll: true, preserveState: true });
-};
+// ============ DELETE ============
 
 const deleteProduct = (product) => {
     if (!confirm("Delete this product?")) return;
 
     router.delete(route("products.destroy", product.id), {
         preserveScroll: true,
-        onSuccess: () => {
-            // optional: toast
-        },
+        preserveState: true,
     });
 };
-
-console.log(props.products);
 </script>
 
 <template>
@@ -108,7 +61,7 @@ console.log(props.products);
                         label="New Product"
                         icon="pi pi-plus"
                         class="p-button-sm"
-                        @click="openCreate"
+                        @click="goCreate"
                     />
                 </div>
 
@@ -153,7 +106,7 @@ console.log(props.products);
                                 label="Edit"
                                 icon="pi pi-pencil"
                                 class="p-button-text p-button-sm mr-1"
-                                @click="openEdit(data)"
+                                @click="goEdit(data)"
                             />
                             <Button
                                 label="Delete"
@@ -178,39 +131,6 @@ console.log(props.products);
                     />
                 </div>
             </div>
-
-            <!-- MODAL WITH FORM -->
-            <Dialog
-                v-model:visible="showFormDialog"
-                :modal="true"
-                :style="{ width: '80vw', maxWidth: '1100px' }"
-                :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
-                :header="isEditing ? 'Update Product' : 'Create Product'"
-            >
-                <!-- loader state while fetching edit data -->
-                <div
-                    v-if="isEditing && isFormLoading"
-                    class="py-10 flex flex-col items-center justify-center gap-2"
-                >
-                    <i class="pi pi-spin pi-spinner text-2xl" />
-                    <span>Loading product data...</span>
-                </div>
-
-                <!-- form only when not loading -->
-                <ProductForm
-                    v-else
-                    :product="editingProduct"
-                    :categories="categories"
-                    :brands="brands"
-                    :taxes="taxes"
-                    :tags="tags"
-                    :attributes="attributes"
-                    :warehouses="warehouses"
-                    :is-editing="isEditing"
-                    @cancel="closeDialog"
-                    @saved="handleSaved"
-                />
-            </Dialog>
         </div>
     </AuthenticatedLayout>
 </template>

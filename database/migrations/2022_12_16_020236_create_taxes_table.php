@@ -8,27 +8,23 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('taxes', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->enum('rate_type', ['percent', 'flat'])->default('percent');
-            $table->decimal('rate_value', 10, 4);
-            $table->softDeletes();
+            $table->string('name', 50);
+            $table->enum('rate_type', ["percent","flat"])->default('percent');
+            $table->decimal('rate_value', 10, 2);
+            $table->softDeletes('deleted_at');
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('taxes');
     }

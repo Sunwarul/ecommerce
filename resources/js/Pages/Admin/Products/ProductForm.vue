@@ -149,7 +149,7 @@ const stockStatuses = [
 // =============================
 
 const selectedCategoryKey = ref(null);
-
+console.log(selectedCategoryKey)
 const categoryTreeNodes = computed(() => {
     const mapCategory = (cat) => ({
         key: String(cat.id),
@@ -791,24 +791,21 @@ const cancel = () => {
                 </div>
 
                 <!-- Dimensions -->
-                <div class="field col-12 md:col-4 mb-4 px-md-2">
+                <div class="field col-span-2 mb-4 px-md-2">
                     <label class="block font-bold mb-2">Dimensions (cm)</label>
-                    <div class="flex gap-2">
+                    <div class="grid grid-cols-3 gap-2">
                         <InputNumber
                             v-model.number="form.dimensions.length"
-                            class="w-full"
                             :min="0"
                             placeholder="L"
                         />
                         <InputNumber
                             v-model.number="form.dimensions.width"
-                            class="w-full"
                             :min="0"
                             placeholder="W"
                         />
                         <InputNumber
                             v-model.number="form.dimensions.height"
-                            class="w-full"
                             :min="0"
                             placeholder="H"
                         />

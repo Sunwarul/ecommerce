@@ -27,23 +27,38 @@ const model = ref([
                         to: route("tags.index"),
                     },
                     {
-                        label: "Product",
-                        icon: "pi pi-shopping-bag",
-                        to: route("products.index"),
+                        label: "Tax",
+                        icon: "pi pi-check-square",
+                        to: route("taxes.index"),
                     },
-                ],
-            },
-            {
-                label: "Payment",
-                icon: "pi pi-credit-card",
-                items: [
                     {
                         label: "Payment Method",
                         icon: "pi pi-credit-card",
                         to: route("payment-methods.index"),
                     },
+                    // {
+                    //     label: "Product",
+                    //     icon: "pi pi-shopping-bag",
+                    //     to: route("products.index"),
+                    // },
                 ],
             },
+            {
+                label: "Product",
+                icon: "pi pi-shopping-bag",
+                to: route("products.index"),
+            },
+            // {
+            //     label: "Payment",
+            //     icon: "pi pi-credit-card",
+            //     items: [
+            //         {
+            //             label: "Payment Method",
+            //             icon: "pi pi-credit-card",
+            //             to: route("payment-methods.index"),
+            //         },
+            //     ],
+            // },
         ],
     },
 

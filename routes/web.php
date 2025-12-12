@@ -34,7 +34,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('products', ProductController::class);
     Route::get('/admin/products/{product}/edit-data', [ProductController::class, 'editData'])
         ->name('products.edit-data');
+    Route::get('/products/create', [ProductController::class, 'create'])
+        ->name('products.create');
 
+    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
+        ->name('products.edit');
+
+
+    CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);
     CrudRouter::setFor('categories', CategoryController::class);
     CrudRouter::setFor('tags', TagController::class);
     CrudRouter::setFor('brands', BrandController::class);

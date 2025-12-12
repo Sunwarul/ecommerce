@@ -1,13 +1,21 @@
 models:
-  Setting:
-    key: string nullable
-    value: text nullable
+  Tax:
+    name: string:50
+    rate_type: enum:percent,flat default:percent
+    rate_value: decimal:10,4
+    deleted_at: softDeletes
 
 controllers:
-  Setting:
+  Tax:
     store:
-      validate: key value
+      validate: name, rate_type, rate_value
+      save: tax
+      redirect: taxes.index
+
     update:
-      validate: key value
+      validate: name, rate_type, rate_value
+      update: tax
+      redirect: taxes.index
+
 
 inertia_vue:
