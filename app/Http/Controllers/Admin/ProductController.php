@@ -138,7 +138,8 @@ class ProductController extends Controller
             // dd($data);
             // Clean product inputs
             $productData = Arr::except($data, ['tag_ids', 'variations', 'warehouse_id']);
-
+            
+            // dd($productData);
             $productData['created_by'] = auth()->id();
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
@@ -431,8 +432,9 @@ class ProductController extends Controller
             }
 
             return redirect()
-                ->back()
+                ->route('admin.products.index') // or your real route name
                 ->with('success', 'Product updated successfully.');
+
         });
     }
 

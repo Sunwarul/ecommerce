@@ -29,7 +29,7 @@ class StoreProductRequest extends FormRequest
 
             'sku' => ['nullable', 'string', 'max:255', 'unique:products,sku'],
             'barcode' => ['nullable', 'string', 'max:255', 'unique:products,barcode'],
-            'code' => ['nullable', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:255', 'unique:products,code'],
 
             // Pricing
             'base_price' => ['required', 'numeric', 'min:0'],
@@ -43,7 +43,7 @@ class StoreProductRequest extends FormRequest
             'type' => ['required', 'in:simple,variable'],
 
             // warehouse usage for simple product
-            'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
+            // 'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
 
             // Other fields
             'weight' => ['nullable', 'numeric'],
@@ -54,6 +54,11 @@ class StoreProductRequest extends FormRequest
             'additional_info' => ['nullable', 'string'],
 
             'is_active' => ['nullable', 'boolean'],
+
+            // SEO
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:255'],
+            'meta_keywords' => ['nullable', 'string', 'max:255'],
 
             // TAGS (must always be array when present)
             'tag_ids' => ['nullable', 'array'],

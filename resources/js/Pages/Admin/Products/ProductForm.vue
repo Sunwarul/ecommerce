@@ -27,7 +27,6 @@ const props = defineProps({
     attributes: { type: Array, default: () => [] },
     warehouses: { type: Array, default: () => [] },
 });
-console.log(props.product);
 const emit = defineEmits(["cancel", "saved"]);
 
 // =============================
@@ -102,7 +101,7 @@ const mapProductToForm = (product) => {
 
         type: product.type ?? "simple",
 
-        thumbnail: product.thumbnail ?? null,
+        thumbnail:  null,
         images: product.images ?? [],
 
         weight: product.weight ?? null,
@@ -149,7 +148,7 @@ const stockStatuses = [
 // =============================
 
 const selectedCategoryKey = ref(null);
-console.log(selectedCategoryKey)
+
 const categoryTreeNodes = computed(() => {
     const mapCategory = (cat) => ({
         key: String(cat.id),
@@ -429,9 +428,18 @@ const submitForm = () => {
 
     const options = {
         preserveScroll: true,
+        forceFormData: true, // ✅ REQUIRED for thumbnail File object
         onSuccess: () => {
-            submitted.value = false;
             emit("saved");
+        },
+        onError: (errors) => {
+            // ✅ THIS is the real server validation response
+            console.log("Inertia validation errors:", errors);
+            console.log("form.errors:", form.errors);
+        },
+        onFinish: () => {
+            // always run, success or error
+            submitted.value = false;
         },
     };
 
@@ -444,7 +452,6 @@ const submitForm = () => {
         form.post(url, options);
     }
 };
-
 const cancel = () => {
     emit("cancel");
 };
@@ -471,9 +478,10 @@ const cancel = () => {
                         class="w-full"
                         :class="{ 'p-invalid': submitted && !form.name }"
                     />
-                    <small v-if="submitted && !form.name" class="p-error"
-                        >Name is required.</small
-                    >
+
+                    <small v-if="form.errors.name" class="p-error">{{
+                        form.errors.name
+                    }}</small>
                 </div>
 
                 <!-- Slug -->
@@ -488,9 +496,10 @@ const cancel = () => {
                         class="w-full"
                         :class="{ 'p-invalid': submitted && !form.slug }"
                     />
-                    <small v-if="submitted && !form.slug" class="p-error"
-                        >Slug is required.</small
-                    >
+
+                    <small v-if="form.errors.slug" class="p-error">{{
+                        form.errors.slug
+                    }}</small>
                 </div>
 
                 <!-- SKU -->
@@ -501,6 +510,10 @@ const cancel = () => {
                         v-model.trim="form.sku"
                         class="w-full"
                     />
+
+                    <small v-if="form.errors.sku" class="p-error">{{
+                        form.errors.sku
+                    }}</small>
                 </div>
 
                 <!-- Barcode -->
@@ -513,6 +526,10 @@ const cancel = () => {
                         v-model.trim="form.barcode"
                         class="w-full"
                     />
+
+                    <small v-if="form.errors.barcode" class="p-error">{{
+                        form.errors.barcode
+                    }}</small>
                 </div>
 
                 <!-- Product Code -->
@@ -525,6 +542,10 @@ const cancel = () => {
                         v-model.trim="form.code"
                         class="w-full"
                     />
+
+                    <small v-if="form.errors.code" class="p-error">{{
+                        form.errors.code
+                    }}</small>
                 </div>
 
                 <!-- Product Type -->
@@ -540,11 +561,12 @@ const cancel = () => {
                         optionValue="value"
                         placeholder="Select Type"
                         class="w-full"
-                        :class="{ 'p-invalid': submitted && !form.type }"
+                        :class="{ 'p-invalid': form.errors.type }"
                     />
-                    <small v-if="submitted && !form.type" class="p-error">
-                        Product type is required.
-                    </small>
+
+                    <small v-if="form.errors.type" class="p-error">{{
+                        form.errors.type
+                    }}</small>
                 </div>
 
                 <!-- Stock Status -->
@@ -561,14 +583,14 @@ const cancel = () => {
                         placeholder="Select Status"
                         class="w-full"
                         :class="{
-                            'p-invalid': submitted && !form.stock_status,
+                            'p-invalid': form.errors.stock_status,
                         }"
                     />
                     <small
-                        v-if="submitted && !form.stock_status"
+                        v-if="form.errors.stock_status"
                         class="p-error"
                     >
-                        Stock status is required.
+                        {{ form.errors.stock_status }}
                     </small>
                 </div>
 
@@ -605,12 +627,13 @@ const cancel = () => {
                         class="w-full"
                         :min="0"
                         :class="{
-                            'p-invalid': submitted && !form.base_price,
+                            'p-invalid': form.errors.base_price,
                         }"
                     />
-                    <small v-if="submitted && !form.base_price" class="p-error">
-                        Base price is required.
-                    </small>
+
+                    <small v-if="form.errors.base_price" class="p-error">{{
+                        form.errors.base_price
+                    }}</small>
                 </div>
 
                 <!-- Discount Price -->
@@ -629,7 +652,7 @@ const cancel = () => {
                     />
                     <small
                         v-if="
-                            form.base_discount_price &&
+                            form.errors.base_discount_price &&
                             form.base_discount_price >= form.base_price
                         "
                         class="p-error"
@@ -652,7 +675,7 @@ const cancel = () => {
                 </div>
 
                 <!-- Warehouse (required_if:type,simple) -->
-                <div
+                <!-- <div
                     class="field col-12 sm:col-6 mb-4"
                     v-if="form.type === 'simple'"
                 >
@@ -684,7 +707,7 @@ const cancel = () => {
                     >
                         Warehouse is required for simple products.
                     </small>
-                </div>
+                </div> -->
             </div>
         </div>
 

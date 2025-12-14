@@ -44,7 +44,7 @@ class UpdateProductRequest extends FormRequest
                 'max:255',
                 Rule::unique('products', 'barcode')->ignore($productId),
             ],
-            'code' => ['nullable', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:255', Rule::unique('products', 'code')->ignore($productId)],
 
             'base_price' => ['required', 'numeric', 'min:0'],
             'base_discount_price' => ['nullable', 'numeric', 'min:0'],
@@ -53,7 +53,7 @@ class UpdateProductRequest extends FormRequest
             'stock_quantity' => ['nullable', 'numeric'],
 
             'type' => ['required', 'in:simple,variable'],
-            'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
+            // 'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
 
             'weight' => ['nullable', 'numeric'],
             'dimensions' => ['nullable', 'array'],
@@ -62,6 +62,12 @@ class UpdateProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'additional_info' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
+
+            // SEO
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:255'],
+            'meta_keywords' => ['nullable', 'string', 'max:255'],
+
 
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],

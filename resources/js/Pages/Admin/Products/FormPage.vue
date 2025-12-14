@@ -13,16 +13,8 @@ const props = defineProps({
     attributes: Array,
     warehouses: Array,
 });
-console.log(
-    "debug data",
-    props.product,
-    props.categories,
-    props.brands,
-    props.taxes,
-    props.tags,
-    props.attributes,
-    props.warehouses
-);
+console.log("debug data", props.product);
+
 const isEditing = computed(() => !!props.product?.id);
 </script>
 
