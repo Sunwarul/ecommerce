@@ -14,13 +14,16 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // cashier
             $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
 
-            $table->decimal('opening_balance', 10, 2)->default(0);
-            $table->decimal('closing_balance', 10, 2)->nullable();
+            $table->decimal('opening_cash', 10, 2)->default(0);
+            $table->decimal('closing_cash', 10, 2)->nullable();
 
             $table->string('status', 50)->default('open'); // open, closed
             $table->timestamp('opened_at')->nullable();
             $table->timestamp('closed_at')->nullable();
+
+            $table->text('note')->nullable();
 
             $table->timestamps();
         });

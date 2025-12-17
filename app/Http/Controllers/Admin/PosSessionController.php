@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PosSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PosSessionController extends Controller
 {
@@ -16,61 +17,72 @@ class PosSessionController extends Controller
             ->latest('id')
             ->first();
 
-        return response()->json([
-            'session' => $session,
-        ]);
+        return response()->json($session);
     }
 
     public function open(Request $request)
     {
         $data = $request->validate([
-            'branch_id'    => ['nullable', 'exists:branches,id'],
-            'warehouse_id' => ['nullable', 'exists:warehouses,id'],
-            'opening_balance' => ['nullable', 'numeric', 'min:0'],
+            'branch_id' => ['required', 'exists:branches,id'],
+            'warehouse_id' => ['required', 'exists:warehouses,id'],
+            'opening_cash' => ['nullable', 'numeric', 'min:0'],
+            'note' => ['nullable', 'string'],
         ]);
 
-        // close old open session if any
-        PosSession::where('user_id', Auth::id())
-            ->where('status', 'open')
-            ->update([
-                'status' => 'closed',
-                'closed_at' => now(),
+        return DB::transaction(function () use ($data) {
+            $alreadyOpen = PosSession::where('user_id', Auth::id())
+                ->where('status', 'open')
+                ->lockForUpdate()
+                ->first();
+
+            if ($alreadyOpen) {
+                return back()->withErrors([
+                    'session' => 'You already have an open POS session.',
+                ]);
+            }
+
+            PosSession::create([
+                'user_id' => Auth::id(),
+                'branch_id' => $data['branch_id'],
+                'warehouse_id' => $data['warehouse_id'],
+                'opening_cash' => $data['opening_cash'] ?? 0,
+                'note' => $data['note'] ?? null,
+                'status' => 'open',
+                'opened_at' => now(),
             ]);
 
-        $session = PosSession::create([
-            'user_id'         => Auth::id(),
-            'branch_id'       => $data['branch_id'] ?? null,
-            'warehouse_id'    => $data['warehouse_id'] ?? null,
-            'opening_balance' => $data['opening_balance'] ?? 0,
-            'status'          => 'open',
-            'opened_at'       => now(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'session' => $session,
-        ]);
+            return back()->with('success', 'POS session opened.');
+        });
     }
 
     public function close(Request $request)
     {
         $data = $request->validate([
-            'session_id'      => ['required', 'exists:pos_sessions,id'],
-            'closing_balance' => ['required', 'numeric'],
+            'closing_cash' => ['nullable', 'numeric', 'min:0'],
+            'note' => ['nullable', 'string'],
         ]);
 
-        $session = PosSession::where('id', $data['session_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        return DB::transaction(function () use ($data) {
+            $session = PosSession::where('user_id', Auth::id())
+                ->where('status', 'open')
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
 
-        $session->update([
-            'closing_balance' => $data['closing_balance'],
-            'status'          => 'closed',
-            'closed_at'       => now(),
-        ]);
+            if (!$session) {
+                return back()->withErrors([
+                    'session' => 'No open POS session found.',
+                ]);
+            }
 
-        return response()->json([
-            'success' => true,
-        ]);
+            $session->update([
+                'closing_cash' => $data['closing_cash'] ?? 0,
+                'note' => $data['note'] ?? $session->note,
+                'status' => 'closed',
+                'closed_at' => now(),
+            ]);
+
+            return back()->with('success', 'POS session closed.');
+        });
     }
 }

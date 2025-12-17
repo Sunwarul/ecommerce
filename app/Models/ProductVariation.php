@@ -47,15 +47,16 @@ class ProductVariation extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function attributeValues(): BelongsToMany
+    public function attributeValues()
     {
         return $this->belongsToMany(
             ProductAttributeValue::class,
             'product_variation_attributes',
             'variation_id',
             'attribute_value_id'
-        )->withPivot('attribute_id');
+        )->withPivot(['attribute_id', 'product_id']);
     }
+
 
     // Scopes
     public function scopeActive($query)
@@ -71,8 +72,19 @@ class ProductVariation extends Model
 
     public function stocks(): HasMany
     {
-        return $this->hasMany(ProductStock::class);
+        return $this->hasMany(ProductStock::class, 'variation_id');
     }
+
+    public function simpleStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class)->whereNull('variation_id');
+    }
+
+    public function variationStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class)->whereNotNull('variation_id');
+    }
+
 
     // Helper methods
     public function getCurrentPrice(): float
@@ -122,4 +134,16 @@ class ProductVariation extends Model
 
         return $this->save();
     }
+
+    public function getTotalWarehouseStockAttribute(): float
+    {
+        return (float) $this->stocks()->sum('quantity');
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class, 'variation_id');
+    }
+
+
 }

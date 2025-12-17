@@ -1,8 +1,7 @@
 <script setup>
+import { resolveImagePath } from "@/Helpers/imageHelper";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, ref, watch } from "vue";
-
-import { resolveImagePath } from "@/Helpers/imageHelper";
 
 // PrimeVue
 import Button from "primevue/button";
@@ -27,17 +26,21 @@ const props = defineProps({
     attributes: { type: Array, default: () => [] },
     warehouses: { type: Array, default: () => [] },
 });
+
 const emit = defineEmits(["cancel", "saved"]);
 
-// =============================
-// FORM BASE
-// =============================
+const productTypes = [
+    { label: "Simple Product", value: "simple" },
+    { label: "Variable Product", value: "variable" },
+];
 
+// -----------------------------
+// FORM BASE (warehouse stock)
+// -----------------------------
 const emptyForm = {
     category_id: null,
     brand_id: null,
     tax_id: null,
-    warehouse_id: null,
 
     name: "",
     slug: "",
@@ -48,20 +51,16 @@ const emptyForm = {
     base_price: null,
     base_discount_price: null,
 
-    stock_status: "in_stock",
-    stock_quantity: 0,
-
     type: "simple",
+
+    // ✅ stock comes from product_stocks now
+    stocks: [], // for SIMPLE: [{warehouse_id, quantity, alert_quantity}]
 
     thumbnail: null,
     images: [],
 
     weight: null,
-    dimensions: {
-        length: null,
-        width: null,
-        height: null,
-    },
+    dimensions: { length: null, width: null, height: null },
     materials: [],
 
     description: "",
@@ -74,18 +73,18 @@ const emptyForm = {
 
     tag_ids: [],
 
+    // for VARIABLE: each variation has stocks[]
     variations: [],
 };
 
 const mapProductToForm = (product) => {
     if (!product) return { ...emptyForm };
 
-    return {
+    const mapped = {
         ...emptyForm,
         category_id: product.category_id ?? null,
         brand_id: product.brand_id ?? null,
         tax_id: product.tax_id ?? null,
-        warehouse_id: product.warehouse_id ?? null,
 
         name: product.name ?? "",
         slug: product.slug ?? "",
@@ -96,12 +95,9 @@ const mapProductToForm = (product) => {
         base_price: product.base_price ?? null,
         base_discount_price: product.base_discount_price ?? null,
 
-        stock_status: product.stock_status ?? "in_stock",
-        stock_quantity: product.stock_quantity ?? 0,
-
         type: product.type ?? "simple",
 
-        thumbnail:  null,
+        thumbnail: null,
         images: product.images ?? [],
 
         weight: product.weight ?? null,
@@ -124,29 +120,52 @@ const mapProductToForm = (product) => {
             ? product.tag_ids
             : (product.tags || []).map((t) => t.id),
 
-        variations: product.variations ?? [],
+        // ✅ preload stocks from API (if you return them)
+        stocks: (product.stocks || [])
+            .filter((s) => !s.variation_id)
+            .map((s) => ({
+                warehouse_id: s.warehouse_id,
+                quantity: Number(s.quantity ?? 0),
+                alert_quantity: s.alert_quantity ?? null,
+            })),
+
+        variations: (product.variations || []).map((v) => ({
+            id: v.id, // keep id for edit mode if you need
+            sku: v.sku ?? "",
+            price: v.price ?? null,
+            discount_price: v.discount_price ?? null,
+            image: v.image ?? null,
+            attribute_value_ids: (
+                v.attribute_values ||
+                v.attribute_value_ids ||
+                []
+            ).map((x) => (typeof x === "object" ? x.id : x)),
+            stocks: (v.stocks || []).map((s) => ({
+                warehouse_id: s.warehouse_id,
+                quantity: Number(s.quantity ?? 0),
+                alert_quantity: s.alert_quantity ?? null,
+            })),
+        })),
     };
+
+    // If no stocks returned, initialize empty stocks rows for simple
+    if (mapped.type === "simple" && (!mapped.stocks || !mapped.stocks.length)) {
+        mapped.stocks = props.warehouses.map((w) => ({
+            warehouse_id: w.id,
+            quantity: 0,
+            alert_quantity: null,
+        }));
+    }
+
+    return mapped;
 };
 
 const submitted = ref(false);
 const form = useForm(mapProductToForm(props.product));
 
-// dropdown options
-const productTypes = [
-    { label: "Simple Product", value: "simple" },
-    { label: "Variable Product", value: "variable" },
-];
-
-const stockStatuses = [
-    { label: "In Stock", value: "in_stock" },
-    { label: "Out of Stock", value: "out_of_stock" },
-    { label: "Pre-Order", value: "pre_order" },
-];
-
-// =============================
+// -----------------------------
 // CATEGORY TREESELECT
-// =============================
-
+// -----------------------------
 const selectedCategoryKey = ref(null);
 
 const categoryTreeNodes = computed(() => {
@@ -156,17 +175,13 @@ const categoryTreeNodes = computed(() => {
         data: cat,
         children: (cat.children || []).map(mapCategory),
     });
-
     return props.categories.map(mapCategory);
 });
 
 watch(
     selectedCategoryKey,
     (newVal) => {
-        if (!newVal) {
-            form.category_id = null;
-            return;
-        }
+        if (!newVal) return (form.category_id = null);
 
         if (typeof newVal === "string" || typeof newVal === "number") {
             form.category_id = Number(newVal);
@@ -189,10 +204,9 @@ watch(
     { immediate: true }
 );
 
-// =============================
+// -----------------------------
 // MATERIALS INPUT (STRING <-> ARRAY)
-// =============================
-
+// -----------------------------
 const materialsInput = ref("");
 
 watch(materialsInput, (value) => {
@@ -204,14 +218,13 @@ watch(materialsInput, (value) => {
         : [];
 });
 
-// =============================
+// -----------------------------
 // AUTO SLUG FROM NAME
-// =============================
-
+// -----------------------------
 watch(
     () => form.name,
     (newValue) => {
-        if (!form.slug || form.slug === "") {
+        if (!form.slug) {
             form.slug = (newValue || "")
                 .toLowerCase()
                 .replace(/\s+/g, "-")
@@ -223,10 +236,9 @@ watch(
     }
 );
 
-// =============================
-// FILE UPLOAD (THUMBNAIL)
-// =============================
-
+// -----------------------------
+// THUMBNAIL UPLOAD
+// -----------------------------
 const photoPreview = ref(null);
 
 const handlePhotoUpload = (event) => {
@@ -236,18 +248,14 @@ const handlePhotoUpload = (event) => {
     form.thumbnail = file;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-        photoPreview.value = e.target.result;
-    };
+    reader.onload = (e) => (photoPreview.value = e.target.result);
     reader.readAsDataURL(file);
 };
 
-// =============================
+// -----------------------------
 // VARIATIONS / ATTRIBUTES
-// =============================
-
+// -----------------------------
 const attributeValueOptions = computed(() => {
-    if (!props.attributes) return [];
     const opts = [];
     props.attributes.forEach((attr) => {
         (attr.values || []).forEach((val) => {
@@ -262,38 +270,13 @@ const attributeValueOptions = computed(() => {
     return opts;
 });
 
-const addVariation = () => {
-    form.variations.push({
-        sku: "",
-        price: form.base_price || null,
-        discount_price: null,
-        stock_quantity: 0,
-        stock_status: "in_stock",
-        image: null,
-        attribute_value_ids: [],
-    });
-};
-
-const removeVariation = (index) => {
-    form.variations.splice(index, 1);
-};
-
-// AUTO COMBINATION LOGIC
 const selectedAttrValues = ref({});
 
-const cartesian = (arrays) => {
-    if (!arrays.length) return [];
-    return arrays.reduce(
-        (acc, curr) => {
-            const res = [];
-            acc.forEach((a) => {
-                curr.forEach((c) => res.push([...a, c]));
-            });
-            return res;
-        },
+const cartesian = (arrays) =>
+    arrays.reduce(
+        (acc, curr) => acc.flatMap((a) => curr.map((c) => [...a, c])),
         [[]]
     );
-};
 
 const comboKey = (valueIds) =>
     valueIds
@@ -304,9 +287,9 @@ const comboKey = (valueIds) =>
 const valueIdToLabel = computed(() => {
     const map = new Map();
     props.attributes.forEach((a) => {
-        (a.values || []).forEach((v) => {
-            map.set(v.id, (v.display_value || v.value || "").toString());
-        });
+        (a.values || []).forEach((v) =>
+            map.set(v.id, String(v.display_value || v.value || ""))
+        );
     });
     return map;
 });
@@ -320,37 +303,53 @@ const makeSku = (valueIds) => {
         .replace(/\s+/g, "");
 };
 
+// keep existing edits when regen
 const mergeExisting = (newVariations) => {
     const existingMap = new Map(
         form.variations.map((v) => [comboKey(v.attribute_value_ids || []), v])
     );
 
     return newVariations.map((v) => {
-        const key = comboKey(v.attribute_value_ids);
-        const old = existingMap.get(key);
+        const old = existingMap.get(comboKey(v.attribute_value_ids));
         if (!old) return v;
 
         return {
             ...v,
+            id: old.id, // keep id in edit mode
             sku: old.sku || v.sku,
             price: old.price ?? v.price,
             discount_price: old.discount_price ?? v.discount_price,
-            stock_quantity: old.stock_quantity ?? v.stock_quantity,
-            stock_status: old.stock_status || v.stock_status,
             image: old.image || v.image,
+            stocks: old.stocks?.length ? old.stocks : v.stocks,
         };
     });
 };
 
-const generateVariations = () => {
-    const groups = Object.entries(selectedAttrValues.value)
-        .map(([, valueIds]) => valueIds)
-        .filter((arr) => Array.isArray(arr) && arr.length);
+const initStocksForAllWarehouses = () =>
+    props.warehouses.map((w) => ({
+        warehouse_id: w.id,
+        quantity: 0,
+        alert_quantity: null,
+    }));
 
-    if (!groups.length) {
-        form.variations = [];
-        return;
-    }
+const addVariation = () => {
+    form.variations.push({
+        sku: "",
+        price: form.base_price || null,
+        discount_price: null,
+        image: null,
+        attribute_value_ids: [],
+        stocks: initStocksForAllWarehouses(),
+    });
+};
+
+const removeVariation = (index) => form.variations.splice(index, 1);
+
+const generateVariations = () => {
+    const groups = Object.values(selectedAttrValues.value).filter(
+        (arr) => Array.isArray(arr) && arr.length
+    );
+    if (!groups.length) return (form.variations = []);
 
     const combos = cartesian(groups);
     const basePrice = form.base_price || null;
@@ -359,10 +358,9 @@ const generateVariations = () => {
         sku: makeSku(valueIds),
         price: basePrice,
         discount_price: null,
-        stock_quantity: 0,
-        stock_status: "in_stock",
         image: null,
         attribute_value_ids: valueIds,
+        stocks: initStocksForAllWarehouses(),
     }));
 
     form.variations = mergeExisting(newVars);
@@ -370,55 +368,64 @@ const generateVariations = () => {
 
 const clearGeneratedVariations = () => {
     form.variations = [];
-    Object.keys(selectedAttrValues.value).forEach((k) => {
-        selectedAttrValues.value[k] = [];
-    });
+    Object.keys(selectedAttrValues.value).forEach(
+        (k) => (selectedAttrValues.value[k] = [])
+    );
 };
 
-// =============================
-// SUBMIT / CANCEL
-// =============================
+// -----------------------------
+// Ensure stocks are initialized when type changes
+// -----------------------------
+watch(
+    () => form.type,
+    (t) => {
+        if (t === "simple") {
+            if (!form.stocks?.length)
+                form.stocks = initStocksForAllWarehouses();
+            form.variations = [];
+        } else if (t === "variable") {
+            form.stocks = [];
+            // init attribute picker keys
+            selectedAttrValues.value = {};
+            props.attributes.forEach(
+                (a) => (selectedAttrValues.value[a.id] = [])
+            );
+        }
+    },
+    { immediate: true }
+);
 
+// -----------------------------
+// RESET
+// -----------------------------
 const resetFromProps = () => {
     const mapped = mapProductToForm(props.product);
     form.defaults(mapped);
     form.reset(mapped);
     form.clearErrors();
 
-    if (Array.isArray(mapped.materials) && mapped.materials.length) {
-        materialsInput.value = mapped.materials.join(", ");
-    } else {
-        materialsInput.value = "";
-    }
+    materialsInput.value = Array.isArray(mapped.materials)
+        ? mapped.materials.join(", ")
+        : "";
 
-    if (mapped.category_id) {
-        selectedCategoryKey.value = String(mapped.category_id);
-    } else {
-        selectedCategoryKey.value = null;
-    }
-
-    photoPreview.value = mapped.thumbnail
-        ? resolveImagePath(mapped.thumbnail)
+    selectedCategoryKey.value = mapped.category_id
+        ? String(mapped.category_id)
         : null;
 
-    // init attribute keys
+    photoPreview.value = props.product?.thumbnail
+        ? resolveImagePath(props.product.thumbnail)
+        : null;
+
     selectedAttrValues.value = {};
-    props.attributes.forEach((a) => {
-        selectedAttrValues.value[a.id] = [];
-    });
+    props.attributes.forEach((a) => (selectedAttrValues.value[a.id] = []));
 };
 
-onMounted(() => {
-    resetFromProps();
-});
+onMounted(resetFromProps);
+watch(() => props.product, resetFromProps);
 
-watch(
-    () => props.product,
-    () => {
-        resetFromProps();
-    }
-);
-
+// -----------------------------
+// SUBMIT
+// -----------------------------
 const submitForm = () => {
     submitted.value = true;
 
@@ -428,33 +435,22 @@ const submitForm = () => {
 
     const options = {
         preserveScroll: true,
-        forceFormData: true, // ✅ REQUIRED for thumbnail File object
-        onSuccess: () => {
-            emit("saved");
-        },
-        onError: (errors) => {
-            // ✅ THIS is the real server validation response
-            console.log("Inertia validation errors:", errors);
-            console.log("form.errors:", form.errors);
-        },
-        onFinish: () => {
-            // always run, success or error
-            submitted.value = false;
-        },
+        forceFormData: true,
+        onSuccess: () => emit("saved"),
+        onFinish: () => (submitted.value = false),
     };
 
     if (props.isEditing) {
-        form.transform((data) => ({
-            ...data,
-            _method: "put",
-        })).post(url, options);
+        form.transform((data) => ({ ...data, _method: "put" })).post(
+            url,
+            options
+        );
     } else {
         form.post(url, options);
     }
 };
-const cancel = () => {
-    emit("cancel");
-};
+
+const cancel = () => emit("cancel");
 </script>
 
 <template>
@@ -478,7 +474,6 @@ const cancel = () => {
                         class="w-full"
                         :class="{ 'p-invalid': submitted && !form.name }"
                     />
-
                     <small v-if="form.errors.name" class="p-error">{{
                         form.errors.name
                     }}</small>
@@ -496,7 +491,6 @@ const cancel = () => {
                         class="w-full"
                         :class="{ 'p-invalid': submitted && !form.slug }"
                     />
-
                     <small v-if="form.errors.slug" class="p-error">{{
                         form.errors.slug
                     }}</small>
@@ -510,7 +504,6 @@ const cancel = () => {
                         v-model.trim="form.sku"
                         class="w-full"
                     />
-
                     <small v-if="form.errors.sku" class="p-error">{{
                         form.errors.sku
                     }}</small>
@@ -526,7 +519,6 @@ const cancel = () => {
                         v-model.trim="form.barcode"
                         class="w-full"
                     />
-
                     <small v-if="form.errors.barcode" class="p-error">{{
                         form.errors.barcode
                     }}</small>
@@ -542,7 +534,6 @@ const cancel = () => {
                         v-model.trim="form.code"
                         class="w-full"
                     />
-
                     <small v-if="form.errors.code" class="p-error">{{
                         form.errors.code
                     }}</small>
@@ -563,35 +554,9 @@ const cancel = () => {
                         class="w-full"
                         :class="{ 'p-invalid': form.errors.type }"
                     />
-
                     <small v-if="form.errors.type" class="p-error">{{
                         form.errors.type
                     }}</small>
-                </div>
-
-                <!-- Stock Status -->
-                <div class="field col-12 md:col-4 mb-4 px-md-2">
-                    <label for="stock_status" class="block font-bold mb-2"
-                        >Stock Status *</label
-                    >
-                    <Dropdown
-                        id="stock_status"
-                        v-model="form.stock_status"
-                        :options="stockStatuses"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select Status"
-                        class="w-full"
-                        :class="{
-                            'p-invalid': form.errors.stock_status,
-                        }"
-                    />
-                    <small
-                        v-if="form.errors.stock_status"
-                        class="p-error"
-                    >
-                        {{ form.errors.stock_status }}
-                    </small>
                 </div>
 
                 <!-- Active / Inactive -->
@@ -626,11 +591,8 @@ const cancel = () => {
                         v-model.number="form.base_price"
                         class="w-full"
                         :min="0"
-                        :class="{
-                            'p-invalid': form.errors.base_price,
-                        }"
+                        :class="{ 'p-invalid': form.errors.base_price }"
                     />
-
                     <small v-if="form.errors.base_price" class="p-error">{{
                         form.errors.base_price
                     }}</small>
@@ -651,63 +613,62 @@ const cancel = () => {
                         :max="form.base_price || null"
                     />
                     <small
-                        v-if="
-                            form.errors.base_discount_price &&
-                            form.base_discount_price >= form.base_price
-                        "
+                        v-if="form.errors.base_discount_price"
                         class="p-error"
                     >
-                        Discount price must be less than base price.
+                        {{ form.errors.base_discount_price }}
                     </small>
                 </div>
 
-                <!-- Stock Quantity -->
-                <div class="field col-12 sm:col-6 mb-4">
-                    <label for="stock_quantity" class="block font-bold mb-2"
-                        >Stock Quantity (simple)</label
-                    >
-                    <InputNumber
-                        id="stock_quantity"
-                        v-model.number="form.stock_quantity"
-                        class="w-full"
-                        :min="0"
-                    />
-                </div>
+                <!-- SIMPLE: Warehouse Stock Table -->
+                <div v-if="form.type === 'simple'" class="col-span-full">
+                    <h4 class="font-semibold mb-2">Warehouse Stock (Simple)</h4>
 
-                <!-- Warehouse (required_if:type,simple) -->
-                <!-- <div
-                    class="field col-12 sm:col-6 mb-4"
-                    v-if="form.type === 'simple'"
-                >
-                    <label for="warehouse_id" class="block font-bold mb-2"
-                        >Warehouse *</label
-                    >
-                    <Dropdown
-                        id="warehouse_id"
-                        v-model="form.warehouse_id"
-                        :options="warehouses"
-                        optionLabel="name"
-                        optionValue="id"
-                        placeholder="Select Warehouse"
-                        class="w-full"
-                        :class="{
-                            'p-invalid':
-                                submitted &&
-                                form.type === 'simple' &&
-                                !form.warehouse_id,
-                        }"
-                    />
-                    <small
-                        v-if="
-                            submitted &&
-                            form.type === 'simple' &&
-                            !form.warehouse_id
-                        "
-                        class="p-error"
-                    >
-                        Warehouse is required for simple products.
-                    </small>
-                </div> -->
+                    <div class="overflow-x-auto border rounded">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="p-2 text-left">Warehouse</th>
+                                    <th class="p-2 text-left">Quantity</th>
+                                    <th class="p-2 text-left">Alert Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(s, i) in form.stocks"
+                                    :key="s.warehouse_id"
+                                    class="border-b"
+                                >
+                                    <td class="p-2">
+                                        {{
+                                            warehouses.find(
+                                                (w) => w.id === s.warehouse_id
+                                            )?.name || "Warehouse"
+                                        }}
+                                    </td>
+                                    <td class="p-2">
+                                        <InputNumber
+                                            v-model.number="s.quantity"
+                                            class="w-full"
+                                            :min="0"
+                                        />
+                                    </td>
+                                    <td class="p-2">
+                                        <InputNumber
+                                            v-model.number="s.alert_quantity"
+                                            class="w-full"
+                                            :min="0"
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <small v-if="form.errors.stocks" class="p-error">{{
+                        form.errors.stocks
+                    }}</small>
+                </div>
             </div>
         </div>
 
@@ -723,6 +684,7 @@ const cancel = () => {
                     <label for="category_id" class="block font-bold mb-2"
                         >Category *</label
                     >
+
                     <TreeSelect
                         id="category_id"
                         v-model="selectedCategoryKey"
@@ -730,9 +692,7 @@ const cancel = () => {
                         placeholder="Select Category"
                         class="w-full"
                         selectionMode="single"
-                        :class="{
-                            'p-invalid': submitted && !form.category_id,
-                        }"
+                        :class="{ 'p-invalid': submitted && !form.category_id }"
                     />
 
                     <small
@@ -865,6 +825,7 @@ const cancel = () => {
                     <label for="thumbnail" class="block font-bold mb-2"
                         >Thumbnail</label
                     >
+
                     <div class="flex items-center gap-4">
                         <div
                             v-if="photoPreview || form.thumbnail"
@@ -880,6 +841,7 @@ const cancel = () => {
                                 class="w-20 h-20 object-cover rounded"
                             />
                         </div>
+
                         <FileUpload
                             mode="basic"
                             name="thumbnail"
@@ -890,9 +852,11 @@ const cancel = () => {
                             chooseLabel="Browse"
                         />
                     </div>
-                    <small class="text-gray-500">
-                        Max size: 2MB. Accepted formats: JPEG, PNG, JPG, GIF
-                    </small>
+
+                    <small class="text-gray-500"
+                        >Max size: 2MB. Accepted formats: JPEG, PNG, JPG,
+                        GIF</small
+                    >
                 </div>
             </div>
         </div>
@@ -907,9 +871,9 @@ const cancel = () => {
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div v-for="attr in attributes" :key="attr.id" class="mb-3">
-                        <label class="block font-bold mb-2">
-                            {{ attr.display_name || attr.name }}
-                        </label>
+                        <label class="block font-bold mb-2">{{
+                            attr.display_name || attr.name
+                        }}</label>
 
                         <MultiSelect
                             v-model="selectedAttrValues[attr.id]"
@@ -963,25 +927,29 @@ const cancel = () => {
                 </small>
             </div>
 
-            <div v-if="form.variations.length" class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead>
+            <div v-if="form.variations.length" class="w-full overflow-x-auto">
+                <table class="min-w-[1100px] w-full text-sm table-fixed">
+                    <thead class="sticky top-0 bg-white z-10">
                         <tr class="border-b">
-                            <th class="p-2 text-left">SKU *</th>
-                            <th class="p-2 text-left">Price *</th>
-                            <th class="p-2 text-left">Discount</th>
-                            <th class="p-2 text-left">Stock *</th>
-                            <th class="p-2 text-left">Status *</th>
-                            <th class="p-2 text-left">Attribute Values *</th>
-                            <th class="p-2 text-left">Image Path</th>
-                            <th class="p-2 text-left"></th>
+                            <th class="p-2 text-left w-[180px]">SKU *</th>
+                            <th class="p-2 text-left w-[120px]">Price *</th>
+                            <th class="p-2 text-left w-[120px]">Discount</th>
+                            <th class="p-2 text-left w-[280px]">
+                                Attribute Values *
+                            </th>
+                            <th class="p-2 text-left w-[320px]">
+                                Warehouse Stock *
+                            </th>
+                            <th class="p-2 text-left w-[220px]">Image Path</th>
+                            <th class="p-2 text-left w-[70px]"></th>
                         </tr>
                     </thead>
+
                     <tbody>
                         <tr
                             v-for="(variation, index) in form.variations"
                             :key="index"
-                            class="border-b"
+                            class="border-b align-top"
                         >
                             <!-- SKU -->
                             <td class="p-2">
@@ -991,9 +959,7 @@ const cancel = () => {
                                     placeholder="Variation SKU"
                                     :class="{
                                         'p-invalid':
-                                            submitted &&
-                                            form.type === 'variable' &&
-                                            !variation.sku,
+                                            submitted && !variation.sku,
                                     }"
                                 />
                             </td>
@@ -1002,84 +968,89 @@ const cancel = () => {
                             <td class="p-2">
                                 <InputNumber
                                     v-model.number="variation.price"
-                                    class="w-full"
                                     :min="0"
                                     :class="{
                                         'p-invalid':
-                                            submitted &&
-                                            form.type === 'variable' &&
-                                            !variation.price,
+                                            submitted && !variation.price,
                                     }"
+                                    style="width: 80px;"
                                 />
                             </td>
 
-                            <!-- Discount Price -->
+                            <!-- Discount -->
                             <td class="p-2">
                                 <InputNumber
                                     v-model.number="variation.discount_price"
-                                    class="w-full"
                                     :min="0"
-                                />
-                            </td>
-
-                            <!-- Stock Quantity -->
-                            <td class="p-2">
-                                <InputNumber
-                                    v-model.number="variation.stock_quantity"
-                                    class="w-full"
-                                    :min="0"
-                                    :class="{
-                                        'p-invalid':
-                                            submitted &&
-                                            form.type === 'variable' &&
-                                            (variation.stock_quantity ===
-                                                null ||
-                                                variation.stock_quantity ===
-                                                    '' ||
-                                                variation.stock_quantity < 0),
-                                    }"
-                                />
-                            </td>
-
-                            <!-- Stock Status -->
-                            <td class="p-2">
-                                <Dropdown
-                                    v-model="variation.stock_status"
-                                    :options="stockStatuses"
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    class="w-full"
-                                    :class="{
-                                        'p-invalid':
-                                            submitted &&
-                                            form.type === 'variable' &&
-                                            !variation.stock_status,
-                                    }"
+                                    style="width: 80px;"
                                 />
                             </td>
 
                             <!-- Attribute Values -->
                             <td class="p-2">
-                                <MultiSelect
-                                    v-model="variation.attribute_value_ids"
-                                    :options="attributeValueOptions"
-                                    optionLabel="label"
-                                    optionValue="id"
-                                    display="chip"
-                                    placeholder="Select attribute values"
-                                    class="w-full"
-                                    :class="{
-                                        'p-invalid':
-                                            submitted &&
-                                            form.type === 'variable' &&
-                                            (!variation.attribute_value_ids ||
-                                                !variation.attribute_value_ids
-                                                    .length),
-                                    }"
-                                />
+                                <div class="max-w-[260px]">
+                                    <MultiSelect
+                                        v-model="variation.attribute_value_ids"
+                                        :options="attributeValueOptions"
+                                        optionLabel="label"
+                                        optionValue="id"
+                                        display="chip"
+                                        placeholder="Select attribute values"
+                                        class="w-full"
+                                        :class="{
+                                            'p-invalid':
+                                                submitted &&
+                                                (!variation.attribute_value_ids ||
+                                                    !variation
+                                                        .attribute_value_ids
+                                                        .length),
+                                        }"
+                                    />
+                                </div>
                             </td>
 
-                            <!-- Image path (string) -->
+                            <!-- Warehouse Stocks -->
+                            <td class="p-2">
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="(s, si) in variation.stocks"
+                                        :key="s.warehouse_id ?? si"
+                                        class="grid grid-cols-12 gap-2 items-center"
+                                    >
+                                        <span
+                                            class="col-span-5 text-xs truncate"
+                                        >
+                                            {{
+                                                warehouses.find(
+                                                    (w) =>
+                                                        w.id === s.warehouse_id
+                                                )?.name || "Warehouse"
+                                            }}
+                                        </span>
+
+                                        <div class="col-span-3">
+                                            <InputNumber
+                                                v-model.number="s.quantity"
+                                                class="w-full"
+                                                :min="0"
+                                            />
+                                        </div>
+
+                                        <div class="col-span-4">
+                                            <InputNumber
+                                                v-model.number="
+                                                    s.alert_quantity
+                                                "
+                                                class="w-full"
+                                                :min="0"
+                                                placeholder="Alert"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Image -->
                             <td class="p-2">
                                 <InputText
                                     v-model.trim="variation.image"
@@ -1100,6 +1071,10 @@ const cancel = () => {
                     </tbody>
                 </table>
             </div>
+
+            <small v-if="form.errors.variations" class="p-error">{{
+                form.errors.variations
+            }}</small>
         </div>
 
         <!-- Description Section -->

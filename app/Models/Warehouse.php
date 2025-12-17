@@ -39,4 +39,15 @@ class Warehouse extends Model
     {
         return $this->status ? 'Active' : 'Inactive';
     }
+
+    public function stockMovementsFrom()
+    {
+        return $this->hasMany(StockMovement::class, 'from_warehouse_id');
+    }
+
+    public function stockMovementsTo()
+    {
+        return $this->hasMany(StockMovement::class, 'to_warehouse_id');
+    }
+
 }

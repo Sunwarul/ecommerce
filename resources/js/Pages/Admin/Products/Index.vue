@@ -5,6 +5,7 @@ import { computed } from "vue";
 import { resolveImagePath } from "@/Helpers/imageHelper";
 
 // PrimeVue
+import Badge from "primevue/badge";
 import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
@@ -16,30 +17,21 @@ const props = defineProps({
     products: { type: Object, required: true }, // paginator from controller
 });
 
-// ============ TABLE & PAGINATION ============
-
 const products = computed(() => props.products || { data: [], links: [] });
 
 const visitLink = (url) => {
     if (!url) return;
-    router.visit(url, {
-        preserveScroll: true,
-        preserveState: true,
-    });
+    router.visit(url, { preserveScroll: true, preserveState: true });
 };
 
-// ============ PAGE NAVIGATION ============
-
-const goCreate = () => {
-    router.visit(route("products.create"));
-};
-
-const goEdit = (rowProduct) => {
+// Navigation
+const goCreate = () => router.visit(route("products.create"));
+const goShow = (rowProduct) =>
+    router.visit(route("products.show", rowProduct.id));
+const goEdit = (rowProduct) =>
     router.visit(route("products.edit", rowProduct.id));
-};
 
-// ============ DELETE ============
-
+// Delete
 const deleteProduct = (product) => {
     if (!confirm("Delete this product?")) return;
 
@@ -48,12 +40,21 @@ const deleteProduct = (product) => {
         preserveState: true,
     });
 };
+
+// Stock helper (works even if you don't send total_stock yet)
+const getTotalStock = (p) => {
+    if (p.total_stock !== undefined && p.total_stock !== null)
+        return Number(p.total_stock);
+    if (Array.isArray(p.stocks)) {
+        return p.stocks.reduce((sum, s) => sum + Number(s.quantity || 0), 0);
+    }
+    return 0;
+};
 </script>
 
 <template>
     <AuthenticatedLayout>
-        <div class="p-4 space-y-6">
-            <!-- PRODUCTS TABLE -->
+        <div class="space-y-6">
             <div class="card">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-xl font-semibold">Products</h2>
@@ -71,7 +72,8 @@ const deleteProduct = (product) => {
                     :paginator="false"
                     class="w-full"
                 >
-                    <Column field="thumbnail" header="Thumbnail">
+                    <!-- Thumbnail -->
+                    <Column header="Thumbnail">
                         <template #body="{ data }">
                             <img
                                 v-if="data.thumbnail"
@@ -83,25 +85,74 @@ const deleteProduct = (product) => {
                         </template>
                     </Column>
 
+                    <!-- Name -->
                     <Column field="name" header="Name" />
+
+                    <!-- Type -->
+                    <Column header="Type">
+                        <template #body="{ data }">
+                            <Badge
+                                :severity="
+                                    data.type === 'variable'
+                                        ? 'info'
+                                        : 'secondary'
+                                "
+                                :value="data.type"
+                            />
+                        </template>
+                    </Column>
+
+                    <!-- SKU -->
                     <Column field="sku" header="SKU" />
 
+                    <!-- Category -->
                     <Column header="Category">
                         <template #body="{ data }">
-                            {{ data.category?.name }}
+                            {{ data.category?.name || "-" }}
                         </template>
                     </Column>
 
+                    <!-- Brand -->
                     <Column header="Brand">
                         <template #body="{ data }">
-                            {{ data.brand?.name }}
+                            {{ data.brand?.name || "-" }}
                         </template>
                     </Column>
 
+                    <!-- Base Price -->
                     <Column field="base_price" header="Base Price" />
 
+                    <!-- Total Stock -->
+                    <Column header="Total Stock">
+                        <template #body="{ data }">
+                            <span class="font-medium">{{
+                                getTotalStock(data)
+                            }}</span>
+                        </template>
+                    </Column>
+
+                    <!-- Status -->
+                    <Column header="Status">
+                        <template #body="{ data }">
+                            <Badge
+                                :severity="
+                                    data.is_active ? 'success' : 'danger'
+                                "
+                            >
+                                {{ data.is_active ? "Active" : "Inactive" }}
+                            </Badge>
+                        </template>
+                    </Column>
+
+                    <!-- Actions -->
                     <Column header="Actions">
                         <template #body="{ data }">
+                            <Button
+                                label="View"
+                                icon="pi pi-eye"
+                                class="p-button-text p-button-sm mr-1"
+                                @click="goShow(data)"
+                            />
                             <Button
                                 label="Edit"
                                 icon="pi pi-pencil"
@@ -113,6 +164,19 @@ const deleteProduct = (product) => {
                                 icon="pi pi-trash"
                                 class="p-button-text p-button-danger p-button-sm"
                                 @click="deleteProduct(data)"
+                            />
+                            <Button
+                                label="Stock Movement"
+                                icon="pi pi-sort-alt"
+                                class="p-button-secondary"
+                                @click="
+                                    router.visit(
+                                        route(
+                                            'admin.stock.move.form',
+                                            data.id
+                                        )
+                                    )
+                                "
                             />
                         </template>
                     </Column>

@@ -10,7 +10,18 @@ class ProductStock extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['product_id', 'warehouse_id', 'quantity', 'alert_quantity'];
+    protected $fillable = [
+        'product_id',
+        'warehouse_id',
+        'variation_id',
+        'quantity',
+        'alert_quantity'
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:2',
+        'alert_quantity' => 'decimal:2',
+    ];
 
     public function product(): BelongsTo
     {
@@ -21,4 +32,10 @@ class ProductStock extends Model
     {
         return $this->belongsTo(Warehouse::class);
     }
+
+    public function variation(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariation::class, 'variation_id');
+    }
 }
+

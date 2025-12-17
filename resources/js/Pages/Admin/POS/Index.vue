@@ -1,145 +1,129 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { useForm } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
+
+// PrimeVue
+import SessionBar from "@/Components/POS/SessionBar.vue";
+import Badge from "primevue/badge";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import Dropdown from "primevue/dropdown";
+import InputGroup from "primevue/inputgroup";
+import InputGroupAddon from "primevue/inputgroupaddon";
+import InputNumber from "primevue/inputnumber";
+import InputText from "primevue/inputtext";
+
 const props = defineProps({
-    products: Array,
-    customers: Array,
-    paymentMethods: Array,
-    currentSession: Object,
+    products: { type: Array, default: () => [] },
+    customers: { type: Array, default: () => [] },
+    paymentMethods: { type: Array, default: () => [] },
+    currentSession: { type: Object, default: null },
+    warehouses: { type: Array, default: () => [] },
+    branches: { type: Array, default: () => [] },
 });
-console.log(props.products)
+
 const toast = useToast();
 
+// session + clock
+const posSession = ref(props.currentSession);
+const now = ref(new Date());
+let timer = null;
+
+onMounted(() => {
+    timer = setInterval(() => (now.value = new Date()), 1000);
+});
+onUnmounted(() => {
+    if (timer) clearInterval(timer);
+});
+
+// search
 const search = ref("");
 const selectedCustomerId = ref(null);
-const posSession = ref(props.currentSession);
+
+// cart
 const cartItems = ref([]);
 
-// ---------- ORDER LEVEL DISCOUNT ----------
-const discountMode = ref("none"); // 'none' | 'percent' | 'fixed'
+// order discount
+const discountMode = ref("none"); // none | percent | fixed
 const discountValue = ref(0);
 
-// ---------- CART LOGIC ----------
+// -----------------------------
+// Price helpers
+// -----------------------------
+const n = (v) => Number(v || 0);
+
+const getProductUnitPrice = (p) => n(p.base_price);
+
+const getProductDiscountPrice = (p) => {
+    const up = getProductUnitPrice(p);
+    const dp = n(p.base_discount_price);
+    return dp > 0 && dp < up ? dp : null;
+};
+
+const productDiscountPercent = (p) => {
+    const up = getProductUnitPrice(p);
+    const dp = getProductDiscountPrice(p);
+    if (!dp || up <= 0) return 0;
+    return Math.round(((up - dp) / up) * 100);
+};
+
+const getVariationUnitPrice = (v) => n(v.price);
+
+const getVariationDiscountPrice = (v) => {
+    const up = getVariationUnitPrice(v);
+    const dp = n(v.discount_price);
+    return dp > 0 && dp < up ? dp : null;
+};
+
+const variationDiscountPercent = (v) => {
+    const up = getVariationUnitPrice(v);
+    const dp = getVariationDiscountPrice(v);
+    if (!dp || up <= 0) return 0;
+    return Math.round(((up - dp) / up) * 100);
+};
+
+// -----------------------------
+// filtered products
+// -----------------------------
 const filteredProducts = computed(() => {
     let list = props.products || [];
+    if (!search.value) return list;
 
-    if (search.value) {
-        const t = search.value.toLowerCase();
-        list = list.filter(
-            (p) =>
-                (p.name && p.name.toLowerCase().includes(t)) ||
-                (p.sku && p.sku.toLowerCase().includes(t)) ||
-                (p.barcode && p.barcode.toLowerCase().includes(t))
-        );
-    }
-
-    return list;
+    const t = search.value.toLowerCase();
+    return list.filter(
+        (p) =>
+            (p.name && p.name.toLowerCase().includes(t)) ||
+            (p.sku && p.sku.toLowerCase().includes(t)) ||
+            (p.barcode && p.barcode.toLowerCase().includes(t))
+    );
 });
 
-function addToCart(product) {
-    const found = cartItems.value.find((i) => i.product_id === product.id);
-    if (found) {
-        found.quantity += 1;
-    } else {
-        cartItems.value.push({
-            product_id: product.id,
-            name: product.name,
-            sku: product.sku,
-            unit_price: Number(product.base_price) || 0,
-            quantity: 1,
-            discount_amount: 0,
-            tax_amount: 0,
-        });
-    }
-}
+// -----------------------------
+// variation picker dialog
+// -----------------------------
+const showVariationDialog = ref(false);
+const dialogProduct = ref(null);
+const selectedVariationId = ref(null);
 
-function removeFromCart(index) {
-    cartItems.value.splice(index, 1);
-}
-
-// ---------- TOTALS ----------
-const subtotal = computed(() =>
-    cartItems.value.reduce(
-        (sum, item) => sum + item.unit_price * item.quantity,
-        0
-    )
-);
-
-const lineDiscountTotal = computed(() =>
-    cartItems.value.reduce(
-        (sum, item) => sum + Number(item.discount_amount || 0),
-        0
-    )
-);
-
-const orderDiscount = computed(() => {
-    const base = subtotal.value;
-    const val = Number(discountValue.value) || 0;
-
-    if (discountMode.value === "percent") {
-        const p = Math.min(Math.max(val, 0), 100);
-        return (base * p) / 100;
-    }
-
-    if (discountMode.value === "fixed") {
-        return Math.min(Math.max(val, 0), base);
-    }
-
-    return 0;
+const dialogVariations = computed(() => {
+    const p = dialogProduct.value;
+    if (!p) return [];
+    return (p.variations || []).map((v) => ({
+        label: v.sku || `Variation #${v.id}`,
+        value: v.id,
+        raw: v,
+    }));
 });
 
-const discountTotal = computed(
-    () => lineDiscountTotal.value + orderDiscount.value
-);
-
-const taxTotal = computed(() =>
-    cartItems.value.reduce((sum, item) => sum + Number(item.tax_amount || 0), 0)
-);
-
-const total = computed(
-    () => subtotal.value - discountTotal.value + taxTotal.value
-);
-
-// ---------- MULTIPLE PAYMENTS ----------
-let paymentRowId = 1;
-const payments = ref([
-    {
-        id: paymentRowId++,
-        payment_method_id: null,
-        amount: 0,
-    },
-]);
-
-function addPaymentRow() {
-    payments.value.push({
-        id: paymentRowId++,
-        payment_method_id: null,
-        amount: 0,
-    });
-}
-
-function removePaymentRow(index) {
-    if (payments.value.length === 1) {
-        // reset last row instead of removing
-        payments.value[0].payment_method_id = null;
-        payments.value[0].amount = 0;
-        return;
-    }
-    payments.value.splice(index, 1);
-}
-
-const totalPaid = computed(() =>
-    payments.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
-);
-
-const change = computed(() => Math.max(0, totalPaid.value - total.value));
-
-// ---------- SUBMIT ----------
-const form = useForm({});
+const selectedVariation = computed(() => {
+    const p = dialogProduct.value;
+    if (!p || !selectedVariationId.value) return null;
+    return (p.variations || []).find((v) => v.id === selectedVariationId.value);
+});
 
 function ensureSession() {
     if (posSession.value) return true;
@@ -152,7 +136,181 @@ function ensureSession() {
     return false;
 }
 
-function submitOrder() {
+// -----------------------------
+// Add to cart
+// - simple product: add directly
+// - variable product: open dialog to choose variation
+// -----------------------------
+function addProduct(product) {
+    if (!ensureSession()) return;
+
+    if (product.type === "variable") {
+        dialogProduct.value = product;
+        selectedVariationId.value = null;
+        showVariationDialog.value = true;
+        return;
+    }
+
+    addSimpleToCart(product);
+}
+
+function addSimpleToCart(product) {
+    const sellPrice =
+        getProductDiscountPrice(product) ?? getProductUnitPrice(product);
+
+    const found = cartItems.value.find(
+        (i) => i.product_id === product.id && !i.variation_id
+    );
+
+    if (found) {
+        found.quantity += 1;
+        return;
+    }
+
+    cartItems.value.push({
+        product_id: product.id,
+        variation_id: null,
+        name: product.name,
+        sku: product.sku,
+        unit_price: getProductUnitPrice(product), // original
+        discount_price: getProductDiscountPrice(product), // default discount price (nullable)
+        sell_price: sellPrice, // price used for selling
+        quantity: 1,
+
+        // optional manual extras
+        line_discount_amount: 0,
+        tax_amount: 0,
+    });
+}
+
+function confirmAddVariation() {
+    const p = dialogProduct.value;
+    const v = selectedVariation.value;
+
+    if (!p || !v) {
+        toast.add({
+            severity: "warn",
+            summary: "Select variation",
+            detail: "Please select a variation first",
+            life: 2000,
+        });
+        return;
+    }
+
+    const sellPrice = getVariationDiscountPrice(v) ?? getVariationUnitPrice(v);
+
+    const found = cartItems.value.find(
+        (i) => i.product_id === p.id && i.variation_id === v.id
+    );
+
+    if (found) {
+        found.quantity += 1;
+    } else {
+        cartItems.value.push({
+            product_id: p.id,
+            variation_id: v.id,
+
+            name: `${p.name} (${v.sku})`,
+            sku: v.sku || p.sku,
+
+            unit_price: getVariationUnitPrice(v),
+            discount_price: getVariationDiscountPrice(v),
+            sell_price: sellPrice,
+
+            quantity: 1,
+            line_discount_amount: 0,
+            tax_amount: 0,
+        });
+    }
+
+    showVariationDialog.value = false;
+    dialogProduct.value = null;
+    selectedVariationId.value = null;
+}
+
+function removeFromCart(index) {
+    cartItems.value.splice(index, 1);
+}
+
+// -----------------------------
+// Totals
+// -----------------------------
+const subtotal = computed(() =>
+    cartItems.value.reduce((sum, item) => {
+        const price = n(item.sell_price || item.unit_price);
+        return sum + price * n(item.quantity);
+    }, 0)
+);
+
+const lineDiscountTotal = computed(() =>
+    cartItems.value.reduce((sum, item) => sum + n(item.line_discount_amount), 0)
+);
+
+const orderDiscount = computed(() => {
+    const base = subtotal.value;
+    const val = n(discountValue.value);
+
+    if (discountMode.value === "percent") {
+        const p = Math.min(Math.max(val, 0), 100);
+        return (base * p) / 100;
+    }
+    if (discountMode.value === "fixed") {
+        return Math.min(Math.max(val, 0), base);
+    }
+    return 0;
+});
+
+const discountTotal = computed(
+    () => lineDiscountTotal.value + orderDiscount.value
+);
+
+const taxTotal = computed(() =>
+    cartItems.value.reduce((sum, item) => sum + n(item.tax_amount), 0)
+);
+
+const total = computed(
+    () => subtotal.value - discountTotal.value + taxTotal.value
+);
+
+// -----------------------------
+// Payments
+// -----------------------------
+let paymentRowId = 1;
+const payments = ref([
+    { id: paymentRowId++, payment_method_id: null, amount: 0 },
+]);
+
+function addPaymentRow() {
+    payments.value.push({
+        id: paymentRowId++,
+        payment_method_id: null,
+        amount: 0,
+    });
+}
+function removePaymentRow(index) {
+    if (payments.value.length === 1) {
+        payments.value[0].payment_method_id = null;
+        payments.value[0].amount = 0;
+        return;
+    }
+    payments.value.splice(index, 1);
+}
+
+const totalPaid = computed(() =>
+    payments.value.reduce((sum, row) => sum + n(row.amount), 0)
+);
+
+const change = computed(() => Math.max(0, totalPaid.value - total.value));
+
+// reset payments if total changes and paid became smaller (optional)
+watch(total, () => {
+    // keep user input; no hard reset
+});
+
+// -----------------------------
+// Submit
+// -----------------------------
+function submitOrder(action = "complete") {
     if (!ensureSession()) return;
 
     if (!cartItems.value.length) {
@@ -165,65 +323,79 @@ function submitOrder() {
         return;
     }
 
+    // ✅ payments required only for complete / complete_print
     const validPayments = payments.value.filter(
-        (p) => p.payment_method_id && Number(p.amount) > 0
+        (p) => p.payment_method_id && n(p.amount) > 0
     );
 
-    if (!validPayments.length) {
-        toast.add({
-            severity: "warn",
-            summary: "Payment required",
-            detail: "Add at least one payment method with amount",
-            life: 2200,
-        });
-        return;
-    }
-
-    if (totalPaid.value < total.value) {
-        toast.add({
-            severity: "warn",
-            summary: "Insufficient payment",
-            detail: "Total paid is less than payable amount",
-            life: 2500,
-        });
-        return;
+    if (action !== "draft") {
+        if (!validPayments.length) {
+            toast.add({
+                severity: "warn",
+                summary: "Payment required",
+                detail: "Add at least one payment",
+                life: 2200,
+            });
+            return;
+        }
+        if (totalPaid.value < total.value) {
+            toast.add({
+                severity: "warn",
+                summary: "Insufficient payment",
+                detail: "Total paid is less than payable amount",
+                life: 2500,
+            });
+            return;
+        }
     }
 
     const payload = {
+        action, // ✅ REQUIRED BY BACKEND
+
         pos_session_id: posSession.value.id,
         branch_id: posSession.value.branch_id,
         warehouse_id: posSession.value.warehouse_id,
         customer_id: selectedCustomerId.value,
-        // send items as before
+
         items: cartItems.value.map((item) => ({
             product_id: item.product_id,
-            variation_id: null,
+            variation_id: item.variation_id,
             quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount_amount: item.discount_amount || 0,
+            unit_price: item.sell_price,
+            discount_amount: item.line_discount_amount || 0,
             tax_amount: item.tax_amount || 0,
         })),
-        // multiple payments
-        payments: validPayments.map((p) => ({
-            payment_method_id: p.payment_method_id,
-            amount: p.amount,
-        })),
-        // optional: you can store order-level discount too
+
+        payments:
+            action === "draft"
+                ? [] // ✅ no payment needed for draft
+                : validPayments.map((p) => ({
+                      payment_method_id: p.payment_method_id,
+                      amount: p.amount,
+                  })),
+
         order_discount_type: discountMode.value,
         order_discount_value: discountValue.value,
         notes: null,
     };
 
-    form.post(route("pos.orders.store"), {
+    router.post(route("pos.orders.store"), payload, {
         preserveScroll: true,
-        data: payload,
-        onSuccess: () => {
+        onSuccess: (page) => {
             toast.add({
                 severity: "success",
                 summary: "Success",
                 detail: "Order saved",
                 life: 2000,
             });
+
+            // ✅ If you return order_id from backend, redirect to invoice for print
+            // Example: page.props.flash?.order_id
+            if (action === "complete_print") {
+                const orderId = page?.props?.flash?.order_id;
+                if (orderId) router.visit(route("pos.orders.invoice", orderId));
+            }
+
             cartItems.value = [];
             selectedCustomerId.value = null;
             discountMode.value = "none";
@@ -232,25 +404,17 @@ function submitOrder() {
                 { id: paymentRowId++, payment_method_id: null, amount: 0 },
             ];
         },
-        onError: () => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "Failed to save order",
-                life: 3000,
-            });
-        },
     });
 }
 </script>
 
 <template>
     <AuthenticatedLayout>
-        <div class="h-screen flex">
+        <div class="h-[95vh] flex">
             <main
                 class="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4"
             >
-                <!-- Top mini header -->
+                <!-- Header -->
                 <header
                     class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6"
                 >
@@ -266,19 +430,40 @@ function submitOrder() {
                             }}
                         </p>
                     </div>
+
                     <div class="flex items-center gap-3 text-xs text-slate-500">
+                        <div class="flex items-center justify-between mb-3">
+                            <!-- <div>
+                                <h1 class="text-lg font-semibold">
+                                    Point of Sale
+                                </h1>
+                                <p class="text-xs text-gray-500">
+                                    {{
+                                        props.currentSession
+                                            ? "Session Open"
+                                            : "No active session"
+                                    }}
+                                </p>
+                            </div> -->
+
+                            <SessionBar
+                                :currentSession="props.currentSession"
+                                :branches="props.branches"
+                                :warehouses="props.warehouses"
+                            />
+                        </div>
                         <span
-                            class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 flex items-center gap-2"
+                            class="px-3 py-1 rounded-full text-lg mb-3 bg-emerald-50 text-emerald-600 flex items-center gap-2"
                         >
-                            <i class="pi pi-clock text-xs" />
-                            {{ new Date().toLocaleTimeString() }}
+                            <i class="pi pi-clock text-4xl" />
+                            {{ now.toLocaleTimeString() }}
                         </span>
                     </div>
                 </header>
 
                 <!-- BODY -->
                 <div class="flex-1 flex overflow-hidden">
-                    <!-- CENTER: PRODUCTS -->
+                    <!-- PRODUCTS -->
                     <section class="flex-1 p-5 overflow-y-auto">
                         <div
                             class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4"
@@ -290,12 +475,13 @@ function submitOrder() {
                                     Product Catalog
                                 </h2>
                                 <p class="text-xs text-slate-400">
-                                    Tap a product card to add it to the order.
+                                    Click a product card to add it. Variable
+                                    products will ask for variation.
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-3">
-                                <InputGroup>
+                                <InputGroup class="w-full max-w-md">
                                     <InputGroupAddon>
                                         <i class="pi pi-search"></i>
                                     </InputGroupAddon>
@@ -318,27 +504,52 @@ function submitOrder() {
                             >
                                 <div
                                     class="rounded-2xl shadow-sm border border-slate-300 bg-slate-100 p-3 flex flex-col h-full cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition"
-                                    @click="addToCart(product)"
+                                    @click="addProduct(product)"
                                 >
                                     <div
-                                        class="rounded-xl bg-white mb-3 h-28 flex items-center justify-center overflow-hidden"
+                                        class="relative rounded-xl bg-white mb-3 h-28 flex items-center justify-center overflow-hidden"
                                     >
-                                        <!-- product image placeholder -->
                                         <span
-                                            class="text-slate-300 text-xs uppercase tracking-wide"
                                             v-if="!product.thumbnail"
+                                            class="text-slate-300 text-xs uppercase tracking-wide"
                                         >
-                                            {{
-                                                product.thumbnail ? "" : "Image"
-                                            }}
+                                            Image
                                         </span>
 
                                         <img
-                                            v-if="product.thumbnail"
-                                            :src="resolveImagePath(product.thumbnail)"
+                                            v-else
+                                            :src="
+                                                resolveImagePath(
+                                                    product.thumbnail
+                                                )
+                                            "
                                             alt=""
                                             class="h-full object-contain"
                                         />
+
+                                        <!-- Type badge -->
+                                        <div class="absolute top-2 left-2">
+                                            <Badge
+                                                :severity="
+                                                    product.type === 'variable'
+                                                        ? 'info'
+                                                        : 'secondary'
+                                                "
+                                                :value="product.type"
+                                            />
+                                        </div>
+
+                                        <!-- Discount badge (simple product) -->
+                                        <div
+                                            v-if="
+                                                getProductDiscountPrice(product)
+                                            "
+                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[11px] font-semibold px-2 py-1 rounded-full"
+                                        >
+                                            -{{
+                                                productDiscountPercent(product)
+                                            }}%
+                                        </div>
                                     </div>
 
                                     <div
@@ -351,24 +562,59 @@ function submitOrder() {
                                                 {{ product.name }}
                                             </div>
                                             <div
-                                                class="text-xs text-slate-400 mt-0.5"
+                                                class="text-xs text-slate-400 mt-0.5 truncate"
                                             >
                                                 {{ product.sku }}
                                             </div>
                                         </div>
 
                                         <div
-                                            class="flex items-center justify-between mt-1"
+                                            class="flex items-end justify-between mt-1 gap-2"
                                         >
-                                            <span
-                                                class="text-base font-bold text-emerald-600"
-                                            >
-                                                {{
-                                                    Number(
-                                                        product.base_price || 0
-                                                    ).toFixed(2)
-                                                }}
-                                            </span>
+                                            <div class="min-w-0">
+                                                <div
+                                                    class="text-base font-bold text-emerald-600"
+                                                >
+                                                    {{
+                                                        (
+                                                            getProductDiscountPrice(
+                                                                product
+                                                            ) ??
+                                                            getProductUnitPrice(
+                                                                product
+                                                            )
+                                                        ).toFixed(2)
+                                                    }}
+                                                </div>
+
+                                                <div
+                                                    v-if="
+                                                        getProductDiscountPrice(
+                                                            product
+                                                        )
+                                                    "
+                                                    class="text-xs text-slate-400 flex items-center gap-2"
+                                                >
+                                                    <span class="line-through">
+                                                        {{
+                                                            getProductUnitPrice(
+                                                                product
+                                                            ).toFixed(2)
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="text-rose-600 font-semibold"
+                                                    >
+                                                        Save
+                                                        {{
+                                                            productDiscountPercent(
+                                                                product
+                                                            )
+                                                        }}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
                                             <Button
                                                 icon="pi pi-plus"
                                                 class="p-button-rounded p-button-sm p-button-success"
@@ -388,7 +634,7 @@ function submitOrder() {
                         </div>
                     </section>
 
-                    <!-- RIGHT: ORDER PANEL -->
+                    <!-- ORDER PANEL -->
                     <aside
                         class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col"
                     >
@@ -415,6 +661,7 @@ function submitOrder() {
                                         }}
                                     </p>
                                 </div>
+
                                 <span
                                     class="px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-600 font-medium"
                                 >
@@ -430,21 +677,23 @@ function submitOrder() {
                                 <Dropdown
                                     v-model="selectedCustomerId"
                                     :options="customers"
-                                    option-label="name"
-                                    option-value="id"
+                                    optionLabel="name"
+                                    optionValue="id"
                                     placeholder="Walk-in Customer"
-                                    show-clear
+                                    showClear
                                     class="w-full text-sm"
                                 />
                             </div>
 
-                            <!-- items list -->
+                            <!-- cart items -->
                             <div
                                 class="flex-1 overflow-y-auto space-y-3 pr-1 mb-3"
                             >
                                 <div
                                     v-for="(item, index) in cartItems"
-                                    :key="item.product_id"
+                                    :key="`${item.product_id}-${
+                                        item.variation_id || 'simple'
+                                    }`"
                                     class="flex items-start justify-between bg-white border-slate-300 border rounded-xl px-3 py-2"
                                 >
                                     <div class="flex-1">
@@ -453,28 +702,61 @@ function submitOrder() {
                                         >
                                             {{ item.name }}
                                         </div>
+
                                         <div
                                             class="text-[11px] text-slate-400 mb-1"
                                         >
                                             {{ item.sku }}
                                         </div>
+
+                                        <!-- show discount info -->
+                                        <div
+                                            class="text-[11px] text-slate-500 mb-1"
+                                        >
+                                            <span
+                                                class="font-semibold text-slate-700"
+                                            >
+                                                {{
+                                                    Number(
+                                                        item.sell_price || 0
+                                                    ).toFixed(2)
+                                                }}
+                                            </span>
+                                            <span
+                                                v-if="item.discount_price"
+                                                class="ml-2 text-rose-600"
+                                            >
+                                                (was
+                                                {{
+                                                    Number(
+                                                        item.unit_price || 0
+                                                    ).toFixed(2)
+                                                }})
+                                            </span>
+                                        </div>
+
                                         <div class="flex items-center gap-2">
                                             <InputNumber
                                                 v-model="item.quantity"
                                                 :min="1"
-                                                input-class="!w-14 !text-xs"
-                                                show-buttons
-                                                button-layout="horizontal"
-                                                increment-button-icon="pi pi-plus"
-                                                decrement-button-icon="pi pi-minus"
-                                                increment-button-class="p-button-text p-button-sm"
-                                                decrement-button-class="p-button-text p-button-sm"
+                                                inputClass="!w-14 !text-xs"
+                                                showButtons
+                                                buttonLayout="horizontal"
+                                                incrementButtonIcon="pi pi-plus"
+                                                decrementButtonIcon="pi pi-minus"
+                                                incrementButtonClass="p-button-text p-button-sm"
+                                                decrementButtonClass="p-button-text p-button-sm"
                                             />
+
                                             <span
                                                 class="text-[11px] text-slate-400"
                                             >
                                                 x
-                                                {{ item.unit_price.toFixed(2) }}
+                                                {{
+                                                    Number(
+                                                        item.sell_price || 0
+                                                    ).toFixed(2)
+                                                }}
                                             </span>
                                         </div>
                                     </div>
@@ -485,11 +767,14 @@ function submitOrder() {
                                         >
                                             {{
                                                 (
-                                                    item.unit_price *
-                                                    item.quantity
+                                                    Number(
+                                                        item.sell_price || 0
+                                                    ) *
+                                                    Number(item.quantity || 0)
                                                 ).toFixed(2)
                                             }}
                                         </div>
+
                                         <Button
                                             icon="pi pi-trash"
                                             class="p-button-text p-button-danger p-button-sm mt-1"
@@ -507,72 +792,54 @@ function submitOrder() {
                                 </div>
                             </div>
 
-                            <!-- DISCOUNT CARD -->
+                            <!-- ORDER DISCOUNT -->
                             <div
-                                class="mb-3 p-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs flex items-start gap-3"
+                                class="mb-3 p-3 rounded-2xl bg-white border border-slate-200"
                             >
                                 <div
-                                    class="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0"
+                                    class="flex items-center justify-between mb-2"
                                 >
-                                    <i class="pi pi-percentage text-base"></i>
+                                    <span
+                                        class="text-sm font-semibold text-slate-800"
+                                        >Order Discount</span
+                                    >
+                                    <span
+                                        v-if="orderDiscount > 0"
+                                        class="text-sm font-semibold text-rose-600"
+                                    >
+                                        -{{ orderDiscount.toFixed(2) }}
+                                    </span>
                                 </div>
-                                <div class="flex-1">
-                                    <div
-                                        class="flex justify-between items-center mb-1"
-                                    >
-                                        <span class="font-semibold text-sm"
-                                            >Discount</span
-                                        >
-                                        <span
-                                            v-if="orderDiscount > 0"
-                                            class="font-semibold"
-                                        >
-                                            -{{ orderDiscount.toFixed(2) }}
-                                        </span>
-                                    </div>
 
-                                    <div
-                                        class="flex items-center gap-2 mb-1 min-w-0"
-                                    >
-                                        <Dropdown
-                                            v-model="discountMode"
-                                            :options="[
-                                                {
-                                                    label: 'None',
-                                                    value: 'none',
-                                                },
-                                                {
-                                                    label: 'Percent %',
-                                                    value: 'percent',
-                                                },
-                                                {
-                                                    label: 'Fixed',
-                                                    value: 'fixed',
-                                                },
-                                            ]"
-                                            option-label="label"
-                                            option-value="value"
-                                            class="flex-1 min-w-0 text-xs"
-                                        />
-
-                                        <InputNumber
-                                            v-model="discountValue"
-                                            :min="0"
-                                            class="w-24 shrink-0"
-                                            inputClass="!text-xs !w-full"
-                                            :suffix="
-                                                discountMode === 'percent'
-                                                    ? '%'
-                                                    : ''
-                                            "
-                                            :disabled="discountMode === 'none'"
-                                        />
-                                    </div>
-
-                                    <p class="text-[11px] text-white/80">
-                                        Example: 5% for loyalty customers or a
-                                        fixed voucher amount.
-                                    </p>
+                                <div
+                                    class="flex items-center gap-2 mb-1 min-w-0"
+                                >
+                                    <Dropdown
+                                        v-model="discountMode"
+                                        :options="[
+                                            { label: 'None', value: 'none' },
+                                            {
+                                                label: 'Percent %',
+                                                value: 'percent',
+                                            },
+                                            { label: 'Fixed', value: 'fixed' },
+                                        ]"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        class="flex-1 min-w-0 text-xs"
+                                    />
+                                    <InputNumber
+                                        v-model="discountValue"
+                                        :min="0"
+                                        class="w-24 shrink-0"
+                                        inputClass="!text-xs !w-full"
+                                        :suffix="
+                                            discountMode === 'percent'
+                                                ? '%'
+                                                : ''
+                                        "
+                                        :disabled="discountMode === 'none'"
+                                    />
                                 </div>
                             </div>
 
@@ -588,6 +855,7 @@ function submitOrder() {
                                         subtotal.toFixed(2)
                                     }}</span>
                                 </div>
+
                                 <div
                                     class="flex items-center justify-between text-xs text-slate-500"
                                 >
@@ -596,6 +864,7 @@ function submitOrder() {
                                         >-{{ discountTotal.toFixed(2) }}</span
                                     >
                                 </div>
+
                                 <div
                                     class="flex items-center justify-between text-xs text-slate-500"
                                 >
@@ -608,23 +877,22 @@ function submitOrder() {
                                 <div
                                     class="flex items-center justify-between text-sm mt-2"
                                 >
-                                    <span class="font-semibold text-slate-800">
-                                        Total Payable
-                                    </span>
+                                    <span class="font-semibold text-slate-800"
+                                        >Total Payable</span
+                                    >
                                     <span
                                         class="text-lg font-bold text-emerald-600"
+                                        >{{ total.toFixed(2) }}</span
                                     >
-                                        {{ total.toFixed(2) }}
-                                    </span>
                                 </div>
                             </div>
 
-                            <!-- multiple payments -->
+                            <!-- payments -->
                             <div class="mt-3 space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-slate-500">
-                                        Payments
-                                    </span>
+                                    <span class="text-xs text-slate-500"
+                                        >Payments</span
+                                    >
                                     <Button
                                         icon="pi pi-plus"
                                         class="p-button-text p-button-sm"
@@ -643,8 +911,8 @@ function submitOrder() {
                                         <Dropdown
                                             v-model="row.payment_method_id"
                                             :options="paymentMethods"
-                                            option-label="name"
-                                            option-value="id"
+                                            optionLabel="name"
+                                            optionValue="id"
                                             placeholder="Method"
                                             class="flex-1 text-xs"
                                         />
@@ -652,7 +920,7 @@ function submitOrder() {
                                             v-model="row.amount"
                                             :min="0"
                                             class="w-28"
-                                            input-class="!text-xs"
+                                            inputClass="!text-xs"
                                         />
                                         <Button
                                             icon="pi pi-trash"
@@ -667,32 +935,135 @@ function submitOrder() {
                                     class="flex items-center justify-between text-xs text-slate-500 mt-1"
                                 >
                                     <span>Total Paid</span>
-                                    <span class="font-semibold text-slate-800">
-                                        {{ totalPaid.toFixed(2) }}
-                                    </span>
+                                    <span
+                                        class="font-semibold text-slate-800"
+                                        >{{ totalPaid.toFixed(2) }}</span
+                                    >
                                 </div>
                                 <div
                                     class="flex items-center justify-between text-xs text-slate-500"
                                 >
                                     <span>Change</span>
-                                    <span class="font-semibold text-slate-800">
-                                        {{ change.toFixed(2) }}
-                                    </span>
+                                    <span
+                                        class="font-semibold text-slate-800"
+                                        >{{ change.toFixed(2) }}</span
+                                    >
                                 </div>
                             </div>
 
-                            <Button
-                                label="Process Order"
-                                icon="pi pi-check"
-                                class="w-full mt-4"
-                                :disabled="!cartItems.length || !posSession"
-                                @click="submitOrder"
-                                type="button"
-                            />
+                            <div class="grid grid-cols-1 gap-2 mt-4">
+                                <Button
+                                    label="Save Draft"
+                                    icon="pi pi-save"
+                                    class="w-full"
+                                    severity="war"
+                                    :disabled="!cartItems.length || !posSession"
+                                    @click="submitOrder('draft')"
+                                    type="button"
+                                />
+
+                                <Button
+                                    label="Complete"
+                                    icon="pi pi-check"
+                                    class="w-full"
+                                    severity="info"
+                                    :disabled="!cartItems.length || !posSession"
+                                    @click="submitOrder('complete')"
+                                    type="button"
+                                />
+
+                                <Button
+                                    label="Complete & Print"
+                                    icon="pi pi-print"
+                                    class="w-full"
+                                    :disabled="!cartItems.length || !posSession"
+                                    @click="submitOrder('complete_print')"
+                                    type="button"
+                                    severity="success"
+                                />
+                            </div>
                         </div>
                     </aside>
                 </div>
             </main>
         </div>
+
+        <!-- Variation Dialog -->
+        <Dialog
+            v-model:visible="showVariationDialog"
+            modal
+            header="Select Variation"
+            :style="{ width: '420px' }"
+        >
+            <div v-if="dialogProduct" class="space-y-3">
+                <div class="text-sm font-semibold text-slate-800">
+                    {{ dialogProduct.name }}
+                </div>
+                <div class="text-xs text-slate-500">
+                    Choose a variation to add to cart.
+                </div>
+
+                <Dropdown
+                    v-model="selectedVariationId"
+                    :options="dialogVariations"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select variation"
+                    class="w-full"
+                    showClear
+                />
+
+                <div
+                    v-if="selectedVariation"
+                    class="p-3 rounded-xl border border-slate-200 bg-slate-50"
+                >
+                    <div class="text-xs text-slate-500">Price</div>
+                    <div class="flex items-end gap-2">
+                        <div class="text-lg font-bold text-emerald-600">
+                            {{
+                                (
+                                    getVariationDiscountPrice(
+                                        selectedVariation
+                                    ) ??
+                                    getVariationUnitPrice(selectedVariation)
+                                ).toFixed(2)
+                            }}
+                        </div>
+
+                        <div
+                            v-if="getVariationDiscountPrice(selectedVariation)"
+                            class="text-sm text-slate-400 line-through"
+                        >
+                            {{
+                                getVariationUnitPrice(
+                                    selectedVariation
+                                ).toFixed(2)
+                            }}
+                        </div>
+
+                        <div
+                            v-if="getVariationDiscountPrice(selectedVariation)"
+                            class="text-xs text-rose-600 font-semibold"
+                        >
+                            -{{ variationDiscountPercent(selectedVariation) }}%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button
+                        label="Cancel"
+                        class="p-button-text"
+                        @click="showVariationDialog = false"
+                    />
+                    <Button
+                        label="Add to Cart"
+                        icon="pi pi-check"
+                        :disabled="!selectedVariationId"
+                        @click="confirmAddVariation"
+                    />
+                </div>
+            </div>
+        </Dialog>
     </AuthenticatedLayout>
 </template>

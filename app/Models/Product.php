@@ -18,37 +18,47 @@ class Product extends Model
         'tax_id',
         'brand_id',
         'created_by',
+
         'name',
         'slug',
         'thumbnail',
         'images',
+
         'sku',
         'barcode',
         'code',
+
         'base_price',
         'base_discount_price',
-        'stock_quantity',
-        'stock_status',
+
         'type',
+
         'weight',
         'dimensions',
         'materials',
+
         'description',
         'additional_info',
+
         'is_active',
+
         'meta_title',
         'meta_description',
         'meta_keywords',
     ];
 
+
     protected $casts = [
         'is_active' => 'boolean',
+
         'base_price' => 'decimal:2',
         'base_discount_price' => 'decimal:2',
+
         'dimensions' => 'array',
         'materials' => 'array',
         'images' => 'array',
     ];
+
 
     /*
     |--------------------------------------------------------------------------
@@ -183,4 +193,10 @@ class Product extends Model
             (($this->base_price - $this->base_discount_price) / $this->base_price) * 100
         );
     }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
 }

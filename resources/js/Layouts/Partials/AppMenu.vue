@@ -44,7 +44,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Product",
+                label: "Products",
                 icon: "pi pi-shopping-bag",
                 to: route("products.index"),
             },

@@ -33,17 +33,16 @@ class StoreProductRequest extends FormRequest
 
             // Pricing
             'base_price' => ['required', 'numeric', 'min:0'],
-            'base_discount_price' => ['nullable', 'numeric', 'min:0'],
-
-            // Stock (for simple product)
-            'stock_status' => ['required', 'string'],
-            'stock_quantity' => ['nullable', 'numeric'],
+            'base_discount_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
 
             // Product type
             'type' => ['required', 'in:simple,variable'],
 
-            // warehouse usage for simple product
-            // 'warehouse_id' => ['required_if:type,simple', 'nullable', 'exists:warehouses,id'],
+            // ✅ SIMPLE: warehouse stocks
+            'stocks' => ['required_if:type,simple', 'array', 'min:1'],
+            'stocks.*.warehouse_id' => ['required', 'exists:warehouses,id'],
+            'stocks.*.quantity' => ['required', 'numeric', 'min:0'],
+            'stocks.*.alert_quantity' => ['nullable', 'numeric', 'min:0'],
 
             // Other fields
             'weight' => ['nullable', 'numeric'],
@@ -60,22 +59,37 @@ class StoreProductRequest extends FormRequest
             'meta_description' => ['nullable', 'string', 'max:255'],
             'meta_keywords' => ['nullable', 'string', 'max:255'],
 
-            // TAGS (must always be array when present)
+            // Tags
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],
 
-            // VARIATIONS (only when type = variable)
-            'variations' => ['required_if:type,variable', 'array'],
-            'variations.*.sku' => ['required_if:type,variable', 'string'],
-            'variations.*.price' => ['required_if:type,variable', 'numeric'],
-            'variations.*.discount_price' => ['nullable', 'numeric'],
-            'variations.*.stock_quantity' => ['required_if:type,variable', 'integer'],
-            'variations.*.stock_status' => ['required_if:type,variable', 'string'],
+            // ✅ VARIABLE: variations
+            'variations' => ['required_if:type,variable', 'array', 'min:1'],
+
+            'variations.*.sku' => ['required', 'string', 'max:255'],
+            'variations.*.price' => ['required', 'numeric', 'min:0'],
+            'variations.*.discount_price' => ['nullable', 'numeric', 'min:0', 'lt:variations.*.price'],
             'variations.*.image' => ['nullable', 'string'],
 
-            // attribute_value_ids MUST be array, each id must be integer + exist
-            'variations.*.attribute_value_ids' => ['required_if:type,variable', 'array', 'min:1'],
+            // attribute values
+            'variations.*.attribute_value_ids' => ['required', 'array', 'min:1'],
             'variations.*.attribute_value_ids.*' => ['integer', 'exists:product_attribute_values,id'],
+
+            // ✅ VARIABLE: warehouse stocks per variation
+            'variations.*.stocks' => ['required', 'array', 'min:1'],
+            'variations.*.stocks.*.warehouse_id' => ['required', 'exists:warehouses,id'],
+            'variations.*.stocks.*.quantity' => ['required', 'numeric', 'min:0'],
+            'variations.*.stocks.*.alert_quantity' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'tag_ids.*' => 'Tag',
+            'variations.*.attribute_value_ids.*' => 'Attribute value',
+            'variations.*.stocks.*.warehouse_id' => 'Warehouse',
+            
         ];
     }
 }

@@ -23,23 +23,11 @@ class WarehouseSeeder extends Seeder
                 'status' => true,
             ],
             [
-                'name' => 'Chittagong Warehouse',
-                'address' => 'Port Road, Agrabad, Chittagong',
+                'name' => 'Rangpur Warehouse',
+                'address' => 'Port Road, Agrabad, Rangpur',
                 'phone' => '01817000003',
                 'status' => true,
-            ],
-            [
-                'name' => 'Sylhet Warehouse',
-                'address' => 'Zindabazar, Sylhet',
-                'phone' => '01618000004',
-                'status' => false,
-            ],
-            [
-                'name' => 'Rajshahi Warehouse',
-                'address' => 'Shaheb Bazar, Rajshahi',
-                'phone' => '01519000005',
-                'status' => true,
-            ],
+            ]
         ];
 
         foreach ($warehouses as $warehouse) {

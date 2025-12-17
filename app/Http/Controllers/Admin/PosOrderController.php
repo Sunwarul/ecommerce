@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Discount;
 use App\Models\PaymentMethod;
 use App\Models\PosOrder;
 use App\Models\PosOrderItem;
 use App\Models\PosPayment;
 use App\Models\PosSession;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PosOrderController extends Controller
@@ -21,55 +26,54 @@ class PosOrderController extends Controller
     public function index()
     {
         $products = Product::where('is_active', true)
-            ->select('id', 'name', 'sku', 'barcode', 'base_price', 'stock_quantity', 'thumbnail')
+            ->select('id', 'name', 'sku', 'barcode', 'base_price', 'base_discount_price', 'thumbnail', 'type')
+            ->with(['variations:id,product_id,sku,price,discount_price'])
             ->orderBy('name')
             ->get();
-
-        $customers = Customer::select('id', 'name')->orderBy('name')->get();
-
-        $paymentMethods = PaymentMethod::where('is_active', 1)
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
-
-        $currentSession = PosSession::where('user_id', Auth::id())
-            ->where('status', 'open')
-            ->latest('id')
-            ->first();
 
         return Inertia::render('Admin/POS/Index', [
             'products' => $products,
-            'customers' => $customers,
-            'paymentMethods' => $paymentMethods,
-            'currentSession' => $currentSession,
+            'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
+            'paymentMethods' => PaymentMethod::where('is_active', 1)->select('id', 'name')->orderBy('name')->get(),
+            'currentSession' => PosSession::where('user_id', Auth::id())->where('status', 'open')->latest('id')->first(),
+
+            // ✅ add these
+            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
+            'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
 
-    public function store(Request $request)
+
+    public function store(Request $request, StockService $stockService)
     {
         $data = $request->validate([
+            'action' => ['required', 'in:draft,complete,complete_print'],
+
             'pos_session_id' => ['required', 'exists:pos_sessions,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'branch_id' => ['nullable', 'exists:branches,id'],
-            'warehouse_id' => ['nullable', 'exists:warehouses,id'],
+            'warehouse_id' => ['required', 'exists:warehouses,id'],
+
+            'discount_id' => ['nullable', 'exists:discounts,id'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.variation_id' => ['nullable', 'exists:product_variations,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
 
-            'payments' => ['required', 'array', 'min:1'],
-            'payments.*.payment_method_id' => ['required', 'exists:payment_methods,id'],
-            'payments.*.amount' => ['required', 'numeric', 'min:0'],
+            // payments only required for complete
+            'payments' => ['nullable', 'array'],
+            'payments.*.payment_method_id' => ['required_with:payments.*.amount', 'exists:payment_methods,id'],
+            'payments.*.amount' => ['required_with:payments.*.payment_method_id', 'numeric', 'min:0'],
             'payments.*.transaction_ref' => ['nullable', 'string', 'max:100'],
             'payments.*.notes' => ['nullable', 'string', 'max:500'],
 
-            // 🔥 order-level discount (from POS UI)
-            'order_discount_type' => ['nullable', Rule::in(['none', 'percent', 'fixed'])],
+            // manual order discount fallback (optional)
+            'order_discount_type' => ['nullable', 'in:none,percent,fixed'],
             'order_discount_value' => ['nullable', 'numeric', 'min:0'],
 
             'notes' => ['nullable', 'string'],
@@ -77,70 +81,140 @@ class PosOrderController extends Controller
 
         $userId = Auth::id();
 
-        return DB::transaction(function () use ($data, $userId) {
+        return DB::transaction(function () use ($data, $userId, $stockService) {
+
+            $isDraft = $data['action'] === 'draft';
+            $warehouseId = (int) $data['warehouse_id'];
+
+            // load products once
+            $productIds = collect($data['items'])->pluck('product_id')->unique()->values()->all();
+            $products = Product::whereIn('id', $productIds)
+                ->with(['variations:id,product_id,sku,price,discount_price'])
+                ->get()
+                ->keyBy('id');
+
+            $discount = !empty($data['discount_id'])
+                ? Discount::find($data['discount_id'])
+                : null;
 
             $subtotal = 0;
             $lineDiscountTotal = 0;
             $taxTotal = 0;
 
-            // ------------------ ITEMS CALC ------------------
+            $preparedItems = [];
+
             foreach ($data['items'] as $item) {
-                $lineSub = $item['unit_price'] * $item['quantity'];
-                $lineDiscount = $item['discount_amount'] ?? 0;
-                $lineTax = $item['tax_amount'] ?? 0;
+                $product = $products->get($item['product_id']);
+                if (!$product) {
+                    throw ValidationException::withMessages(['items' => ['Invalid product.']]);
+                }
+
+                // variable => variation required
+                if ($product->type === 'variable' && empty($item['variation_id'])) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Variation is required for: {$product->name}"],
+                    ]);
+                }
+
+                $variation = null;
+                if (!empty($item['variation_id'])) {
+                    $variation = $product->variations->firstWhere('id', (int) $item['variation_id']);
+                    if (!$variation) {
+                        throw ValidationException::withMessages([
+                            'items' => ["Invalid variation for: {$product->name}"],
+                        ]);
+                    }
+                }
+
+                // price choose
+                $unitPrice =
+                    $item['unit_price'] ??
+                    ($variation
+                        ? ($variation->discount_price ?? $variation->price)
+                        : ($product->base_discount_price ?? $product->base_price));
+
+                $qty = (int) $item['quantity'];
+
+                $lineSub = (float) $unitPrice * $qty;
+                $lineDiscount = (float) ($item['discount_amount'] ?? 0);
+                $lineTax = (float) ($item['tax_amount'] ?? 0);
 
                 $subtotal += $lineSub;
                 $lineDiscountTotal += $lineDiscount;
                 $taxTotal += $lineTax;
+
+                $preparedItems[] = [
+                    'product' => $product,
+                    'variation' => $variation,
+                    'quantity' => $qty,
+                    'unit_price' => (float) $unitPrice,
+                    'discount_amount' => $lineDiscount,
+                    'tax_amount' => $lineTax,
+                ];
             }
 
-            // ------------------ ORDER DISCOUNT ------------------
-            $orderDiscountType = $data['order_discount_type'] ?? 'none';
-            $orderDiscountValue = (float) ($data['order_discount_value'] ?? 0);
+            // order-level discount (auto discount_id first)
             $orderDiscountAmount = 0;
 
-            if ($orderDiscountType === 'percent') {
-                // 0–100 এর মধ্যে clamp করি
-                $p = min(max($orderDiscountValue, 0), 100);
-                $orderDiscountAmount = ($subtotal * $p) / 100;
-            } elseif ($orderDiscountType === 'fixed') {
-                // subtotal এর বেশি discount allow করব না
-                $orderDiscountAmount = min(max($orderDiscountValue, 0), $subtotal);
+            if ($discount) {
+                // adjust to your columns: type/value
+                $dtype = $discount->type;     // percent|fixed
+                $dval = (float) $discount->value;
+
+                if ($dtype === 'percent') {
+                    $p = min(max($dval, 0), 100);
+                    $orderDiscountAmount = ($subtotal * $p) / 100;
+                } elseif ($dtype === 'fixed') {
+                    $orderDiscountAmount = min(max($dval, 0), $subtotal);
+                }
+            } else {
+                $t = $data['order_discount_type'] ?? 'none';
+                $v = (float) ($data['order_discount_value'] ?? 0);
+
+                if ($t === 'percent') {
+                    $p = min(max($v, 0), 100);
+                    $orderDiscountAmount = ($subtotal * $p) / 100;
+                } elseif ($t === 'fixed') {
+                    $orderDiscountAmount = min(max($v, 0), $subtotal);
+                }
             }
 
-            // মোট discount = line discount + order-level discount
             $discountTotal = $lineDiscountTotal + $orderDiscountAmount;
-
-            // ------------------ TOTAL CALC ------------------
             $total = $subtotal - $discountTotal + $taxTotal;
-            $paidAmount = collect($data['payments'])->sum('amount');
-            $change = max(0, $paidAmount - $total);
 
-            $paymentStatus = $paidAmount >= $total
-                ? 'paid'
-                : ($paidAmount > 0 ? 'partial' : 'unpaid');
+            // payments: only on complete
+            $payments = collect($data['payments'] ?? [])
+                ->filter(fn($p) => !empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
+                ->values();
 
-            // (চাইলে backend থেকেও check করতে পারো যে partial allow করবে নাকি error দেবে)
-            // উদাহরণ:
-            // if ($paidAmount < $total && config('pos.disallow_partial', false)) {
-            //     throw ValidationException::withMessages([
-            //         'payments' => ['Total paid must be at least payable amount.'],
-            //     ]);
-            // }
+            $paidAmount = $isDraft ? 0 : (float) $payments->sum('amount');
+            $change = $isDraft ? 0 : max(0, $paidAmount - $total);
 
-            // ------------------ CREATE ORDER ------------------
+            $paymentStatus = $isDraft
+                ? 'unpaid'
+                : ($paidAmount >= $total ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid'));
+
+            // if complete -> require at least one payment (recommended)
+            if (!$isDraft && $payments->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'payments' => ['At least one payment is required to complete the order.'],
+                ]);
+            }
+
+            // invoice number only for completed (recommended)
+            $invoiceNo = $isDraft ? null : ('POS-' . now()->format('YmdHis') . '-' . $userId);
+
             $order = PosOrder::create([
                 'pos_session_id' => $data['pos_session_id'],
                 'branch_id' => $data['branch_id'] ?? null,
-                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'warehouse_id' => $warehouseId,
                 'customer_id' => $data['customer_id'] ?? null,
                 'user_id' => $userId,
 
-                'invoice_no' => 'POS-' . now()->format('YmdHis') . '-' . $userId,
-                'reference_no' => null,
+                'invoice_no' => $invoiceNo,
 
                 'subtotal' => $subtotal,
-                'discount_amount' => $discountTotal,        // ✅ line + order discount total
+                'discount_amount' => $discountTotal,
                 'tax_amount' => $taxTotal,
                 'total_amount' => $total,
 
@@ -148,63 +222,75 @@ class PosOrderController extends Controller
                 'change_amount' => $change,
 
                 'payment_status' => $paymentStatus,
-                'status' => 'completed',
+                'status' => $isDraft ? 'draft' : 'completed',
                 'notes' => $data['notes'] ?? null,
 
-                // 🔥 শুধুমাত্র যদি এই কলামগুলো PosOrder টেবিলে / মডেলে যোগ করে থাকো:
-                // 'order_discount_type'  => $orderDiscountType,
-                // 'order_discount_value' => $orderDiscountValue,
-                // 'order_discount_amount'=> $orderDiscountAmount,
+                // optional if you have columns
+                // 'discount_id' => $data['discount_id'] ?? null,
             ]);
 
-            // ------------------ ITEMS + STOCK UPDATE ------------------
-            foreach ($data['items'] as $item) {
-                $product = Product::findOrFail($item['product_id']);
+            foreach ($preparedItems as $it) {
+                $product = $it['product'];
+                $variation = $it['variation'];
 
-                $lineSub = $item['unit_price'] * $item['quantity'];
-                $lineDiscount = $item['discount_amount'] ?? 0;
-                $lineTax = $item['tax_amount'] ?? 0;
-                $lineTotal = $lineSub - $lineDiscount + $lineTax;
+                $lineSub = $it['unit_price'] * $it['quantity'];
+                $lineTotal = $lineSub - $it['discount_amount'] + $it['tax_amount'];
 
                 PosOrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
-                    'variation_id' => $item['variation_id'] ?? null,
-                    'sku' => $product->sku,
+                    'variation_id' => $variation?->id,
+                    'sku' => $variation?->sku ?? $product->sku,
                     'name' => $product->name,
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'discount_amount' => $lineDiscount,
-                    'tax_amount' => $lineTax,
+                    'quantity' => $it['quantity'],
+                    'unit_price' => $it['unit_price'],
+                    'discount_amount' => $it['discount_amount'],
+                    'tax_amount' => $it['tax_amount'],
                     'line_total' => $lineTotal,
                 ]);
 
-                // TODO: এখানে তোমার ProductStock / Inventory logic প্লাগ ইন করো
-                $product->decrement('stock_quantity', $item['quantity']);
+                // ✅ stock out only when completed
+                if (!$isDraft) {
+                    $stockService->stockOut([
+                        'type' => 'out',
+                        'product_id' => $product->id,
+                        'variation_id' => $variation?->id,
+                        'quantity' => $it['quantity'],
+                        'from_warehouse_id' => $warehouseId,
+                        'reference' => $order->invoice_no,
+                        'note' => 'POS sale',
+                        'created_by' => $userId,
+                    ]);
+                }
             }
 
-            // ------------------ PAYMENTS SAVE (multiple methods) ------------------
-            foreach ($data['payments'] as $payment) {
-                PosPayment::create([
-                    'order_id' => $order->id,
-                    'payment_method_id' => $payment['payment_method_id'],
-                    'amount' => $payment['amount'],
-                    'paid_at' => now(),
-                    'transaction_ref' => $payment['transaction_ref'] ?? null,
-                    'notes' => $payment['notes'] ?? null,
-                ]);
+            // payments only when completed
+            if (!$isDraft) {
+                foreach ($payments as $payment) {
+                    PosPayment::create([
+                        'order_id' => $order->id,
+                        'payment_method_id' => $payment['payment_method_id'],
+                        'amount' => $payment['amount'],
+                        'paid_at' => now(),
+                        'transaction_ref' => $payment['transaction_ref'] ?? null,
+                        'notes' => $payment['notes'] ?? null,
+                    ]);
+                }
             }
 
             return response()->json([
                 'success' => true,
                 'order_id' => $order->id,
                 'invoice_no' => $order->invoice_no,
+                'status' => $order->status,
                 'total' => $total,
                 'paid_amount' => $paidAmount,
                 'change' => $change,
+                'redirect' => !$isDraft ? route('pos.orders.invoice', $order->id) : null,
             ]);
         });
     }
+
 
 
     public function orders(Request $request)

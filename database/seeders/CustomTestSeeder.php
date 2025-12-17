@@ -64,7 +64,6 @@ class CustomTestSeeder extends Seeder
             'name' => 'iPhone 13',
             'description' => 'The iPhone 13 is a smartphone designed, developed, and marketed by Apple Inc. It is the fourteenth generation of the iPhone, succeeding the iPhone 12 and preceding the iPhone 14.',
             'base_price' => 999.99,
-            'stock_status' => 'in_stock',
             'is_active' => true,
             'thumbnail' => FakeImageUtil::imagePath(),
             'images' => [
@@ -77,7 +76,7 @@ class CustomTestSeeder extends Seeder
         $productAttr['sku'] = 'IP13'.random_int(1000, 9999);
         $productAttr['barcode'] = 'IP13'.random_int(1000, 9999);
         $productAttr['code'] = 'IP13'.random_int(1000, 9999);
-        $product = Product::create($productAttr);
-        $product->tags()->attach([Tag::first()->id, Tag::skip(1)->first()->id, Tag::skip(2)->first()->id]);
+        // $product = Product::create($productAttr);
+        // $product->tags()->attach([Tag::first()->id, Tag::skip(1)->first()->id, Tag::skip(2)->first()->id]);
     }
 }
