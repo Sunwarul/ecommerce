@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariation extends Model
 {
@@ -46,15 +47,16 @@ class ProductVariation extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function attributeValues(): BelongsToMany
+    public function attributeValues()
     {
         return $this->belongsToMany(
             ProductAttributeValue::class,
             'product_variation_attributes',
             'variation_id',
             'attribute_value_id'
-        )->withPivot('attribute_id');
+        )->withPivot(['attribute_id', 'product_id']);
     }
+
 
     // Scopes
     public function scopeActive($query)
@@ -68,6 +70,22 @@ class ProductVariation extends Model
             ->where('stock_quantity', '>', 0);
     }
 
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class, 'variation_id');
+    }
+
+    public function simpleStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class)->whereNull('variation_id');
+    }
+
+    public function variationStocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class)->whereNotNull('variation_id');
+    }
+
+
     // Helper methods
     public function getCurrentPrice(): float
     {
@@ -76,12 +94,12 @@ class ProductVariation extends Model
 
     public function hasDiscount(): bool
     {
-        return ! is_null($this->discount_price);
+        return !is_null($this->discount_price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (! $this->hasDiscount()) {
+        if (!$this->hasDiscount()) {
             return null;
         }
 
@@ -116,4 +134,16 @@ class ProductVariation extends Model
 
         return $this->save();
     }
+
+    public function getTotalWarehouseStockAttribute(): float
+    {
+        return (float) $this->stocks()->sum('quantity');
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class, 'variation_id');
+    }
+
+
 }

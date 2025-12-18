@@ -2,184 +2,217 @@
 
 namespace Database\Seeders;
 
-use App\Models\Brand;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\ProductStock;
-use App\Models\ProductVariation;
-use App\Models\ProductAttribute;
-use App\Models\ProductAttributeValue;
-use App\Models\Tag;
-use App\Models\Warehouse;
+use App\Models\{
+    Product,
+    ProductVariation,
+    ProductStock,
+    ProductAttribute,
+    ProductAttributeValue,
+    Category,
+    Brand,
+    Tax,
+    Tag,
+    Warehouse
+};
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        // --------------------------------------------
-        // FETCH REQUIRED EXISTING DATA
-        // --------------------------------------------
+        DB::transaction(function () {
 
-        $category = Category::first();
-        $brand = Brand::first();
-        $tax = \App\Models\Tax::first();
-        $tags = Tag::take(3)->pluck('id')->toArray();
-        $userId = 1; // created_by
+            $category = Category::first();
+            $brand = Brand::first();
+            $tax = Tax::first();
+            $tags = Tag::take(3)->pluck('id')->toArray();
+            $warehouses = Warehouse::take(2)->get();
 
-        // Attributes (created from your ProductAttributeSeeder)
-        $colorAttr = ProductAttribute::where('name', 'color')->first();
-        $sizeAttr = ProductAttribute::where('name', 'size')->first();
+            if (!$category || !$warehouses->count()) {
+                $this->command->warn('Missing category or warehouses. Seeder skipped.');
+                return;
+            }
 
-        $red = ProductAttributeValue::where('value', 'red')->first();
-        $blue = ProductAttributeValue::where('value', 'blue')->first();
-        $sizeS = ProductAttributeValue::where('value', 'S')->first();
-        $sizeM = ProductAttributeValue::where('value', 'M')->first();
+            /* =========================================================
+             | SIMPLE PRODUCT (all fields + stocks)
+             |=========================================================*/
+            $simpleProduct = Product::create([
+                'category_id' => $category->id,
+                'brand_id' => $brand?->id,
+                'tax_id' => $tax?->id,
 
-        $warehouse = Warehouse::first();
+                'name' => 'Simple Cotton T-Shirt',
+                'slug' => Str::slug('Simple Cotton T-Shirt'),
+                'thumbnail' => null,
+                'images' => [
+                    'products/gallery/simple-1.jpg',
+                    'products/gallery/simple-2.jpg',
+                ],
 
-        // --------------------------------------------
-        // SIMPLE PRODUCT
-        // --------------------------------------------
+                'sku' => 'SIMPLE-TSHIRT-001',
+                'barcode' => '123456789001',
+                'code' => 'TSHIRT-001',
 
-        $simpleProduct = Product::create([
-            'category_id' => $category->id,
-            'tax_id' => $tax->id ?? null,
-            'brand_id' => $brand->id ?? null,
-            'created_by' => $userId,
+                'base_price' => 25,
+                'base_discount_price' => 20,
 
-            'name' => 'Basic T-Shirt',
-            'slug' => Str::slug('Basic T-Shirt'),
-            'thumbnail' => 'products/tshirt/thumb.jpg',
-            'images' => ['products/tshirt/img1.jpg'],
+                'type' => 'simple',
 
-            'sku' => 'TSHIRT-1001',
-            'barcode' => '100200300400',
-            'code' => 'BT001',
+                'weight' => 0.35,
+                'dimensions' => ['length' => 30, 'width' => 20, 'height' => 2],
+                'materials' => ['Cotton', 'Polyester'],
 
-            'base_price' => 500,
-            'base_discount_price' => 450,
+                'description' => '<p>High quality simple cotton t-shirt.</p>',
+                'additional_info' => '<p>Wash cold, do not bleach.</p>',
 
-            'stock_quantity' => 100,
-            'stock_status' => 'in_stock',
-            'type' => 'simple',
+                'is_active' => true,
 
-            'weight' => 0.25,
-            'dimensions' => ['length' => 30, 'width' => 25, 'height' => 2],
-            'materials' => ['cotton'],
+                'meta_title' => 'Simple Cotton T-Shirt',
+                'meta_description' => 'A premium simple cotton t-shirt.',
+                'meta_keywords' => 'tshirt,cotton,simple',
+            ]);
 
-            'description' => 'High-quality cotton basic T-shirt.',
-            'additional_info' => 'Machine wash cold.',
-            'is_active' => true,
-        ]);
+            // Tags
+            if (!empty($tags)) {
+                $simpleProduct->tags()->sync($tags);
+            }
 
-        // Simple Stock Entry
-        ProductStock::create([
-            'product_id' => $simpleProduct->id,
-            'warehouse_id' => $warehouse?->id ?? 1,
-            'quantity' => 100,
-            'alert_quantity' => 10,
-        ]);
+            // Stocks (simple: variation_id = null)
+            foreach ($warehouses as $warehouse) {
+                ProductStock::create([
+                    'product_id' => $simpleProduct->id,
+                    'variation_id' => null,
+                    'warehouse_id' => $warehouse->id,
+                    'quantity' => rand(20, 50),
+                    'alert_quantity' => 5,
+                ]);
+            }
 
-        // Sync some tags
-        $simpleProduct->tags()->sync($tags);
+            /* =========================================================
+             | VARIABLE PRODUCT (all fields + variations + pivot + stocks)
+             |=========================================================*/
 
-        // --------------------------------------------
-        // VARIABLE PRODUCT
-        // --------------------------------------------
+            // Attributes
+            $colorAttr = ProductAttribute::firstOrCreate(
+                ['name' => 'color'],
+                ['display_name' => 'Color', 'type' => 'select', 'is_active' => true]
+            );
 
-        $variableProduct = Product::create([
-            'category_id' => $category->id,
-            'tax_id' => $tax->id ?? null,
-            'brand_id' => $brand->id ?? null,
-            'created_by' => $userId,
+            $sizeAttr = ProductAttribute::firstOrCreate(
+                ['name' => 'size'],
+                ['display_name' => 'Size', 'type' => 'select', 'is_active' => true]
+            );
 
-            'name' => 'Premium Hoodie',
-            'slug' => Str::slug('Premium Hoodie'),
-            'thumbnail' => 'products/hoodie/thumb.jpg',
-            'images' => ['products/hoodie/img1.jpg', 'products/hoodie/img2.jpg'],
+            // Attribute Values
+            $red = ProductAttributeValue::firstOrCreate([
+                'attribute_id' => $colorAttr->id,
+                'value' => 'red',
+                'display_value' => 'Red',
+            ]);
 
-            'sku' => 'HOODIE-2001',
-            'barcode' => '200300400500',
-            'code' => 'PH001',
+            $blue = ProductAttributeValue::firstOrCreate([
+                'attribute_id' => $colorAttr->id,
+                'value' => 'blue',
+                'display_value' => 'Blue',
+            ]);
 
-            'base_price' => 2000,
-            'base_discount_price' => 1800,
+            $small = ProductAttributeValue::firstOrCreate([
+                'attribute_id' => $sizeAttr->id,
+                'value' => 'S',
+                'display_value' => 'Small',
+            ]);
 
-            'stock_quantity' => 0, // variations track stock
-            'stock_status' => 'in_stock',
-            'type' => 'variable',
+            $medium = ProductAttributeValue::firstOrCreate([
+                'attribute_id' => $sizeAttr->id,
+                'value' => 'M',
+                'display_value' => 'Medium',
+            ]);
 
-            'weight' => 0.80,
-            'dimensions' => ['length' => 40, 'width' => 30, 'height' => 10],
-            'materials' => ['cotton', 'polyester'],
+            // Variable Product
+            $variableProduct = Product::create([
+                'category_id' => $category->id,
+                'brand_id' => $brand?->id,
+                'tax_id' => $tax?->id,
 
-            'description' => 'Soft and warm premium hoodie.',
-            'additional_info' => 'Available in multiple sizes/colors.',
-            'is_active' => true,
-        ]);
+                'name' => 'Variable Hoodie',
+                'slug' => Str::slug('Variable Hoodie'),
+                'thumbnail' => null,
+                'images' => [
+                    'products/gallery/hoodie-1.jpg',
+                    'products/gallery/hoodie-2.jpg',
+                ],
 
-        $variableProduct->tags()->sync($tags);
+                'sku' => 'HOODIE-MASTER-001',
+                'barcode' => '123456789002',
+                'code' => 'HOODIE-001',
 
-        // --------------------------------------------
-        // VARIATION 1: Red / Size S
-        // --------------------------------------------
+                'base_price' => 60,
+                'base_discount_price' => 55,
 
-        $v1 = ProductVariation::create([
-            'product_id' => $variableProduct->id,
-            'sku' => 'HOODIE-RED-S',
-            'price' => 2000,
-            'discount_price' => 1800,
-            'stock_quantity' => 25,
-            'stock_status' => 'in_stock',
-            'image' => 'products/hoodie/red-s.jpg',
-            'is_active' => true,
-        ]);
+                'type' => 'variable',
 
-        $v1->attributeValues()->attach([
-            $red->id => ['attribute_id' => $colorAttr->id, 'product_id' => $variableProduct->id],
-            $sizeS->id => ['attribute_id' => $sizeAttr->id, 'product_id' => $variableProduct->id],
-        ]);
+                'weight' => 1.2,
+                'dimensions' => ['length' => 40, 'width' => 35, 'height' => 8],
+                'materials' => ['Cotton', 'Fleece'],
 
-        // --------------------------------------------
-        // VARIATION 2: Red / Size M
-        // --------------------------------------------
+                'description' => '<p>Comfortable hoodie with multiple variations.</p>',
+                'additional_info' => '<p>Unisex. Warm and soft.</p>',
 
-        $v2 = ProductVariation::create([
-            'product_id' => $variableProduct->id,
-            'sku' => 'HOODIE-RED-M',
-            'price' => 2000,
-            'discount_price' => 1800,
-            'stock_quantity' => 15,
-            'stock_status' => 'in_stock',
-            'image' => 'products/hoodie/red-m.jpg',
-            'is_active' => true,
-        ]);
+                'is_active' => true,
 
-        $v2->attributeValues()->attach([
-            $red->id => ['attribute_id' => $colorAttr->id, 'product_id' => $variableProduct->id],
-            $sizeM->id => ['attribute_id' => $sizeAttr->id, 'product_id' => $variableProduct->id],
-        ]);
+                'meta_title' => 'Variable Hoodie',
+                'meta_description' => 'A hoodie with size & color options.',
+                'meta_keywords' => 'hoodie,variable,size,color',
+            ]);
 
-        // --------------------------------------------
-        // VARIATION 3: Blue / Size M
-        // --------------------------------------------
+            // Tags
+            if (!empty($tags)) {
+                $variableProduct->tags()->sync($tags);
+            }
 
-        $v3 = ProductVariation::create([
-            'product_id' => $variableProduct->id,
-            'sku' => 'HOODIE-BLUE-M',
-            'price' => 2000,
-            'discount_price' => null,
-            'stock_quantity' => 10,
-            'stock_status' => 'in_stock',
-            'image' => 'products/hoodie/blue-m.jpg',
-            'is_active' => true,
-        ]);
+            // Variations combinations
+            $combinations = [
+                [$red, $small],
+                [$red, $medium],
+                [$blue, $small],
+                [$blue, $medium],
+            ];
 
-        $v3->attributeValues()->attach([
-            $blue->id => ['attribute_id' => $colorAttr->id, 'product_id' => $variableProduct->id],
-            $sizeM->id => ['attribute_id' => $sizeAttr->id, 'product_id' => $variableProduct->id],
-        ]);
+            foreach ($combinations as $combo) {
+                $skuParts = collect($combo)->pluck('value')->implode('-');
+
+                $variation = ProductVariation::create([
+                    'product_id' => $variableProduct->id,
+                    'sku' => 'HOODIE-' . strtoupper($skuParts),
+                    'price' => 60,
+                    'discount_price' => 55,
+                    'image' => null,
+                    'is_active' => true,
+                ]);
+
+                // ✅ Pivot attach (must include product_id because your table requires it)
+                $attachData = [];
+                foreach ($combo as $value) {
+                    $attachData[$value->id] = [
+                        'attribute_id' => $value->attribute_id,
+                        'product_id' => $variableProduct->id,
+                    ];
+                }
+                $variation->attributeValues()->attach($attachData);
+
+                // Variation stocks per warehouse
+                foreach ($warehouses as $warehouse) {
+                    ProductStock::create([
+                        'product_id' => $variableProduct->id,
+                        'variation_id' => $variation->id,
+                        'warehouse_id' => $warehouse->id,
+                        'quantity' => rand(5, 15),
+                        'alert_quantity' => 3,
+                    ]);
+                }
+            }
+        });
     }
 }

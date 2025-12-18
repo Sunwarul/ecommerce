@@ -71,4 +71,10 @@ class User extends Authenticatable
     //         get: fn ($val) => Carbon::parse($val)->format(GlobalEnum::DateTimeFormat->value)
     //     );
     // }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class, 'created_by');
+    }
+
 }

@@ -18,39 +18,54 @@ class Product extends Model
         'tax_id',
         'brand_id',
         'created_by',
+
         'name',
         'slug',
         'thumbnail',
         'images',
+
         'sku',
         'barcode',
         'code',
+
         'base_price',
         'base_discount_price',
-        'stock_quantity',
-        'stock_status',
+
         'type',
+
         'weight',
         'dimensions',
         'materials',
+
         'description',
         'additional_info',
+
         'is_active',
+
         'meta_title',
         'meta_description',
         'meta_keywords',
     ];
 
+
     protected $casts = [
         'is_active' => 'boolean',
+
         'base_price' => 'decimal:2',
         'base_discount_price' => 'decimal:2',
+
         'dimensions' => 'array',
         'materials' => 'array',
         'images' => 'array',
     ];
 
-    // Relationships
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -83,11 +98,25 @@ class Product extends Model
 
     public function attributes(): BelongsToMany
     {
-        return $this->belongsToMany(ProductAttribute::class, 'product_variation_attributes', 'product_id', 'attribute_id')
-            ->distinct();
+        return $this->belongsToMany(
+            ProductAttribute::class,
+            'product_variation_attributes',
+            'product_id',
+            'attribute_id'
+        )->distinct();
     }
 
-    // Scopes
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ProductStock::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scopes
+    |--------------------------------------------------------------------------
+    */
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -105,7 +134,12 @@ class Product extends Model
         });
     }
 
-    // Helper methods
+    /*
+    |--------------------------------------------------------------------------
+    | Helper methods
+    |--------------------------------------------------------------------------
+    */
+
     public function isVariable(): bool
     {
         return $this->type === 'variable';
@@ -125,29 +159,44 @@ class Product extends Model
     {
         return ProductAttributeValue::whereHas('variations', function ($query) {
             $query->where('product_id', $this->id);
-        })->where('attribute_id', $attribute->id)->get();
+        })
+            ->where('attribute_id', $attribute->id)
+            ->get();
     }
 
     public function findVariationByAttributes(array $attributeValueIds)
     {
         return $this->variations()
-            ->whereHas('attributeValues', function ($query) use ($attributeValueIds) {
-                $query->whereIn('product_attribute_values.id', $attributeValueIds);
-            }, '=', count($attributeValueIds))
+            ->whereHas(
+                'attributeValues',
+                function ($query) use ($attributeValueIds) {
+                    $query->whereIn('product_attribute_values.id', $attributeValueIds);
+                },
+                '=',
+                count($attributeValueIds)
+            )
             ->first();
     }
 
     public function hasDiscount(): bool
     {
-        return ! is_null($this->base_discount_price);
+        return !is_null($this->base_discount_price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (! $this->hasDiscount()) {
+        if (!$this->hasDiscount()) {
             return null;
         }
 
-        return round((($this->base_price - $this->base_discount_price) / $this->base_price) * 100);
+        return round(
+            (($this->base_price - $this->base_discount_price) / $this->base_price) * 100
+        );
     }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
 }

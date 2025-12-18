@@ -19,8 +19,11 @@ use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\SubCategoryController;
 use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\PosOrderController;
+use App\Http\Controllers\Admin\PosSessionController;
 use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockMovementController;
 
 require_once __DIR__ . '/auth.php';
 
@@ -30,6 +33,16 @@ Route::get('/', WelcomePageController::class)->name('welcome');
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('products', ProductController::class);
+    Route::get('/admin/products/{product}/edit-data', [ProductController::class, 'editData'])
+        ->name('products.edit-data');
+    Route::get('/products/create', [ProductController::class, 'create'])
+        ->name('products.create');
+
+    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
+        ->name('products.edit');
+
+
+    CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);
     CrudRouter::setFor('categories', CategoryController::class);
     CrudRouter::setFor('tags', TagController::class);
     CrudRouter::setFor('brands', BrandController::class);
@@ -53,6 +66,61 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+
+    // stock 
+    Route::get('admin/products/{product}/stock-move', [StockMovementController::class, 'create'])
+        ->name('admin.stock.move.form');
+
+    Route::post('admin/stock/move', [StockMovementController::class, 'store'])
+        ->name('admin.stock.move');
+
+
+
+    // =======================
+    // POS
+    // =======================
+    Route::get('/pos', [PosOrderController::class, 'index'])
+        ->name('pos.index');
+
+    // -----------------------
+    // POS Session
+    // -----------------------
+    Route::get('/pos/session/current', [PosSessionController::class, 'current'])
+        ->name('pos.session.current');
+
+    Route::post('/pos/session/open', [PosSessionController::class, 'open'])
+        ->name('pos.session.open');
+
+    Route::post('/pos/session/close', [PosSessionController::class, 'close'])
+        ->name('pos.session.close');
+
+    // -----------------------
+    // POS Orders
+    // -----------------------
+    Route::post('/pos/orders', [PosOrderController::class, 'store'])
+        ->name('pos.orders.store');
+
+    // invoice MUST be before index
+    Route::get('/pos/orders/{order}/invoice', [PosOrderController::class, 'invoice'])
+        ->name('pos.orders.invoice');
+
+    // orders list (sales history)
+    Route::get('/pos/orders', [PosOrderController::class, 'orders'])
+        ->name('pos.orders.index');
+
+
+    // Route::post('/pos/orders/{order}/refund', [PosRefundController::class, 'refund'])->name('pos.orders.refund');
+    // Route::get('/pos/report/daily', [PosReportController::class, 'daily'])->name('pos.report.daily');
+
+
+
+
+
+
+
+
+
 
 
 });

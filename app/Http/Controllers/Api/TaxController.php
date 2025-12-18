@@ -3,58 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\TaxStoreRequest;
-use App\Http\Requests\TaxUpdateRequest;
-use App\Interfaces\TaxServiceInterface;
+use App\Http\Requests\Admin\TaxStoreRequest;
+use App\Http\Requests\Admin\TaxUpdateRequest;
 use App\Models\Tax;
+use App\Traits\HasApiCrud;
+use App\Utils\CrudConfig;
 
 class TaxController extends Controller
 {
-    protected $taxService;
+    use HasApiCrud;
 
-    public function __construct(TaxServiceInterface $taxService)
+    public function __construct()
     {
-        $this->taxService = $taxService;
-    }
-
-    public function index()
-    {
-        $tax = $this->taxService->all();
-
-        return $tax;
-    }
-
-    public function create()
-    {
-        //
-    }
-
-    public function store(TaxStoreRequest $request)
-    {
-        $taxStore = $this->taxService->store($request->validated());
-
-        return response()->json(['data' => $taxStore, 'message' => 'Tax created successfully'], 201);
-    }
-
-    public function show(Tax $tax)
-    {
-        return $this->taxService->find($tax);
-    }
-
-    public function edit(Tax $tax)
-    {
-        //
-    }
-
-    public function update(TaxUpdateRequest $request, Tax $tax)
-    {
-        $taxUpdate = $this->taxService->update($request->validated(), $tax);
-
-        return response()->json(['data' => $taxUpdate, 'message' => 'Tax Updated successfully']);
-    }
-
-    public function destroy(Tax $tax)
-    {
-        return $this->taxService->delete($tax);
+        $this->init(new CrudConfig(
+            resource: 'task',
+            modelClass: Tax::class,
+            storeRequestClass: TaxStoreRequest::class,
+            updateRequestClass: TaxUpdateRequest::class,
+            searchColumns: ['title'],
+        ));
     }
 }

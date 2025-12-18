@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductStoreRequest;
 use App\Http\Requests\Admin\ProductUpdateRequest;
 use App\Http\Requests\Admin\StoreProductRequest as AdminStoreProductRequest;
+use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
@@ -23,6 +24,7 @@ use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -73,68 +75,443 @@ class ProductController extends Controller
         ];
     }
 
+    public function index(Request $request)
+    {
+        $products = Product::query()
+            ->with([
+                'category:id,name',
+                'brand:id,name',
+            ])
+            ->withSum('stocks as total_stock', 'quantity') // ✅ total stock
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Products/Index', [
+            'products' => $products,
+        ]);
+    }
+
+
+    public function create()
+    {
+        return Inertia::render('Admin/Products/FormPage', [
+            'categories' => Category::with('children')->get(),
+            'brands' => Brand::all(),
+            'taxes' => Tax::all(),
+            'tags' => Tag::all(),
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
+            'warehouses' => Warehouse::all(),
+        ]);
+    }
+
+
+    public function edit(Product $product)
+    {
+        $product->load([
+            'category',
+            'brand',
+            'tax',
+            'tags',
+
+            // ✅ simple stock
+            'stocks.warehouse',
+
+            // ✅ variation + attributes + variation stock
+            'variations.attributeValues.attribute',
+            'variations.stocks.warehouse',
+        ]);
+
+        return Inertia::render('Admin/Products/FormPage', [
+            'product' => $product,
+            'categories' => Category::with('children')->get(),
+            'brands' => Brand::all(),
+            'taxes' => Tax::all(),
+            'tags' => Tag::all(),
+            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+                ->with('values:id,attribute_id,value,display_value,color_code')
+                ->get(),
+            'warehouses' => Warehouse::all(),
+        ]);
+    }
+
+
+    public function show(Product $product)
+    {
+        $product->load([
+            'category',
+            'brand',
+            'tax',
+            'tags',
+            'stocks.warehouse', // simple stocks (variation_id null) OR for total view
+            'variations.attributeValues.attribute',
+            'variations.stocks.warehouse',
+        ]);
+
+        // dd($product);
+
+        return inertia('Admin/Products/Show', [
+            'product' => $product,
+        ]);
+    }
+
 
     public function store(\App\Http\Requests\Admin\StoreProductRequest $request)
     {
         return DB::transaction(function () use ($request) {
             $data = $request->validated();
 
-            // Clean product inputs
-            $productData = Arr::except($data, ['tag_ids', 'variations', 'warehouse_id']);
+            // Remove relations we handle separately
+            $productData = Arr::except($data, ['tag_ids', 'variations', 'stocks']);
 
             $productData['created_by'] = auth()->id();
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
 
-            // CREATE PRODUCT
+            // Ensure scalar *_id fields
+            foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
+                if (isset($productData[$key]) && is_array($productData[$key])) {
+                    $productData[$key] = $productData[$key][0] ?? null;
+                }
+            }
+
+            // Cast-safe defaults
+            $productData['images'] = $productData['images'] ?? [];
+            $productData['dimensions'] = $productData['dimensions'] ?? [];
+            $productData['materials'] = $productData['materials'] ?? [];
+
+            // Upload thumbnail
+            if ($request->hasFile('thumbnail')) {
+                $productData['thumbnail'] = $request->file('thumbnail')->store('products');
+            }
+
+            // ✅ Create Product (NO stock fields)
             $product = Product::create($productData);
 
-            // TAG RELATION
+            // ✅ Tags
             if (!empty($data['tag_ids'])) {
                 $product->tags()->sync($data['tag_ids']);
             }
 
-            // SIMPLE PRODUCT STOCK (uses warehouse)
-            if ($data['type'] === 'simple') {
-                ProductStock::create([
-                    'product_id' => $product->id,
-                    'warehouse_id' => $data['warehouse_id'],
-                    'quantity' => $data['stock_quantity'] ?? 0,
-                    'alert_quantity' => 10,
-                ]);
+            // ✅ SIMPLE PRODUCT → create product_stocks rows (variation_id = NULL)
+            if ($product->type === 'simple') {
+                foreach ($data['stocks'] as $s) {
+                    ProductStock::create([
+                        'product_id' => $product->id,
+                        'variation_id' => null,
+                        'warehouse_id' => $s['warehouse_id'],
+                        'quantity' => $s['quantity'],
+                        'alert_quantity' => $s['alert_quantity'] ?? null,
+                    ]);
+                }
             }
 
-            // VARIABLE PRODUCT → variations
-            if ($data['type'] === 'variable' && !empty($data['variations'])) {
+            // ✅ VARIABLE PRODUCT → create variations + pivot + stocks
+            if ($product->type === 'variable') {
                 foreach ($data['variations'] as $variationInput) {
 
+                    // Create variation (NO stock_quantity/status if you removed them)
                     $variation = ProductVariation::create([
                         'product_id' => $product->id,
                         'sku' => $variationInput['sku'],
                         'price' => $variationInput['price'],
                         'discount_price' => $variationInput['discount_price'] ?? null,
-                        'stock_quantity' => $variationInput['stock_quantity'],
-                        'stock_status' => $variationInput['stock_status'],
                         'image' => $variationInput['image'] ?? null,
                         'is_active' => true,
                     ]);
 
-                    // Attach attribute values
-                    foreach ($variationInput['attribute_value_ids'] as $valueId) {
-                        $value = ProductAttributeValue::findOrFail($valueId);
+                    // Attach attribute values with attribute_id in pivot
+                    $attributeValueIds = $variationInput['attribute_value_ids'];
 
-                        $variation->attributeValues()->attach($valueId, [
+                    $values = ProductAttributeValue::whereIn('id', $attributeValueIds)->get();
+
+                    $attachData = [];
+                    foreach ($values as $value) {
+                        $attachData[$value->id] = [
                             'attribute_id' => $value->attribute_id,
+                        ];
+                    }
+
+                    $variation->attributeValues()->attach($attachData);
+
+                    // Create stocks for this variation per warehouse
+                    foreach ($variationInput['stocks'] as $s) {
+                        ProductStock::create([
                             'product_id' => $product->id,
+                            'variation_id' => $variation->id,
+                            'warehouse_id' => $s['warehouse_id'],
+                            'quantity' => $s['quantity'],
+                            'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]);
                     }
                 }
             }
 
-            return response()->json([
-                'message' => 'Product created successfully',
-                'product' => $product->load('tags', 'variations.attributeValues.attribute'),
+            return redirect()
+                ->route('products.index')
+                ->with('success', 'Product created successfully.');
+        });
+    }
+
+
+
+    public function editData(Product $product)
+    {
+        $product->load([
+            'category',
+            'brand',
+            'tax',
+            'tags',
+            'variations.attributeValues.attribute',
+            'stocks.warehouse',
+        ]);
+
+        return response()->json($product);
+    }
+
+
+    public function update(UpdateProductRequest $request, Product $product)
+    {
+        return DB::transaction(function () use ($request, $product) {
+            $data = $request->validated();
+
+            // -----------------------------
+            // Product data (remove handled arrays)
+            // -----------------------------
+            $productData = Arr::except($data, ['tag_ids', 'variations', 'stocks']);
+
+            $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
+            $productData['is_active'] = $request->boolean('is_active');
+
+            // ensure scalar *_id
+            foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
+                if (isset($productData[$key]) && is_array($productData[$key])) {
+                    $productData[$key] = $productData[$key][0] ?? null;
+                }
+            }
+
+            // cast defaults
+            $productData['images'] = $productData['images'] ?? [];
+            $productData['dimensions'] = $productData['dimensions'] ?? [];
+            $productData['materials'] = $productData['materials'] ?? [];
+
+            // Thumbnail replace
+            if ($request->hasFile('thumbnail')) {
+                if ($product->thumbnail && Storage::exists($product->thumbnail)) {
+                    Storage::delete($product->thumbnail);
+                }
+                $productData['thumbnail'] = $request->file('thumbnail')->store('products');
+            }
+
+            // -----------------------------
+            // Update Product (NO STOCK FIELDS)
+            // -----------------------------
+            $product->update([
+                'category_id' => $productData['category_id'],
+                'tax_id' => $productData['tax_id'] ?? null,
+                'brand_id' => $productData['brand_id'] ?? null,
+
+                'name' => $productData['name'],
+                'slug' => $productData['slug'],
+                'thumbnail' => $productData['thumbnail'] ?? $product->thumbnail,
+                'images' => $productData['images'],
+
+                'sku' => $productData['sku'] ?? null,
+                'barcode' => $productData['barcode'] ?? null,
+                'code' => $productData['code'] ?? null,
+
+                'base_price' => $productData['base_price'],
+                'base_discount_price' => $productData['base_discount_price'] ?? null,
+
+                'type' => $productData['type'],
+
+                'weight' => $productData['weight'] ?? null,
+                'dimensions' => $productData['dimensions'],
+                'materials' => $productData['materials'],
+
+                'description' => $productData['description'] ?? null,
+                'additional_info' => $productData['additional_info'] ?? null,
+                'is_active' => $productData['is_active'],
+
+                'meta_title' => $productData['meta_title'] ?? null,
+                'meta_description' => $productData['meta_description'] ?? null,
+                'meta_keywords' => $productData['meta_keywords'] ?? null,
             ]);
+
+            // -----------------------------
+            // Tags
+            // -----------------------------
+            $product->tags()->sync($data['tag_ids'] ?? []);
+
+            // -----------------------------
+            // SIMPLE: update stocks (variation_id = NULL) + delete variations & their stocks
+            // -----------------------------
+            if ($product->type === 'simple') {
+                // remove variation records + their stocks
+                $product->variations()->each(function ($variation) {
+                    $variation->attributeValues()->detach();
+                    $variation->delete();
+                });
+
+                // remove all stocks then recreate only simple ones
+                ProductStock::where('product_id', $product->id)->delete();
+
+                foreach (($data['stocks'] ?? []) as $s) {
+                    ProductStock::create([
+                        'product_id' => $product->id,
+                        'variation_id' => null,
+                        'warehouse_id' => $s['warehouse_id'],
+                        'quantity' => $s['quantity'],
+                        'alert_quantity' => $s['alert_quantity'] ?? null,
+                    ]);
+                }
+
+                return redirect()
+                    ->route('admin.products.index')
+                    ->with('success', 'Product updated successfully.');
+            }
+
+            // -----------------------------
+            // VARIABLE: update/create/delete variations + upsert stocks per variation
+            // -----------------------------
+            // If switching from simple -> variable, clean simple stocks first
+            ProductStock::where('product_id', $product->id)
+                ->whereNull('variation_id')
+                ->delete();
+
+            $incoming = $data['variations'] ?? [];
+
+            // Map existing variations by id
+            $existingIds = $product->variations()->pluck('id')->toArray();
+            $incomingIds = collect($incoming)->pluck('id')->filter()->map(fn($v) => (int) $v)->values()->toArray();
+
+            // Delete removed variations (and their pivot + stocks via cascade if set)
+            $toDelete = array_diff($existingIds, $incomingIds);
+            if (!empty($toDelete)) {
+                $product->variations()
+                    ->whereIn('id', $toDelete)
+                    ->each(function ($variation) {
+                        $variation->attributeValues()->detach();
+                        // delete stocks for this variation
+                        ProductStock::where('variation_id', $variation->id)->delete();
+                        $variation->delete();
+                    });
+            }
+
+            foreach ($incoming as $variationInput) {
+                $variationId = $variationInput['id'] ?? null;
+
+                // Update or create variation
+                if ($variationId) {
+                    $variation = $product->variations()->where('id', $variationId)->firstOrFail();
+
+                    $variation->update([
+                        'sku' => $variationInput['sku'],
+                        'price' => $variationInput['price'],
+                        'discount_price' => $variationInput['discount_price'] ?? null,
+                        'image' => $variationInput['image'] ?? null,
+                        'is_active' => true,
+                    ]);
+                } else {
+                    $variation = ProductVariation::create([
+                        'product_id' => $product->id,
+                        'sku' => $variationInput['sku'],
+                        'price' => $variationInput['price'],
+                        'discount_price' => $variationInput['discount_price'] ?? null,
+                        'image' => $variationInput['image'] ?? null,
+                        'is_active' => true,
+                    ]);
+                }
+
+                // Sync attribute values (pivot with attribute_id)
+                $attributeValueIds = $variationInput['attribute_value_ids'] ?? [];
+                $values = ProductAttributeValue::whereIn('id', $attributeValueIds)->get();
+
+                $attachData = [];
+                foreach ($values as $value) {
+                    $attachData[$value->id] = [
+                        'attribute_id' => $value->attribute_id,
+                    ];
+                }
+                $variation->attributeValues()->sync($attachData);
+
+                // Upsert variation stocks by warehouse
+                $stocks = $variationInput['stocks'] ?? [];
+
+                // Remove old stocks for warehouses not present anymore
+                $incomingWarehouseIds = collect($stocks)->pluck('warehouse_id')->map(fn($x) => (int) $x)->values()->toArray();
+                ProductStock::where('variation_id', $variation->id)
+                    ->whereNotIn('warehouse_id', $incomingWarehouseIds)
+                    ->delete();
+
+                foreach ($stocks as $s) {
+                    ProductStock::updateOrCreate(
+                        [
+                            'product_id' => $product->id,
+                            'variation_id' => $variation->id,
+                            'warehouse_id' => $s['warehouse_id'],
+                        ],
+                        [
+                            'quantity' => $s['quantity'],
+                            'alert_quantity' => $s['alert_quantity'] ?? null,
+                        ]
+                    );
+                }
+            }
+
+            return redirect()
+                ->route('admin.products.index')
+                ->with('success', 'Product updated successfully.');
+        });
+    }
+
+    public function bulkForceDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
+        ]);
+
+        return DB::transaction(function () use ($request) {
+
+            $products = Product::withTrashed()
+                ->whereIn('id', $request->ids)
+                ->get();
+
+            foreach ($products as $product) {
+
+                // 🧹 Delete thumbnail file
+                if ($product->thumbnail && Storage::exists($product->thumbnail)) {
+                    Storage::delete($product->thumbnail);
+                }
+
+                // 🧹 Variations + pivots + stocks
+                $product->variations()->withTrashed()->each(function ($variation) {
+
+                    // pivot table
+                    $variation->attributeValues()->detach();
+
+                    // variation stocks
+                    ProductStock::where('variation_id', $variation->id)->delete();
+
+                    $variation->forceDelete();
+                });
+
+                // 🧹 Simple product stocks
+                ProductStock::where('product_id', $product->id)->delete();
+
+                // 🧹 Tags pivot
+                $product->tags()->detach();
+
+                // ❌ HARD DELETE PRODUCT
+                $product->forceDelete();
+            }
+
+            return redirect()
+                ->route('admin.products.index')
+                ->with('success', 'Selected products permanently deleted.');
         });
     }
 
@@ -147,6 +524,7 @@ class ProductController extends Controller
         $search = $request->input('search');
 
         $query = Product::query();
+        $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
         $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
 
         $searchColumns = ['name', 'slug'];
@@ -161,6 +539,7 @@ class ProductController extends Controller
         });
 
         if ($request->has('trashed')) {
+            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
             $query->when($request->trashed, fn($query) => $query->onlyTrashed());
         }
 
