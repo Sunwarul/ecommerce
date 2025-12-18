@@ -410,7 +410,7 @@ function submitOrder(action = "complete") {
 
 <template>
     <AuthenticatedLayout>
-        <div class="h-[95vh] flex">
+        <div class="h-[95vh] flex overflow-y-auto">
             <main
                 class="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4"
             >
@@ -636,7 +636,7 @@ function submitOrder(action = "complete") {
 
                     <!-- ORDER PANEL -->
                     <aside
-                        class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col"
+                        class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto"
                     >
                         <div class="flex flex-col flex-1">
                             <!-- header -->
