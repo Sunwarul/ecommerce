@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -8,6 +8,7 @@ import { resolveImagePath } from "@/Helpers/imageHelper";
 
 // PrimeVue
 import SessionBar from "@/Components/POS/SessionBar.vue";
+import AutoComplete from "primevue/autocomplete";
 import Badge from "primevue/badge";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
@@ -19,7 +20,7 @@ import InputText from "primevue/inputtext";
 
 const props = defineProps({
     products: { type: Array, default: () => [] },
-    customers: { type: Array, default: () => [] },
+    customers: { type: Array, default: () => [] }, // not required now, but ok
     paymentMethods: { type: Array, default: () => [] },
     currentSession: { type: Object, default: null },
     warehouses: { type: Array, default: () => [] },
@@ -27,6 +28,7 @@ const props = defineProps({
 });
 
 const toast = useToast();
+const page = usePage();
 
 // session + clock
 const posSession = ref(props.currentSession);
@@ -40,9 +42,87 @@ onUnmounted(() => {
     if (timer) clearInterval(timer);
 });
 
-// search
+// product search
 const search = ref("");
-const selectedCustomerId = ref(null);
+
+// -----------------------------
+// ✅ Customer Remote Search (Backend)
+// -----------------------------
+const selectedCustomer = ref(null); // object or null (walk-in)
+const customerSuggestions = ref([]);
+const customerLoading = ref(false);
+
+let customerSearchTimer = null;
+let customerAbort = null;
+
+function customerLabel(c) {
+    if (!c) return "Walk-in customer";
+    const phone = c.phone ? ` • ${c.phone}` : "";
+    const email = c.email ? ` • ${c.email}` : "";
+    return `${c.name || "Customer"}${phone}${email}`;
+}
+
+// Called by PrimeVue AutoComplete
+function onCustomerComplete(event) {
+    const q = (event.query || "").trim();
+
+    // allow clearing suggestions when empty
+    if (!q) {
+        customerSuggestions.value = [];
+        return;
+    }
+
+    // debounce
+    if (customerSearchTimer) clearTimeout(customerSearchTimer);
+    customerSearchTimer = setTimeout(() => {
+        fetchCustomers(q);
+    }, 300);
+}
+
+watch(selectedCustomer, (v) => console.log("selectedCustomer =", v));
+
+async function fetchCustomers(q) {
+    try {
+        customerLoading.value = true;
+
+        // cancel previous request
+        if (customerAbort) customerAbort.abort();
+        customerAbort = new AbortController();
+
+        // ✅ backend route (create this route in Laravel)
+        // Example: route('pos.customers.search', { q })
+        const url = route("pos.customers.search", { q });
+
+        const res = await fetch(url, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            signal: customerAbort.signal,
+        });
+
+        if (!res.ok) throw new Error("Customer search failed");
+        const data = await res.json();
+
+        // Expect: { data: [ {id,name,phone,email}, ... ] } OR just array
+        customerSuggestions.value = Array.isArray(data)
+            ? data
+            : data.data || [];
+    } catch (e) {
+        // ignore abort errors
+        if (String(e?.name) === "AbortError") return;
+
+        toast.add({
+            severity: "warn",
+            summary: "Search error",
+            detail: "Could not load customers",
+            life: 2000,
+        });
+    } finally {
+        customerLoading.value = false;
+    }
+}
 
 // cart
 const cartItems = ref([]);
@@ -138,8 +218,6 @@ function ensureSession() {
 
 // -----------------------------
 // Add to cart
-// - simple product: add directly
-// - variable product: open dialog to choose variation
 // -----------------------------
 function addProduct(product) {
     if (!ensureSession()) return;
@@ -172,12 +250,10 @@ function addSimpleToCart(product) {
         variation_id: null,
         name: product.name,
         sku: product.sku,
-        unit_price: getProductUnitPrice(product), // original
-        discount_price: getProductDiscountPrice(product), // default discount price (nullable)
-        sell_price: sellPrice, // price used for selling
+        unit_price: getProductUnitPrice(product),
+        discount_price: getProductDiscountPrice(product),
+        sell_price: sellPrice,
         quantity: 1,
-
-        // optional manual extras
         line_discount_amount: 0,
         tax_amount: 0,
     });
@@ -209,14 +285,11 @@ function confirmAddVariation() {
         cartItems.value.push({
             product_id: p.id,
             variation_id: v.id,
-
             name: `${p.name} (${v.sku})`,
             sku: v.sku || p.sku,
-
             unit_price: getVariationUnitPrice(v),
             discount_price: getVariationDiscountPrice(v),
             sell_price: sellPrice,
-
             quantity: 1,
             line_discount_amount: 0,
             tax_amount: 0,
@@ -273,24 +346,50 @@ const total = computed(
 );
 
 // -----------------------------
-// Payments
+// Payments (✅ partial allowed)
 // -----------------------------
 let paymentRowId = 1;
 const payments = ref([
-    { id: paymentRowId++, payment_method_id: null, amount: 0 },
-]);
-
-function addPaymentRow() {
-    payments.value.push({
+    {
         id: paymentRowId++,
         payment_method_id: null,
         amount: 0,
-    });
+
+        transaction_ref: null,
+        notes: null,
+
+        meta: {
+            customer_bank_name: null,
+            customer_account_no: null,
+            received_to_bank_account_id: null,
+            txn_ref: null,
+        },
+    },
+]);
+
+function blankPaymentRow() {
+    return {
+        id: paymentRowId++,
+        payment_method_id: null,
+        amount: 0,
+        transaction_ref: null,
+        notes: null,
+        meta: {
+            customer_bank_name: null,
+            customer_account_no: null,
+            received_to_bank_account_id: null,
+            txn_ref: null,
+        },
+    };
 }
+
+function addPaymentRow() {
+    payments.value.push(blankPaymentRow());
+}
+
 function removePaymentRow(index) {
     if (payments.value.length === 1) {
-        payments.value[0].payment_method_id = null;
-        payments.value[0].amount = 0;
+        payments.value = [blankPaymentRow()];
         return;
     }
     payments.value.splice(index, 1);
@@ -299,14 +398,40 @@ function removePaymentRow(index) {
 const totalPaid = computed(() =>
     payments.value.reduce((sum, row) => sum + n(row.amount), 0)
 );
-
+const due = computed(() => Math.max(0, total.value - totalPaid.value));
 const change = computed(() => Math.max(0, totalPaid.value - total.value));
 
-// reset payments if total changes and paid became smaller (optional)
-watch(total, () => {
-    // keep user input; no hard reset
+// --- helpers for Bank method detection ---
+const bankMethodIds = computed(() => {
+    // detect by name (adjust if your method name is different)
+    const list = props.paymentMethods || [];
+    return list
+        .filter((m) => (m.name || "").toLowerCase().includes("bank"))
+        .map((m) => m.id);
 });
 
+function isBankRow(row) {
+    if (!row?.payment_method_id) return false;
+    return bankMethodIds.value.includes(row.payment_method_id);
+}
+
+// clear meta when method changes away from Bank
+watch(
+    payments,
+    (rows) => {
+        rows.forEach((row) => {
+            if (!isBankRow(row)) {
+                row.meta = {
+                    customer_bank_name: null,
+                    customer_account_no: null,
+                    received_to_bank_account_id: null,
+                    txn_ref: null,
+                };
+            }
+        });
+    },
+    { deep: true }
+);
 // -----------------------------
 // Submit
 // -----------------------------
@@ -323,11 +448,11 @@ function submitOrder(action = "complete") {
         return;
     }
 
-    // ✅ payments required only for complete / complete_print
     const validPayments = payments.value.filter(
         (p) => p.payment_method_id && n(p.amount) > 0
     );
 
+    // ✅ payments required only for complete / complete_print
     if (action !== "draft") {
         if (!validPayments.length) {
             toast.add({
@@ -338,24 +463,27 @@ function submitOrder(action = "complete") {
             });
             return;
         }
-        if (totalPaid.value < total.value) {
+        if (totalPaid.value <= 0) {
             toast.add({
                 severity: "warn",
-                summary: "Insufficient payment",
-                detail: "Total paid is less than payable amount",
-                life: 2500,
+                summary: "Payment required",
+                detail: "Payment must be greater than 0",
+                life: 2200,
             });
             return;
         }
+        // ✅ no "insufficient" block; partial is allowed
     }
 
     const payload = {
-        action, // ✅ REQUIRED BY BACKEND
+        action,
 
         pos_session_id: posSession.value.id,
         branch_id: posSession.value.branch_id,
         warehouse_id: posSession.value.warehouse_id,
-        customer_id: selectedCustomerId.value,
+
+        // ✅ allow order without customer
+        customer_id: selectedCustomer.value?.id ?? null,
 
         items: cartItems.value.map((item) => ({
             product_id: item.product_id,
@@ -368,14 +496,35 @@ function submitOrder(action = "complete") {
 
         payments:
             action === "draft"
-                ? [] // ✅ no payment needed for draft
+                ? []
                 : validPayments.map((p) => ({
                       payment_method_id: p.payment_method_id,
                       amount: p.amount,
+
+                      transaction_ref: p.transaction_ref || null,
+                      notes: p.notes || null,
+
+                      meta: isBankRow(p)
+                          ? {
+                                customer_bank_name:
+                                    p.meta?.customer_bank_name || null,
+                                customer_account_no:
+                                    p.meta?.customer_account_no || null,
+                                received_to_bank_account_id:
+                                    p.meta?.received_to_bank_account_id || null,
+                                txn_ref: p.meta?.txn_ref || null,
+                            }
+                          : null,
                   })),
 
         order_discount_type: discountMode.value,
         order_discount_value: discountValue.value,
+
+        // ✅ optional helpers for backend
+        total_amount: total.value,
+        paid_amount: totalPaid.value,
+        due_amount: due.value,
+
         notes: null,
     };
 
@@ -388,16 +537,16 @@ function submitOrder(action = "complete") {
                 detail: "Order saved",
                 life: 2000,
             });
+            console.log(page);
+            console.log(action, page.props.flash?.order_id);
 
-            // ✅ If you return order_id from backend, redirect to invoice for print
-            // Example: page.props.flash?.order_id
             if (action === "complete_print") {
                 const orderId = page?.props?.flash?.order_id;
                 if (orderId) router.visit(route("pos.orders.invoice", orderId));
             }
 
             cartItems.value = [];
-            selectedCustomerId.value = null;
+            selectedCustomer.value = null;
             discountMode.value = "none";
             discountValue.value = 0;
             payments.value = [
@@ -433,25 +582,13 @@ function submitOrder(action = "complete") {
 
                     <div class="flex items-center gap-3 text-xs text-slate-500">
                         <div class="flex items-center justify-between mb-3">
-                            <!-- <div>
-                                <h1 class="text-lg font-semibold">
-                                    Point of Sale
-                                </h1>
-                                <p class="text-xs text-gray-500">
-                                    {{
-                                        props.currentSession
-                                            ? "Session Open"
-                                            : "No active session"
-                                    }}
-                                </p>
-                            </div> -->
-
                             <SessionBar
                                 :currentSession="props.currentSession"
                                 :branches="props.branches"
                                 :warehouses="props.warehouses"
                             />
                         </div>
+
                         <span
                             class="px-3 py-1 rounded-full text-lg mb-3 bg-emerald-50 text-emerald-600 flex items-center gap-2"
                         >
@@ -482,9 +619,9 @@ function submitOrder(action = "complete") {
 
                             <div class="flex items-center gap-3">
                                 <InputGroup class="w-full max-w-md">
-                                    <InputGroupAddon>
-                                        <i class="pi pi-search"></i>
-                                    </InputGroupAddon>
+                                    <InputGroupAddon
+                                        ><i class="pi pi-search"></i
+                                    ></InputGroupAddon>
                                     <InputText
                                         v-model="search"
                                         placeholder="Search product, SKU, barcode"
@@ -512,9 +649,8 @@ function submitOrder(action = "complete") {
                                         <span
                                             v-if="!product.thumbnail"
                                             class="text-slate-300 text-xs uppercase tracking-wide"
+                                            >Image</span
                                         >
-                                            Image
-                                        </span>
 
                                         <img
                                             v-else
@@ -527,7 +663,6 @@ function submitOrder(action = "complete") {
                                             class="h-full object-contain"
                                         />
 
-                                        <!-- Type badge -->
                                         <div class="absolute top-2 left-2">
                                             <Badge
                                                 :severity="
@@ -539,7 +674,6 @@ function submitOrder(action = "complete") {
                                             />
                                         </div>
 
-                                        <!-- Discount badge (simple product) -->
                                         <div
                                             v-if="
                                                 getProductDiscountPrice(product)
@@ -595,23 +729,23 @@ function submitOrder(action = "complete") {
                                                     "
                                                     class="text-xs text-slate-400 flex items-center gap-2"
                                                 >
-                                                    <span class="line-through">
-                                                        {{
+                                                    <span
+                                                        class="line-through"
+                                                        >{{
                                                             getProductUnitPrice(
                                                                 product
                                                             ).toFixed(2)
-                                                        }}
-                                                    </span>
+                                                        }}</span
+                                                    >
                                                     <span
                                                         class="text-rose-600 font-semibold"
-                                                    >
-                                                        Save
+                                                        >Save
                                                         {{
                                                             productDiscountPercent(
                                                                 product
                                                             )
-                                                        }}%
-                                                    </span>
+                                                        }}%</span
+                                                    >
                                                 </div>
                                             </div>
 
@@ -651,12 +785,8 @@ function submitOrder(action = "complete") {
                                     </h3>
                                     <p class="text-xs text-slate-400">
                                         {{
-                                            selectedCustomerId
-                                                ? customers.find(
-                                                      (c) =>
-                                                          c.id ===
-                                                          selectedCustomerId
-                                                  )?.name || "Customer"
+                                            selectedCustomer
+                                                ? selectedCustomer.name
                                                 : "Walk-in customer"
                                         }}
                                     </p>
@@ -669,20 +799,48 @@ function submitOrder(action = "complete") {
                                 </span>
                             </div>
 
-                            <!-- customer -->
+                            <!-- ✅ customer remote search -->
                             <div class="mb-4">
                                 <p class="text-xs text-slate-500 mb-1">
-                                    Customer
+                                    Customer (optional)
                                 </p>
-                                <Dropdown
-                                    v-model="selectedCustomerId"
-                                    :options="customers"
+
+                                <AutoComplete
+                                    v-model="selectedCustomer"
+                                    :suggestions="customerSuggestions"
+                                    @complete="onCustomerComplete"
                                     optionLabel="name"
-                                    optionValue="id"
-                                    placeholder="Walk-in Customer"
                                     showClear
+                                    dropdown
+                                    :loading="customerLoading"
+                                    placeholder="Search by name / phone / email"
                                     class="w-full text-sm"
-                                />
+                                >
+                                    <template #option="slotProps">
+                                        <div class="flex flex-col">
+                                            <span class="font-medium">{{
+                                                slotProps.option.name
+                                            }}</span>
+                                            <span
+                                                class="text-xs text-slate-500"
+                                            >
+                                                {{
+                                                    slotProps.option.phone ||
+                                                    "—"
+                                                }}
+                                                •
+                                                {{
+                                                    slotProps.option.email ||
+                                                    "—"
+                                                }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </AutoComplete>
+
+                                <div class="text-[11px] text-slate-400 mt-1">
+                                    Leave empty for Walk-in customer
+                                </div>
                             </div>
 
                             <!-- cart items -->
@@ -702,26 +860,23 @@ function submitOrder(action = "complete") {
                                         >
                                             {{ item.name }}
                                         </div>
-
                                         <div
                                             class="text-[11px] text-slate-400 mb-1"
                                         >
                                             {{ item.sku }}
                                         </div>
 
-                                        <!-- show discount info -->
                                         <div
                                             class="text-[11px] text-slate-500 mb-1"
                                         >
                                             <span
                                                 class="font-semibold text-slate-700"
-                                            >
-                                                {{
+                                                >{{
                                                     Number(
                                                         item.sell_price || 0
                                                     ).toFixed(2)
-                                                }}
-                                            </span>
+                                                }}</span
+                                            >
                                             <span
                                                 v-if="item.discount_price"
                                                 class="ml-2 text-rose-600"
@@ -902,32 +1057,110 @@ function submitOrder(action = "complete") {
                                     />
                                 </div>
 
-                                <div class="space-y-2 max-h-40 overflow-y-auto">
+                                <div
+                                    class="space-y-3 max-h-72 overflow-y-auto pr-1"
+                                >
                                     <div
                                         v-for="(row, index) in payments"
                                         :key="row.id"
-                                        class="flex items-center gap-2"
+                                        class="bg-white border border-slate-200 rounded-xl p-3"
                                     >
-                                        <Dropdown
-                                            v-model="row.payment_method_id"
-                                            :options="paymentMethods"
-                                            optionLabel="name"
-                                            optionValue="id"
-                                            placeholder="Method"
-                                            class="flex-1 text-xs"
-                                        />
-                                        <InputNumber
-                                            v-model="row.amount"
-                                            :min="0"
-                                            class="w-28"
-                                            inputClass="!text-xs"
-                                        />
-                                        <Button
-                                            icon="pi pi-trash"
-                                            class="p-button-text p-button-danger p-button-sm"
-                                            @click="removePaymentRow(index)"
-                                            type="button"
-                                        />
+                                        <div class="flex items-center gap-2">
+                                            <Dropdown
+                                                v-model="row.payment_method_id"
+                                                :options="paymentMethods"
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder="Method"
+                                                class="flex-1 text-xs"
+                                            />
+                                            <InputNumber
+                                                v-model="row.amount"
+                                                :min="0"
+                                                class="w-28"
+                                                inputClass="!text-xs"
+                                            />
+                                            <Button
+                                                icon="pi pi-trash"
+                                                class="p-button-text p-button-danger p-button-sm"
+                                                @click="removePaymentRow(index)"
+                                                type="button"
+                                            />
+                                        </div>
+
+                                        <!-- common extra fields -->
+                                        <div
+                                            class="grid grid-cols-1 gap-2 mt-2"
+                                        >
+                                            <InputText
+                                                v-model="row.transaction_ref"
+                                                placeholder="Transaction ref (optional)"
+                                                class="w-full text-xs"
+                                            />
+                                            <InputText
+                                                v-model="row.notes"
+                                                placeholder="Notes (optional)"
+                                                class="w-full text-xs"
+                                            />
+                                        </div>
+
+                                        <!-- ✅ BANK META FIELDS -->
+                                        <div
+                                            v-if="isBankRow(row)"
+                                            class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
+                                        >
+                                            <div
+                                                class="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2"
+                                            >
+                                                <i class="pi pi-building"></i>
+                                                Bank Details
+                                            </div>
+
+                                            <div class="grid grid-cols-1 gap-2">
+                                                <InputText
+                                                    v-model="
+                                                        row.meta
+                                                            .customer_bank_name
+                                                    "
+                                                    placeholder="Customer bank name"
+                                                    class="w-full text-xs"
+                                                />
+                                                <InputText
+                                                    v-model="
+                                                        row.meta
+                                                            .customer_account_no
+                                                    "
+                                                    placeholder="Customer account no"
+                                                    class="w-full text-xs"
+                                                />
+
+                                                <!-- If you don't have bank accounts list yet, keep it as InputText or InputNumber -->
+                                                <InputNumber
+                                                    v-model="
+                                                        row.meta
+                                                            .received_to_bank_account_id
+                                                    "
+                                                    :min="1"
+                                                    placeholder="Received to bank account ID"
+                                                    class="w-full"
+                                                    inputClass="!text-xs"
+                                                />
+
+                                                <InputText
+                                                    v-model="row.meta.txn_ref"
+                                                    placeholder="Bank txn ref / cheque no"
+                                                    class="w-full text-xs"
+                                                />
+                                            </div>
+
+                                            <div
+                                                class="text-[11px] text-slate-400 mt-2"
+                                            >
+                                                These fields go to
+                                                <b>payments.*.meta</b> in
+                                                backend.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -948,6 +1181,14 @@ function submitOrder(action = "complete") {
                                         class="font-semibold text-slate-800"
                                         >{{ change.toFixed(2) }}</span
                                     >
+                                </div>
+                                <div
+                                    class="flex items-center justify-between text-xs text-slate-500"
+                                >
+                                    <span>Due</span>
+                                    <span class="font-semibold text-rose-600">{{
+                                        due.toFixed(2)
+                                    }}</span>
                                 </div>
                             </div>
 

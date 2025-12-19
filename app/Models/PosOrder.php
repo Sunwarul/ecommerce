@@ -25,7 +25,6 @@ class PosOrder extends BaseModel
         'change_amount',
         'payment_status',
         'status',
-        'notes',
     ];
 
     protected $casts = [
@@ -66,5 +65,10 @@ class PosOrder extends BaseModel
     public function payments()
     {
         return $this->hasMany(PosPayment::class, 'order_id');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 }

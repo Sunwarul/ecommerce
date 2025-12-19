@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // cashier
 
-            $table->string('invoice_no', 100)->unique();
+            $table->string('invoice_no', 100)->unique()->nullable();
             $table->string('reference_no', 100)->nullable();
 
             $table->decimal('subtotal', 10, 2)->default(0);
@@ -35,8 +35,6 @@ return new class extends Migration {
 
             $table->string('payment_status', 50)->default('unpaid'); // unpaid, partial, paid
             $table->string('status', 50)->default('completed');      // draft, completed, void
-
-            $table->text('notes')->nullable();
 
             $table->softDeletes();
             $table->timestamps();
