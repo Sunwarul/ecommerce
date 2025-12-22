@@ -245,8 +245,7 @@ function cleanMeta(meta) {
     const m = {
         customer_bank_name: meta.customer_bank_name || null,
         customer_account_no: meta.customer_account_no || null,
-        received_to_bank_account_id:
-            meta.received_to_bank_account_id || null,
+        received_to_bank_account_id: meta.received_to_bank_account_id || null,
         txn_ref: meta.txn_ref || null,
     };
 
@@ -279,8 +278,7 @@ function validatePaymentsOrToast(rowsRef) {
                 toast.add({
                     severity: "warn",
                     summary: "Bank info required",
-                    detail:
-                        "Customer bank name & account no are required for bank payments",
+                    detail: "Customer bank name & account no are required for bank payments",
                     life: 2500,
                 });
                 return null;
@@ -301,7 +299,6 @@ function validatePaymentsOrToast(rowsRef) {
 
     return payload;
 }
-
 
 function completeDraft() {
     if (!completeTarget.value) return;
@@ -441,15 +438,17 @@ function submitPayDue() {
 
             <!-- FILTER BAR -->
             <div class="card p-3 flex flex-wrap gap-3 items-center">
-                <span class="p-input-icon-left w-full md:w-72">
-                    <i class="pi pi-search" />
+                <InputGroup class="max-w-sm">
+                    <InputGroupAddon
+                        ><i class="pi pi-search"></i
+                    ></InputGroupAddon>
                     <InputText
                         v-model="search"
                         placeholder="Invoice / customer / cashier"
                         class="w-full"
                         @keyup.enter="applyFilter"
                     />
-                </span>
+                </InputGroup>
 
                 <Dropdown
                     v-model="status"
