@@ -58,7 +58,7 @@ function isOutsideClicked(event) {
 
 <template>
     <FavIcons />
-    <div class="layout-wrapper" :class="containerClass">
+    <div class="layout-wrapper bg-blue-50" :class="containerClass">
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">

@@ -202,7 +202,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
-                        'quantity' => $s['quantity'],
+                        'quantity' => 0,
                         'alert_quantity' => $s['alert_quantity'] ?? null,
                     ]);
                 }
@@ -242,7 +242,7 @@ class ProductController extends Controller
                             'product_id' => $product->id,
                             'variation_id' => $variation->id,
                             'warehouse_id' => $s['warehouse_id'],
-                            'quantity' => $s['quantity'],
+                            'quantity' => 0,
                             'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]);
                     }
@@ -363,13 +363,13 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
-                        'quantity' => $s['quantity'],
+                        'quantity' => 0,
                         'alert_quantity' => $s['alert_quantity'] ?? null,
                     ]);
                 }
 
                 return redirect()
-                    ->route('admin.products.index')
+                    ->route('products.index')
                     ->with('success', 'Product updated successfully.');
             }
 
@@ -454,7 +454,7 @@ class ProductController extends Controller
                             'warehouse_id' => $s['warehouse_id'],
                         ],
                         [
-                            'quantity' => $s['quantity'],
+                            'quantity' => 0,
                             'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]
                     );
@@ -462,7 +462,7 @@ class ProductController extends Controller
             }
 
             return redirect()
-                ->route('admin.products.index')
+                ->route('products.index')
                 ->with('success', 'Product updated successfully.');
         });
     }
@@ -509,8 +509,7 @@ class ProductController extends Controller
                 $product->forceDelete();
             }
 
-            return redirect()
-                ->route('admin.products.index')
+            return Inertia::render('Admin/Products/Index')
                 ->with('success', 'Selected products permanently deleted.');
         });
     }

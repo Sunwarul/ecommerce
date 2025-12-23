@@ -44,6 +44,25 @@ class PosOrderController extends Controller
     }
 
 
+    public function customerSearch(Request $request)
+    {
+        $q = trim((string) $request->get('q', ''));
+
+        if ($q === '') {
+            return response()->json(['data' => []]);
+        }
+
+        $customers = Customer::query()
+            ->select(['id', 'name', 'phone', 'email'])
+            ->where(function ($query) use ($q) {
+                $query->whereAny(['name', 'phone', 'email'], 'like', "%{$q}%");
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['data' => $customers]);
+    }
 
     public function store(Request $request, StockService $stockService)
     {
@@ -72,11 +91,16 @@ class PosOrderController extends Controller
             'payments.*.transaction_ref' => ['nullable', 'string', 'max:100'],
             'payments.*.notes' => ['nullable', 'string', 'max:500'],
 
+            'payments.*.meta' => ['nullable', 'array'],
+            'payments.*.meta.customer_bank_name' => ['nullable', 'string', 'max:100'],
+            'payments.*.meta.customer_account_no' => ['nullable', 'string', 'max:50'],
+            'payments.*.meta.received_to_bank_account_id' => ['nullable', 'integer'],
+            'payments.*.meta.txn_ref' => ['nullable', 'string', 'max:100'],
+
+
             // manual order discount fallback (optional)
             'order_discount_type' => ['nullable', 'in:none,percent,fixed'],
             'order_discount_value' => ['nullable', 'numeric', 'min:0'],
-
-            'notes' => ['nullable', 'string'],
         ]);
 
         $userId = Auth::id();
@@ -223,7 +247,6 @@ class PosOrderController extends Controller
 
                 'payment_status' => $paymentStatus,
                 'status' => $isDraft ? 'draft' : 'completed',
-                'notes' => $data['notes'] ?? null,
 
                 // optional if you have columns
                 // 'discount_id' => $data['discount_id'] ?? null,
@@ -274,50 +297,98 @@ class PosOrderController extends Controller
                         'paid_at' => now(),
                         'transaction_ref' => $payment['transaction_ref'] ?? null,
                         'notes' => $payment['notes'] ?? null,
+                        'meta' => $payment['meta'] ?? null,
                     ]);
                 }
             }
 
-            return response()->json([
-                'success' => true,
-                'order_id' => $order->id,
-                'invoice_no' => $order->invoice_no,
-                'status' => $order->status,
-                'total' => $total,
-                'paid_amount' => $paidAmount,
-                'change' => $change,
-                'redirect' => !$isDraft ? route('pos.orders.invoice', $order->id) : null,
-            ]);
+            if ($isDraft) {
+                return redirect()->back()->with('success', 'Order saved as draft successfully');
+            }
+
+            return redirect()->route('pos.orders.invoice', $order->id);
+
+
+
+            // return response()->json([
+            //     'success' => true,
+            //     'order_id' => $order->id,
+            //     'invoice_no' => $order->invoice_no,
+            //     'status' => $order->status,
+            //     'total' => $total,
+            //     'paid_amount' => $paidAmount,
+            //     'change' => $change,
+            //     'redirect' => !$isDraft ? route('pos.orders.invoice', $order->id) : null,
+            // ]);
         });
+    }
+
+    public function invoice(PosOrder $order, Request $request)
+    {
+        $order->load([
+            'items',
+            'payments.paymentMethod',
+            'customer',
+            'user',
+            'branch',
+            'warehouse',
+        ]);
+
+        $mode = $request->get('mode', 'a4'); // 'a4' or 'thermal'
+
+        return Inertia::render('Admin/POS/Order/Invoice', [
+            'order' => $order,
+            'mode' => $mode,
+            'thermalWidth' => 80, // or config('pos.printer_width', 80)
+            'shop' => [
+                'name' => config('app.name'),
+                'address' => 'Your Address',
+                'phone' => '0123456789',
+            ],
+        ]);
     }
 
 
 
     public function orders(Request $request)
     {
-        $search = $request->get('search');
-        $status = $request->get('status');
-        $paymentStatus = $request->get('payment_status');
+        $search = trim($request->string('search'));
+        $status = trim($request->string('status'));
+        $paymentStatus = trim($request->string('payment_status'));
+        $dateFrom = $request->date('date_from');
+        $dateTo = $request->date('date_to');
 
         $query = PosOrder::with(['customer', 'user', 'session'])
             ->when($search, function ($q) use ($search) {
-                $q->where('invoice_no', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($q2) use ($search) {
-                        $q2->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('user', function ($q3) use ($search) {
-                        $q3->where('name', 'like', "%{$search}%");
-                    });
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('invoice_no', 'like', "%{$search}%")
+                        ->orWhereHas(
+                            'customer',
+                            fn($c) =>
+                            $c->where('name', 'like', "%{$search}%")
+                        )
+                        ->orWhereHas(
+                            'user',
+                            fn($u) =>
+                            $u->where('name', 'like', "%{$search}%")
+                        );
+                });
             })
-            ->when($status, function ($q) use ($status) {
-                $q->where('status', $status);
-            })
-            ->when($paymentStatus, function ($q) use ($paymentStatus) {
-                $q->where('payment_status', $paymentStatus);
-            })
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($paymentStatus, fn($q) => $q->where('payment_status', $paymentStatus))
+            ->when(
+                $dateFrom,
+                fn($q) =>
+                $q->whereDate('created_at', '>=', $dateFrom)
+            )
+            ->when(
+                $dateTo,
+                fn($q) =>
+                $q->whereDate('created_at', '<=', $dateTo)
+            )
             ->latest('id');
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Admin/POS/Order/Orders', [
             'orders' => $orders,
@@ -325,7 +396,218 @@ class PosOrderController extends Controller
                 'search' => $search,
                 'status' => $status,
                 'payment_status' => $paymentStatus,
+                'date_from' => $dateFrom?->format('Y-m-d'),
+                'date_to' => $dateTo?->format('Y-m-d'),
             ],
+            "paymentMethods" => PaymentMethod::where('is_active', 1)->get(),
         ]);
     }
+
+
+    public function void(PosOrder $order, StockService $stockService)
+    {
+        if ($order->status === 'void') {
+            return back()->with('success', 'Already voided');
+        }
+
+        DB::transaction(function () use ($order, $stockService) {
+            // restore stock only if it was completed
+            if ($order->status === 'completed') {
+                foreach ($order->items as $it) {
+                    $stockService->stockIn([
+                        'type' => 'in',
+                        'product_id' => $it->product_id,
+                        'variation_id' => $it->variation_id,
+                        'quantity' => $it->quantity,
+                        'to_warehouse_id' => $order->warehouse_id,
+                        'reference' => $order->invoice_no,
+                        'note' => 'VOID POS order',
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+            }
+
+            // mark order void
+            $order->update([
+                'status' => 'void',
+            ]);
+
+            // optional: store a void log fields if you have them:
+            // $order->update(['voided_at'=>now(), 'voided_by'=>Auth::id()]);
+        });
+
+        return back()->with('success', 'Order voided');
+    }
+
+    public function completeDraft(Request $request, PosOrder $order, StockService $stockService)
+    {
+        if ($order->status !== 'draft') {
+            return back()->with('success', 'Order already completed/void.');
+        }
+
+        $data = $request->validate([
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.payment_method_id' => ['required', 'exists:payment_methods,id'],
+            'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
+            'payments.*.transaction_ref' => ['nullable', 'string', 'max:100'],
+            'payments.*.notes' => ['nullable', 'string', 'max:500'],
+
+            // meta (bank info)
+            'payments.*.meta' => ['nullable', 'array'],
+            'payments.*.meta.customer_bank_name' => ['nullable', 'string', 'max:100'],
+            'payments.*.meta.customer_account_no' => ['nullable', 'string', 'max:50'],
+            'payments.*.meta.received_to_bank_account_id' => ['nullable', 'integer'],
+            'payments.*.meta.txn_ref' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        return DB::transaction(function () use ($order, $data, $stockService) {
+
+            $total = (float) $order->total_amount;
+
+            $paid = collect($data['payments'])->sum(fn($p) => (float) $p['amount']);
+            $change = max(0, $paid - $total);
+
+            $paymentStatus = $paid >= $total ? 'paid' : ($paid > 0 ? 'partial' : 'unpaid');
+
+            // ✅ generate invoice no now
+            $invoiceNo = $order->invoice_no ?: ('POS-' . now()->format('YmdHis') . '-' . $order->id);
+
+            // ✅ create payment rows now
+            foreach ($data['payments'] as $p) {
+                PosPayment::create([
+                    'order_id' => $order->id,
+                    'payment_method_id' => $p['payment_method_id'],
+                    'amount' => $p['amount'],
+                    'paid_at' => now(),
+                    'transaction_ref' => $p['transaction_ref'] ?? null,
+                    'notes' => $p['notes'] ?? null,
+                    'meta' => $p['meta'] ?? null, // make sure PosPayment model casts meta as array/json
+                ]);
+            }
+
+            // ✅ stockOut now (draft had no stockOut before)
+            $order->loadMissing('items');
+            foreach ($order->items as $it) {
+                $stockService->stockOut([
+                    'type' => 'out',
+                    'product_id' => $it->product_id,
+                    'variation_id' => $it->variation_id,
+                    'quantity' => $it->quantity,
+                    'from_warehouse_id' => $order->warehouse_id,
+                    'reference' => $invoiceNo,
+                    'note' => 'POS sale (completed from draft)',
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
+            // ✅ update order
+            $order->update([
+                'invoice_no' => $invoiceNo,
+                'status' => 'completed',
+                'paid_amount' => $paid,
+                'change_amount' => $change,
+                'payment_status' => $paymentStatus,
+            ]);
+
+            return redirect()
+                ->route('pos.orders.invoice', $order->id)
+                ->with('success', 'Draft completed successfully');
+        });
+    }
+
+
+    public function addPayment(Request $request, PosOrder $order)
+    {
+        if ($order->status === 'void') {
+            return back()->with('error', 'Cannot take payment for void order.');
+        }
+
+        // ✅ If frontend sends { payments: [...] }
+        if ($request->has('payments')) {
+            $data = $request->validate([
+                'payments' => ['required', 'array', 'min:1'],
+
+                'payments.*.payment_method_id' => ['required', 'exists:payment_methods,id'],
+                'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
+                'payments.*.transaction_ref' => ['nullable', 'string', 'max:100'],
+                'payments.*.notes' => ['nullable', 'string', 'max:500'],
+
+                'payments.*.meta' => ['nullable', 'array'],
+                'payments.*.meta.customer_bank_name' => ['nullable', 'string', 'max:100'],
+                'payments.*.meta.customer_account_no' => ['nullable', 'string', 'max:50'],
+                'payments.*.meta.received_to_bank_account_id' => ['nullable', 'integer'],
+                'payments.*.meta.txn_ref' => ['nullable', 'string', 'max:100'],
+            ]);
+
+            DB::transaction(function () use ($order, $data) {
+                foreach ($data['payments'] as $p) {
+                    PosPayment::create([
+                        'order_id' => $order->id,
+                        'payment_method_id' => $p['payment_method_id'],
+                        'amount' => $p['amount'],
+                        'paid_at' => now(),
+                        'transaction_ref' => $p['transaction_ref'] ?? null,
+                        'notes' => $p['notes'] ?? null,
+                        'meta' => $p['meta'] ?? null,
+                    ]);
+                }
+
+                $total = (float) $order->total_amount;
+                $paid = (float) $order->payments()->sum('amount');
+                $due = max(0, $total - $paid);
+
+                $paymentStatus = $paid <= 0 ? 'unpaid' : ($due <= 0 ? 'paid' : 'partial');
+
+                $order->update([
+                    'paid_amount' => $paid,
+                    'due_amount' => $due,
+                    'payment_status' => $paymentStatus,
+                ]);
+            });
+
+            return back()->with('success', 'Payments added successfully.');
+        }
+
+        // ✅ Otherwise handle single payment payload
+        $data = $request->validate([
+            'payment_method_id' => ['required', 'exists:payment_methods,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'transaction_ref' => ['nullable', 'string', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:500'],
+
+            'meta' => ['nullable', 'array'],
+            'meta.customer_bank_name' => ['nullable', 'string', 'max:100'],
+            'meta.customer_account_no' => ['nullable', 'string', 'max:50'],
+            'meta.received_to_bank_account_id' => ['nullable', 'integer'],
+            'meta.txn_ref' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        DB::transaction(function () use ($order, $data) {
+            PosPayment::create([
+                'order_id' => $order->id,
+                'payment_method_id' => $data['payment_method_id'],
+                'amount' => $data['amount'],
+                'paid_at' => now(),
+                'transaction_ref' => $data['transaction_ref'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'meta' => $data['meta'] ?? null,
+            ]);
+
+            $total = (float) $order->total_amount;
+            $paid = (float) $order->payments()->sum('amount');
+            $due = max(0, $total - $paid);
+
+            $paymentStatus = $paid <= 0 ? 'unpaid' : ($due <= 0 ? 'paid' : 'partial');
+
+            $order->update([
+                'paid_amount' => $paid,
+                'due_amount' => $due,
+                'payment_status' => $paymentStatus,
+            ]);
+        });
+
+        return back()->with('success', 'Payment added successfully.');
+    }
+
+
 }

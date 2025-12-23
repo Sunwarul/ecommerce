@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->timestamp('paid_at')->nullable();
             $table->string('transaction_ref', 100)->nullable();
             $table->text('notes')->nullable();
+            $table->json('meta')->nullable();
 
 
             $table->timestamps();

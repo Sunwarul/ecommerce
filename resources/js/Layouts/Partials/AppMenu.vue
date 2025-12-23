@@ -36,11 +36,6 @@ const model = ref([
                         icon: "pi pi-credit-card",
                         to: route("payment-methods.index"),
                     },
-                    // {
-                    //     label: "Product",
-                    //     icon: "pi pi-shopping-bag",
-                    //     to: route("products.index"),
-                    // },
                 ],
             },
             {
@@ -48,21 +43,8 @@ const model = ref([
                 icon: "pi pi-shopping-bag",
                 to: route("products.index"),
             },
-            // {
-            //     label: "Payment",
-            //     icon: "pi pi-credit-card",
-            //     items: [
-            //         {
-            //             label: "Payment Method",
-            //             icon: "pi pi-credit-card",
-            //             to: route("payment-methods.index"),
-            //         },
-            //     ],
-            // },
         ],
     },
-
-    // 🔥 New Sales / POS section
     {
         label: "Sales",
         icon: "pi pi-shopping-cart",
@@ -70,27 +52,15 @@ const model = ref([
             {
                 label: "Point of Sale",
                 icon: "pi pi-desktop",
-                to: route("pos.index"), // POS screen (your Vue POS page)
+                to: route("pos.index"),
             },
             {
                 label: "Orders",
                 icon: "pi pi-receipt",
-                to: route("pos.orders.index"), // Sales orders list page
+                to: route("pos.orders.index"),
             },
-            // চাইলে পরে আরও যোগ করতে পারো, যেমন:
-            // {
-            //     label: "Returns",
-            //     icon: "pi pi-undo",
-            //     to: route("sales.returns.index"),
-            // },
-            // {
-            //     label: "Invoices",
-            //     icon: "pi pi-file",
-            //     to: route("invoices.index"),
-            // },
         ],
     },
-
     {
         label: "User Management",
         icon: "pi pi-users",
@@ -111,14 +81,9 @@ const model = ref([
                     },
                 ],
             },
-            {
-                label: "Users",
-                icon: "pi pi-user",
-                to: route("users.index"), // single item, no submenu
-            },
+            { label: "Users", icon: "pi pi-user", to: route("users.index") },
         ],
     },
-
     {
         label: "Setup",
         icon: "pi pi-cog",
@@ -199,7 +164,7 @@ const model = ref([
 <template>
     <ul class="layout-menu">
         <template v-for="(item, i) in model" :key="`${item.label}-${i}`">
-            <app-menu-item
+            <AppMenuItem
                 v-if="!item.separator"
                 :item="item"
                 :index="i"

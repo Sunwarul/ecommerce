@@ -82,6 +82,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     // =======================
     Route::get('/pos', [PosOrderController::class, 'index'])
         ->name('pos.index');
+    Route::get('/pos/customers/search', [PosOrderController::class, 'customerSearch'])
+        ->name('pos.customers.search');
 
     // -----------------------
     // POS Session
@@ -108,6 +110,15 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     // orders list (sales history)
     Route::get('/pos/orders', [PosOrderController::class, 'orders'])
         ->name('pos.orders.index');
+
+    Route::post('/pos/orders/{order}/void', [PosOrderController::class, 'void'])
+        ->name('pos.orders.void');
+    Route::post('/pos/orders/{order}/complete', [PosOrderController::class, 'completeDraft'])
+        ->name('pos.orders.complete');
+    Route::post('/pos/orders/{order}/payments', [PosOrderController::class, 'addPayment'])
+        ->name('pos.orders.payments.store');
+
+
 
 
     // Route::post('/pos/orders/{order}/refund', [PosRefundController::class, 'refund'])->name('pos.orders.refund');
