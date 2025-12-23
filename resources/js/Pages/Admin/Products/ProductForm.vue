@@ -938,7 +938,7 @@ const cancel = () => emit("cancel");
                                 Attribute Values *
                             </th>
                             <th class="p-2 text-left w-[320px]">
-                                Warehouse Stock *
+                                Warehouse Alert Qty *
                             </th>
                             <th class="p-2 text-left w-[220px]">Image Path</th>
                             <th class="p-2 text-left w-[70px]"></th>
@@ -958,7 +958,7 @@ const cancel = () => emit("cancel");
                                     class="w-full"
                                     placeholder="Variation SKU"
                                     :class="{
-                                        'p-invalid':
+                                        'p-invalid ':
                                             submitted && !variation.sku,
                                     }"
                                 />
@@ -966,15 +966,16 @@ const cancel = () => emit("cancel");
 
                             <!-- Price -->
                             <td class="p-2">
-                                <InputNumber
-                                    v-model.number="variation.price"
-                                    :min="0"
-                                    :class="{
-                                        'p-invalid':
-                                            submitted && !variation.price,
-                                    }"
-                                    style="width: 80px;"
-                                />
+                                <div class="grid grid-cols-4">
+                                    <InputNumber
+                                        v-model.number="variation.price"
+                                        :min="0"
+                                        :class="{
+                                            'p-invalid':
+                                                submitted && !variation.price,
+                                        }"
+                                    />
+                                </div>
                             </td>
 
                             <!-- Discount -->
@@ -982,7 +983,6 @@ const cancel = () => emit("cancel");
                                 <InputNumber
                                     v-model.number="variation.discount_price"
                                     :min="0"
-                                    style="width: 80px;"
                                 />
                             </td>
 
@@ -1028,13 +1028,13 @@ const cancel = () => emit("cancel");
                                             }}
                                         </span>
 
-                                        <div class="col-span-3">
+                                        <!-- <div class="col-span-3">
                                             <InputNumber
                                                 v-model.number="s.quantity"
                                                 class="w-full"
                                                 :min="0"
                                             />
-                                        </div>
+                                        </div> -->
 
                                         <div class="col-span-4">
                                             <InputNumber

@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import ProductForm from "./ProductForm.vue";
 
@@ -16,6 +16,20 @@ const props = defineProps({
 console.log("debug data", props.product);
 
 const isEditing = computed(() => !!props.product?.id);
+
+/* ✅ handle emitted events here */
+const handleSaved = (data) => {
+    console.log("Product saved:", data);
+
+    // example redirect
+    router.visit(route("admin.products.index"));
+};
+
+const handleCancel = () => {
+    console.log("Form cancelled");
+
+    router.visit(route("admin.products.index"));
+};
 </script>
 
 <template>
@@ -43,6 +57,8 @@ const isEditing = computed(() => !!props.product?.id);
                 :tags="tags"
                 :attributes="attributes"
                 :warehouses="warehouses"
+                @saved="handleSaved"
+                @cancel="handleCancel"
             />
         </div>
     </AuthenticatedLayout>
