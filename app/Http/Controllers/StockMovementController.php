@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\StockService;
@@ -20,6 +21,7 @@ class StockMovementController extends Controller
                 'variations' => $product->variations,
             ],
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
+            'branches' => Branch::active()->select('id', 'name')->orderBy('name')->get(),
         ]);
     }
     public function store(Request $request, StockService $stockService)
@@ -28,6 +30,7 @@ class StockMovementController extends Controller
             'type' => ['required', 'in:in,out,transfer,adjust'],
             'product_id' => ['required', 'exists:products,id'],
             'variation_id' => ['nullable', 'exists:product_variations,id'],
+            'branch_id' => ['required', 'exists:branches,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
 
             'from_warehouse_id' => ['nullable', 'exists:warehouses,id'],

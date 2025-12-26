@@ -17,6 +17,7 @@ class StockService
                 'product_id' => $data['product_id'],
                 'variation_id' => $data['variation_id'] ?? null,
                 'warehouse_id' => $data['to_warehouse_id'],
+                'branch_id' => $data['branch_id'],
             ], [
                 'quantity' => 0,
                 'alert_quantity' => null,
@@ -38,6 +39,7 @@ class StockService
                 'product_id' => $data['product_id'],
                 'variation_id' => $data['variation_id'] ?? null,
                 'warehouse_id' => $data['from_warehouse_id'],
+                'branch_id' => $data['branch_id'],
             ])->lockForUpdate()->first();
 
             if (!$stock || $stock->quantity < $data['quantity']) {
@@ -80,6 +82,7 @@ class StockService
                 'product_id' => $data['product_id'],
                 'variation_id' => $data['variation_id'] ?? null,
                 'warehouse_id' => $data['to_warehouse_id'],
+                'branch_id' => $data['branch_id'],
             ], [
                 'quantity' => 0,
                 'alert_quantity' => null,

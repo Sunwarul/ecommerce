@@ -12,6 +12,7 @@ class PosPayment extends BaseModel
 
     protected $fillable = [
         'order_id',
+        'branch_id',
         'payment_method_id',
         'amount',
         'paid_at',

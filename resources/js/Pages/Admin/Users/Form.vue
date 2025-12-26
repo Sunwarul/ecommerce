@@ -76,6 +76,19 @@
                 />
             </div>
         </div>
+        <div class="flex flex-col gap-6 mt-3 mb-4">
+            <div>
+                <label for="branch" class="block font-bold mb-2">Branch</label>
+                <Dropdown
+                    v-model="form.branch_id"
+                    :options="branches"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select Branch"
+                    class="w-full"
+                />
+            </div>
+        </div>
         <div class="mb-3">
             <label for="phone" class="block font-bold mb-2">Phone</label>
             <InputText
@@ -128,6 +141,10 @@ defineProps({
     resolveImagePath: Function,
     handlePhotoUpload: Function,
     roles: {
+        type: Array,
+        required: true,
+    },
+    branches: {
         type: Array,
         required: true,
     },

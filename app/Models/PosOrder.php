@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PosOrder extends BaseModel
 {
-    use HasFactory;
+    use HasFactory, HasBranch;
 
     protected $table = 'pos_orders';
 
@@ -71,4 +72,5 @@ class PosOrder extends BaseModel
     {
         return $this->belongsTo(Warehouse::class);
     }
+
 }

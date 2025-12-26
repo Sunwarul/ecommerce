@@ -14,7 +14,8 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->foreignId('variation_id')->nullable()->constrained('product_variations')->nullOnDelete();
-
+            $table->foreignId('branch_id')->constrained('branches')->cascadeOnDelete();
+            
             $table->foreignId('from_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->foreignId('to_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
 

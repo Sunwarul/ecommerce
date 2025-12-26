@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserStoreRequest;
 use App\Http\Requests\Admin\UserUpdateRequest;
+use App\Models\Branch;
 use App\Models\Role;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
@@ -32,8 +34,10 @@ class UserController extends Controller
     protected function addProps(): array
     {
         $roles = Role::all();
+        $branches = Branch::active()->get();
         return [
             'roles' => $roles,
+            'branches' => $branches
         ];
     }
 
@@ -73,5 +77,27 @@ class UserController extends Controller
         }
 
         return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Updated successfully');
+    }
+
+
+    public function switch(Request $request)
+    {
+        $request->validate([
+            'branch_id' => ['required', 'exists:branches,id'],
+        ]);
+
+        $user = Auth::user();
+
+        // Optional: permission check
+        // abort_if(!$user->branches()->where('id', $request->branch_id)->exists(), 403);
+
+        $user->update([
+            'branch_id' => $request->branch_id,
+        ]);
+
+        // Also store in session (useful for queries)
+        session(['current_branch_id' => $request->branch_id]);
+
+        return back();
     }
 }

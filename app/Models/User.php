@@ -30,6 +30,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'branch_id',
         'phone',
         'photo',
         'password',
@@ -58,23 +59,15 @@ class User extends Authenticatable
         ];
     }
 
-    // public function createdAt(): Attribute
-    // {
-    //     return Attribute::make(
-    //         get: fn ($val) => Carbon::parse($val)->format(GlobalEnum::DateTimeFormat->value)
-    //     );
-    // }
-
-    // public function updatedAt(): Attribute
-    // {
-    //     return Attribute::make(
-    //         get: fn ($val) => Carbon::parse($val)->format(GlobalEnum::DateTimeFormat->value)
-    //     );
-    // }
-
     public function stockMovements()
     {
         return $this->hasMany(StockMovement::class, 'created_by');
     }
 
+
+    // Relations
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

@@ -16,6 +16,9 @@ return new class extends Migration {
             $table->foreignId('order_id')
                 ->constrained('pos_orders')
                 ->cascadeOnDelete();
+            $table->foreignId('branch_id')
+                ->constrained('branches')
+                ->cascadeOnDelete();
 
             $table->foreignId('payment_method_id')
                 ->constrained('payment_methods')
