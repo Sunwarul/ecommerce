@@ -37,4 +37,10 @@ class Branch extends Model
             'updated_at' => 'datetime:Y-m-d h:i A',
         ];
     }
+
+    // scope
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

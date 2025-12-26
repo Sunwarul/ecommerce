@@ -21,6 +21,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
+use function Symfony\Component\String\s;
+
 class PosOrderController extends Controller
 {
     public function index()
@@ -278,6 +280,7 @@ class PosOrderController extends Controller
                         'type' => 'out',
                         'product_id' => $product->id,
                         'variation_id' => $variation?->id,
+                        'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                         'quantity' => $it['quantity'],
                         'from_warehouse_id' => $warehouseId,
                         'reference' => $order->invoice_no,
@@ -292,6 +295,7 @@ class PosOrderController extends Controller
                 foreach ($payments as $payment) {
                     PosPayment::create([
                         'order_id' => $order->id,
+                        'branch_id' => $order->branch_id ?? session('current_branch_id'),
                         'payment_method_id' => $payment['payment_method_id'],
                         'amount' => $payment['amount'],
                         'paid_at' => now(),
@@ -418,6 +422,7 @@ class PosOrderController extends Controller
                         'type' => 'in',
                         'product_id' => $it->product_id,
                         'variation_id' => $it->variation_id,
+                        'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                         'quantity' => $it->quantity,
                         'to_warehouse_id' => $order->warehouse_id,
                         'reference' => $order->invoice_no,
@@ -476,6 +481,7 @@ class PosOrderController extends Controller
             foreach ($data['payments'] as $p) {
                 PosPayment::create([
                     'order_id' => $order->id,
+                    'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                     'payment_method_id' => $p['payment_method_id'],
                     'amount' => $p['amount'],
                     'paid_at' => now(),
@@ -492,6 +498,7 @@ class PosOrderController extends Controller
                     'type' => 'out',
                     'product_id' => $it->product_id,
                     'variation_id' => $it->variation_id,
+                    'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                     'quantity' => $it->quantity,
                     'from_warehouse_id' => $order->warehouse_id,
                     'reference' => $invoiceNo,
@@ -543,6 +550,7 @@ class PosOrderController extends Controller
                 foreach ($data['payments'] as $p) {
                     PosPayment::create([
                         'order_id' => $order->id,
+                        'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                         'payment_method_id' => $p['payment_method_id'],
                         'amount' => $p['amount'],
                         'paid_at' => now(),
@@ -585,6 +593,7 @@ class PosOrderController extends Controller
         DB::transaction(function () use ($order, $data) {
             PosPayment::create([
                 'order_id' => $order->id,
+                'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                 'payment_method_id' => $data['payment_method_id'],
                 'amount' => $data['amount'],
                 'paid_at' => now(),

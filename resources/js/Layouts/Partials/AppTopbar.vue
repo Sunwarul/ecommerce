@@ -3,6 +3,7 @@ import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import { Link, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import { useLayout } from "./LayoutComposable";
+import BranchSwitcher from "@/Components/BranchSwitcher.vue";
 
 const { toggleMenu } = useLayout();
 
@@ -33,6 +34,7 @@ const isActive = (name) => current.value.startsWith(name);
 
         <!-- RIGHT SIDE: ACTIONS -->
         <div class="flex items-center gap-4">
+            <BranchSwitcher />
             <!-- POS BUTTON (TOPBAR BUTTON — NOT DROPDOWN) -->
             <button
                 @click="router.visit(route('pos.index'))"

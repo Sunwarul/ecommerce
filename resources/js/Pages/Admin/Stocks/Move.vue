@@ -16,6 +16,7 @@ import { useToast } from "primevue";
 const props = defineProps({
     product: { type: Object, required: true },
     warehouses: { type: Array, required: true },
+    branches: { type: Array, required: true },
 });
 const toast = useToast();
 
@@ -40,6 +41,7 @@ const form = useForm({
     type: "in",
     product_id: props.product.id,
     variation_id: null,
+    branch_id: null,
 
     quantity: null,
 
@@ -211,6 +213,24 @@ const back = () => router.visit(route("products.show", props.product.id));
                                 class="p-error"
                                 >{{ form.errors.quantity }}</small
                             >
+                        </div>
+
+                        <!-- Branch -->
+                        <div>
+                            <label class="block font-medium mb-2"
+                                >Branch *</label
+                            >
+                            <Dropdown
+                                v-model="form.branch_id"
+                                :options="branches"
+                                optionLabel="name"
+                                optionValue="id"
+                                placeholder="Select branch"
+                                class="w-full"
+                            />
+                            <small v-if="form.errors.branch_id" class="p-error">
+                                {{ form.errors.branch_id }}
+                            </small>
                         </div>
 
                         <!-- From warehouse -->

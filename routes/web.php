@@ -51,6 +51,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('todos', TodoController::class);
     CrudRouter::setFor('tasks', TaskController::class);
     CrudRouter::setFor('users', UserController::class);
+    Route::post('/switch-branch', [UserController::class, 'switch'])
+        ->name('branch.switch');
     CrudRouter::setFor('branches', BranchController::class);
     CrudRouter::setFor('warehouses', WarehouseController::class);
     CrudRouter::setFor('suppliers', SupplierController::class);

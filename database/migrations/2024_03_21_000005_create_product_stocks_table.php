@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('product_id');
             $table->unsignedBigInteger('variation_id')->nullable();
             $table->unsignedBigInteger('warehouse_id');
+            $table->unsignedBigInteger('branch_id');
 
             $table->decimal('quantity', 12, 2)->default(0);
             $table->decimal('alert_quantity', 12, 2)->nullable();

@@ -30,11 +30,11 @@
                         </div>
                     </template>
                 </Column>
-                <Column
+                <!-- <Column
                     field="updated_at"
                     header="Created At"
                     sortable
-                ></Column>
+                ></Column> -->
             </template>
             <template
                 #form="{
@@ -47,6 +47,7 @@
                 <Form
                     :form="form"
                     :roles="roles"
+                    :branches="branches"
                     v-bind="{
                         submitted,
                         handlePhotoUpload,
@@ -63,24 +64,25 @@ import CrudComponent from "@/Components/CrudComponent.vue";
 import { useForm } from "@inertiajs/vue3";
 import { nextTick } from "vue";
 import Form from "./Form.vue";
-const { permissions, roles } = defineProps(["permissions", "roles"]);
+const { branches, roles } = defineProps(["branches", "roles"]);
 
 const form = useForm({
     name: "",
     email: "",
+    branch_id: null,
     password: "",
     password_confirmation: "",
     roles: [],
     phone: "",
     photo: "",
 });
+
 const handleEditingItem = async (user) => {
-    console.log("user.roles:", user.roles);
     form.name = user.name;
     form.email = user.email;
     // form.phone = user.phone;
     await nextTick();
     form.roles = user.roles?.map((role) => role.id) || [];
-    console.log("form.roles updated:", form.roles);
+    form.branch_id = user.branch_id || null;
 };
 </script>
