@@ -1,11 +1,13 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+import BranchSwitcher from "@/Components/BranchSwitcher.vue";
+import useAuth from "@/Composables/useAuth";
 import { Link, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import { useLayout } from "./LayoutComposable";
-import BranchSwitcher from "@/Components/BranchSwitcher.vue";
 
 const { toggleMenu } = useLayout();
+const { user, roles, permissions, can } = useAuth();
 
 // detect active route
 const current = computed(() => route().current());
@@ -93,7 +95,7 @@ const isActive = (name) => current.value.startsWith(name);
 
             <Button
                 type="button"
-                label="Profile"
+                :label="user.name"
                 icon="pi pi-user"
                 class="layout-topbar-action1"
                 variant="outlined"
