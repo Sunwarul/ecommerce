@@ -254,7 +254,9 @@ const model = ref([
     },
 ]);
 
-const { hasAnyPermission } = useAuth();
+const { hasAnyPermission, permissions } = useAuth();
+
+// console.log(permissions.value);
 
 const filteredMenu = computed(() => {
     const filterItems = (items = []) => {
