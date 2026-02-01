@@ -24,11 +24,9 @@ console.log(props.order);
 const isThermal = computed(() => props.mode === "thermal");
 
 function printInvoice() {
-    // print thermal design only (even if user is viewing A4)
-    // Option A: switch to thermal in same page for printing
     const url =
         route("pos.orders.invoice", props.order.id) +
-        "?mode=thermal&autoprint=1";
+        `?mode=${props.mode}&autoprint=1`;
     window.open(url, "_blank");
 }
 

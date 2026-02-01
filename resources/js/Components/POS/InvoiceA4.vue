@@ -4,7 +4,6 @@ import { computed } from "vue";
 const props = defineProps({
     order: { type: Object, required: true },
     shop: { type: Object, required: true },
-    width: { type: Number, default: 80 }, // 58 or 80
 });
 
 const money = (v) => Number(v || 0).toFixed(2);
@@ -28,9 +27,7 @@ const change = computed(() =>
     Math.max(0, paidAmount.value - Number(props.order.total_amount || 0))
 );
 
-const receiptMaxWidth = computed(() =>
-    props.width === 58 ? "280px" : "380px"
-);
+const receiptMaxWidth = "210mm";
 function isBankPayment(p) {
     const name = (p.paymentMethod?.name || "").toLowerCase();
     return name.includes("bank");
@@ -185,8 +182,7 @@ function isBankPayment(p) {
     padding: 12px;
     border: 1px solid #ddd;
     background: #fff;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     font-size: 13px;
 }
 .center {
@@ -226,11 +222,11 @@ function isBankPayment(p) {
 }
 .item {
     padding: 6px 0;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .sep {
-    border-top: 1px dashed #000;
+    border-top: 1px solid #000;
     margin: 8px 0;
 }
 .sep.thin {
