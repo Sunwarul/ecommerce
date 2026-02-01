@@ -1,7 +1,7 @@
 <script setup>
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
@@ -17,7 +17,9 @@ const props = defineProps({
     warehouses: { type: Array, default: () => [] }, // pass from controller
 });
 
-const posSession = ref(props.currentSession);
+const page = usePage();
+
+const posSession = computed(() => page.props.currentSession);
 
 const openDialog = ref(false);
 const closeDialog = ref(false);

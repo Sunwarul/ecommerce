@@ -417,21 +417,17 @@ function isBankRow(row) {
 
 // clear meta when method changes away from Bank
 watch(
-    payments,
-    (rows) => {
-        rows.forEach((row) => {
+    () => payments.value.map(p => p.payment_method_id),
+    () => {
+        payments.value.forEach(row => {
             if (!isBankRow(row)) {
-                row.meta = {
-                    customer_bank_name: null,
-                    customer_account_no: null,
-                    received_to_bank_account_id: null,
-                    txn_ref: null,
-                };
+                row.meta = null;
             }
         });
-    },
-    { deep: true }
+    }
 );
+
+
 // -----------------------------
 // Submit
 // -----------------------------
