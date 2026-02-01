@@ -13,7 +13,8 @@
         <!-- Scripts -->
         @routes
         {{-- @viteReactRefresh --}}
-        @vite(['resources/js/app.js', "resources/js/pages/{$page['component']}.vue"])
+        @vite(['resources/js/app.js'])
+        {{-- @vite(['resources/js/app.js', "resources/js/pages/{$page['component']}.vue"]) --}}
         {{-- @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"]) --}}
         @inertiaHead
     </head>

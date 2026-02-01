@@ -82,6 +82,7 @@ class ProductSeeder extends Seeder
             // Stocks (simple: variation_id = null)
             foreach ($warehouses as $warehouse) {
                 ProductStock::create([
+                    'branch_id' => 1,
                     'product_id' => $simpleProduct->id,
                     'variation_id' => null,
                     'warehouse_id' => $warehouse->id,
@@ -205,6 +206,7 @@ class ProductSeeder extends Seeder
                 // Variation stocks per warehouse
                 foreach ($warehouses as $warehouse) {
                     ProductStock::create([
+                        'branch_id' => 1,
                         'product_id' => $variableProduct->id,
                         'variation_id' => $variation->id,
                         'warehouse_id' => $warehouse->id,

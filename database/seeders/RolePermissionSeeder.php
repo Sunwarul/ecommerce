@@ -30,6 +30,12 @@ class RolePermissionSeeder extends Seeder
             $permissions = Permission::all();
             $role->syncPermissions($permissions);
         }
+
+
+        $user = \App\Models\User::first();
+        if ($user && !$user->hasRole('Super Admin')) {
+            $user->assignRole('Super Admin');
+        }
     }
 
     private function getPermissions(): array
@@ -100,7 +106,7 @@ class RolePermissionSeeder extends Seeder
             'Product Bulk Restore',
             // POS
             'POS Index',
-            
+
             // Order
             'Order Index',
             'Order View',
@@ -223,6 +229,6 @@ class RolePermissionSeeder extends Seeder
             // Setting
             'Setting Index',
         ];
-        
+
     }
 }

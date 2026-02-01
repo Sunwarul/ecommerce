@@ -8,6 +8,7 @@ export default function useAuth() {
     const roles = computed(() => page.props.auth?.roles ?? []);
     const permissions = computed(() => page.props.auth?.permissions ?? []);
 
+    const can = (permission) => permissions.value.includes(permission);
     // 🔐 Permission checks
     const hasPermission = (permission) => {
         if (!permission) return true;
@@ -45,6 +46,7 @@ export default function useAuth() {
         user,
         roles,
         permissions,
+        can,
 
         // permissions
         hasPermission,
