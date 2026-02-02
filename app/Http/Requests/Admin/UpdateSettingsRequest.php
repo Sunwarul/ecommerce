@@ -17,6 +17,8 @@ class UpdateSettingsRequest extends FormRequest
 
             // General
             'settings.general_application_name' => ['required', 'string', 'max:100'],
+            'settings.general_phone' => ['required', 'string', 'max:100'],
+            'settings.general_address' => ['required', 'string', 'max:100'],
             'settings.general_footer_text' => ['nullable', 'string', 'max:255'],
             'settings.general_language' => ['required', 'string', 'max:50'],
             'settings.general_timezone' => ['required', 'string', 'max:100'],

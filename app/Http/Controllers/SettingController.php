@@ -14,7 +14,9 @@ class SettingController extends Controller
         $settings = [
             // General
             'general_application_name' => Setting::get('general_application_name', 'DeltaPOS'),
-            'general_footer_text' => Setting::get('general_footer_text', 'Copyright© DeltaPOS- 2024'),
+            'general_address' => Setting::get('general_address', ''),
+            'general_phone' => Setting::get('general_phone', ''),
+            'general_footer_text' => Setting::get('general_footer_text', ''),
             'general_language' => Setting::get('general_language', 'English'),
             'general_timezone' => Setting::get('general_timezone', '(GMT/UTC 05:30)Kolkata'),
             'general_date_format' => Setting::get('general_date_format', 'd-m-Y'),
@@ -45,7 +47,6 @@ class SettingController extends Controller
     public function update(UpdateSettingsRequest $request)
     {
         foreach ($request->validated()['settings'] as $key => $value) {
-            // Skip masked secrets
             if (
                 in_array($key, ['mail_password', 'sms_twilio_token', 'sms_vonage_api_secret'], true)
                 && $value === '******'
@@ -54,6 +55,13 @@ class SettingController extends Controller
             }
             Setting::set($key, $value);
         }
-        return back()->with('success', 'Settings saved.');
+
+        // Check if request expects JSON
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Settings saved.']);
+        }
+
+        return redirect()->route('settings.general')->with('success', 'Settings saved.');
     }
+
 }

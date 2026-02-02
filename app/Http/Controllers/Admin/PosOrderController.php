@@ -12,6 +12,7 @@ use App\Models\PosOrderItem;
 use App\Models\PosPayment;
 use App\Models\PosSession;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use Illuminate\Http\Request;
@@ -345,9 +346,9 @@ class PosOrderController extends Controller
             'mode' => $mode,
             'thermalWidth' => 80, // or config('pos.printer_width', 80)
             'shop' => [
-                'name' => config('app.name'),
-                'address' => 'Your Address',
-                'phone' => '0123456789',
+                'name' => Setting::get('general_application_name'),
+                'address' => Setting::get('general_address'),
+                'phone' => Setting::get('general_phone'),
             ],
         ]);
     }

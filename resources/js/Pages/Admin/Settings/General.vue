@@ -57,6 +57,20 @@ function save() {
                             />
                         </div>
                         <div>
+                            <label>Address</label
+                            ><InputText
+                                v-model="form.settings.general_address"
+                                class="w-full"
+                            />
+                        </div>
+                        <div>
+                            <label>Phone</label
+                            ><InputText
+                                v-model="form.settings.general_phone"
+                                class="w-full"
+                            />
+                        </div>
+                        <div>
                             <label>Footer Text</label
                             ><Textarea
                                 rows="2"
