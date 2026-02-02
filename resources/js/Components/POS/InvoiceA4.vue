@@ -3,19 +3,23 @@
         <div class="max-w-4xl mx-auto bg-white p-2 text-sm text-gray-800">
             <!-- Header -->
             <div class="relative border-b pb-1 mb-1">
+                <div class="absolute top-2 left-6">
+                    <img src="../../../assets/images/munnaacbazar.jpeg" alt="Logo" class="h-16 object-contain" />
+                </div>
+
                 <div class="text-center">
-                    <h1 class="text-xl font-bold uppercase">Sales Receipt</h1>
-                    <p class="font-semibold uppercase">
-                        {{ shop?.name ?? "N/A" }}
+                    <h1 class="font-semibold uppercase">Sales Receipt</h1>
+                    <p class="text-xl font-bold uppercase">
+                        {{ shop?.name ?? "" }}
                     </p>
-                    <p>{{ shop?.address ?? "N/A" }}</p>
+                    <p>{{ shop?.address ?? "" }}</p>
                     <p class="text-[10px]">
-                        Phone N: {{ shop?.phone ?? "N/A" }}
+                        Contact: {{ shop?.phone ?? "" }}
                     </p>
                 </div>
 
                 <div class="absolute top-2 right-6">
-                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-12 object-contain" />
+                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-16 object-contain" />
                 </div>
             </div>
 
@@ -23,20 +27,20 @@
             <div class="grid grid-cols-2 gap-1 mb-2">
                 <div>
                     <p class="text-[10px]">
-                        <span class="font-semibold">Name:</span>
-                        {{ order?.customer?.name ?? "N/A" }}
-                    </p>
-                    <p class="text-[10px]">
-                        <span class="font-semibold">Mobile No:</span>
-                        {{ order?.customer?.phone ?? "N/A" }}
-                    </p>
-                    <p class="text-[10px]">
                         <span class="font-semibold">Customer ID:</span>
-                        {{ order?.customer?.id ?? "N/A" }}
+                        {{ order?.customer?.id ?? "" }}
                     </p>
                     <p class="text-[10px]">
-                        <span class="font-semibold">Address:</span>
-                        {{ order?.customer?.billing_address ?? "N/A" }}
+                        <span class="font-semibold">Customer Name:</span>
+                        {{ order?.customer?.name ?? "" }}
+                    </p>
+                    <p class="text-[10px]">
+                        <span class="font-semibold">Customer Phone No:</span>
+                        {{ order?.customer?.phone ?? "" }}
+                    </p>
+                    <p class="text-[10px]">
+                        <span class="font-semibold">Billing Address:</span>
+                        {{ order?.customer?.billing_address ?? "" }}
                     </p>
                 </div>
 
@@ -47,14 +51,14 @@
                     </p>
                     <p class="text-[10px]">
                         <span class="font-semibold">Receipt #:</span>
-                        {{ order?.invoice_no ?? "N/A" }}
+                        {{ order?.invoice_no ?? "" }}
                     </p>
                     <p class="text-[10px]">
-                        {{ order?.branch?.name ?? "N/A" }}
-                        #{{ order?.branch?.code ?? "N/A" }}
+                        {{ order?.branch?.name ?? "" }}
+                        #{{ order?.branch?.code ?? "" }}
                     </p>
                     <p class="text-[10px]">
-                        {{ order?.branch?.address ?? "N/A" }}
+                        {{ order?.branch?.address ?? "" }}
                     </p>
                 </div>
             </div>
@@ -77,25 +81,25 @@
                     <tbody>
                         <tr v-for="item in order?.items ?? []" :key="item.id" class="text-center">
                             <td class="border px-2 py-1 text-left text-[10px]">
-                                {{ item.sku ?? "N/A" }}
+                                {{ item.sku ?? "" }}
                             </td>
                             <td class="border px-2 py-1 text-left text-[10px]">
-                                {{ item.name ?? "N/A" }}
+                                {{ item.name ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.unit_price ?? "0.00" }}
+                                {{ item.unit_price ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
                                 {{ item.quantity ?? 0 }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.discount_amount ?? "0.00" }}
+                                {{ item.discount_amount ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.tax_amount ?? "0.00" }}
+                                {{ item.tax_amount ?? "" }}
                             </td>
                             <td class="border px-2 py-1 font-semibold">
-                                {{ item.line_total ?? "0.00" }}
+                                {{ item.line_total ?? "" }}
                             </td>
                         </tr>
 
@@ -126,11 +130,11 @@
                 <div class="text-xs mt-4 col-span-2">
                     <p>
                         <span class="font-semibold">Invoice No:</span>
-                        {{ order?.invoice_no ?? "N/A" }}
+                        {{ order?.invoice_no ?? "" }}
                     </p>
                     <p>
                         <span class="font-semibold">Warranty Info:</span>
-                        {{ order?.warranty_info ?? "N/A" }}
+                        {{ order?.warranty_info ?? "" }}
                     </p>
                     <p class="italic text-xs">
                         Amount in words:
@@ -144,23 +148,23 @@
                 <div class="border text-sm">
                     <div class="flex justify-between border-b px-2 text-[11px]">
                         <span>Sub Total</span>
-                        <span>{{ order?.subtotal ?? "0.00" }}</span>
+                        <span>{{ order?.subtotal ?? "" }}</span>
                     </div>
                     <div class="flex justify-between border-b px-2 text-[11px]">
                         <span>Discount</span>
-                        <span>{{ order?.discount_amount ?? "0.00" }}</span>
+                        <span>{{ order?.discount_amount ?? "" }}</span>
                     </div>
                     <div class="flex justify-between border-b px-2 text-[11px]">
                         <span>Tax</span>
-                        <span>{{ order?.tax_amount ?? "0.00" }}</span>
+                        <span>{{ order?.tax_amount ?? "" }}</span>
                     </div>
                     <div class="flex justify-between border-b px-2 text-[11px] font-bold">
                         <span>Grand Total</span>
-                        <span>{{ order?.total_amount ?? "0.00" }}</span>
+                        <span>{{ order?.total_amount ?? "" }}</span>
                     </div>
                     <div class="flex justify-between px-2 text-[11px] font-bold">
                         <span>Paid</span>
-                        <span>{{ order?.paid_amount ?? "0.00" }}</span>
+                        <span>{{ order?.paid_amount ?? "" }}</span>
                     </div>
                 </div>
             </div>
@@ -254,6 +258,6 @@ const amountInWords = (amount) => {
         return "";
     };
 
-    return `BDT ${numberToWords(parseInt(amount))} only`;
+    return `${numberToWords(parseInt(amount))} only`;
 };
 </script>
