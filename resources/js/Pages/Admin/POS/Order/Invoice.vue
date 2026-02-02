@@ -59,37 +59,18 @@ onMounted(() => {
     <AuthenticatedLayout>
         <div class="p-4 md:p-6">
             <!-- Top actions (hidden on print) -->
-            <div
-                class="flex flex-wrap gap-2 items-center justify-between mb-4 print:hidden"
-            >
+            <div class="flex flex-wrap gap-2 items-center justify-between mb-4 print:hidden">
                 <div class="flex gap-2">
-                    <Button
-                        label="Back"
-                        icon="pi pi-arrow-left"
-                        severity="secondary"
-                        @click="router.visit(route('pos.orders.index'))"
-                    />
-                    <Button
-                        label="Print Receipt"
-                        icon="pi pi-print"
-                        severity="success"
-                        @click="printInvoice"
-                    />
+                    <Button label="Back" icon="pi pi-arrow-left" severity="secondary"
+                        @click="router.visit(route('pos.orders.index'))" />
+                    <Button label="Print Receipt" icon="pi pi-print" severity="success" @click="printInvoice" />
                 </div>
 
                 <div class="flex gap-2">
-                    <Button
-                        :label="isThermal ? 'Thermal (active)' : 'Thermal'"
-                        icon="pi pi-receipt"
-                        :severity="isThermal ? 'info' : 'secondary'"
-                        @click="openThermalPreview"
-                    />
-                    <Button
-                        :label="!isThermal ? 'A4 (active)' : 'A4'"
-                        icon="pi pi-file"
-                        :severity="!isThermal ? 'info' : 'secondary'"
-                        @click="openA4Preview"
-                    />
+                    <Button :label="isThermal ? 'Thermal (active)' : 'Thermal'" icon="pi pi-receipt"
+                        :severity="isThermal ? 'info' : 'secondary'" @click="openThermalPreview" />
+                    <Button :label="!isThermal ? 'A4 (active)' : 'A4'" icon="pi pi-file"
+                        :severity="!isThermal ? 'info' : 'secondary'" @click="openA4Preview" />
                 </div>
             </div>
 
@@ -98,11 +79,7 @@ onMounted(() => {
                 <InvoiceA4 :order="order" :shop="shop" />
             </div>
             <div v-else id="print-area">
-                <InvoiceThermal
-                    :order="order"
-                    :shop="shop"
-                    :width="thermalWidth"
-                />
+                <InvoiceThermal :order="order" :shop="shop" :width="thermalWidth" />
             </div>
         </div>
     </AuthenticatedLayout>
@@ -110,6 +87,7 @@ onMounted(() => {
 
 <style>
 @media print {
+
     /* hide everything */
     body * {
         visibility: hidden !important;

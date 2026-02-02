@@ -15,11 +15,7 @@
                 </div>
 
                 <div class="absolute top-2 right-6">
-                    <img
-                        src="../../../assets/images/haier.jpeg"
-                        alt="Logo"
-                        class="h-12 object-contain"
-                    />
+                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-12 object-contain" />
                 </div>
             </div>
 
@@ -79,11 +75,7 @@
                     </thead>
 
                     <tbody>
-                        <tr
-                            v-for="item in order?.items ?? []"
-                            :key="item.id"
-                            class="text-center"
-                        >
+                        <tr v-for="item in order?.items ?? []" :key="item.id" class="text-center">
                             <td class="border px-2 py-1 text-left text-[10px]">
                                 {{ item.sku ?? "N/A" }}
                             </td>
@@ -162,15 +154,11 @@
                         <span>Tax</span>
                         <span>{{ order?.tax_amount ?? "0.00" }}</span>
                     </div>
-                    <div
-                        class="flex justify-between border-b px-2 text-[11px] font-bold"
-                    >
+                    <div class="flex justify-between border-b px-2 text-[11px] font-bold">
                         <span>Grand Total</span>
                         <span>{{ order?.total_amount ?? "0.00" }}</span>
                     </div>
-                    <div
-                        class="flex justify-between px-2 text-[11px] font-bold"
-                    >
+                    <div class="flex justify-between px-2 text-[11px] font-bold">
                         <span>Paid</span>
                         <span>{{ order?.paid_amount ?? "0.00" }}</span>
                     </div>
