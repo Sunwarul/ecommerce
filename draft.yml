@@ -1,21 +1,32 @@
 models:
-  Tax:
-    name: string:50
-    rate_type: enum:percent,flat default:percent
-    rate_value: decimal:10,4
+  ProductAttribute:
+    hasMany: ProductAttributeValue
+
+  ProductAttributeValue:
+    attribute_id: id foreign:product_attributes.id onDelete:cascade
+    value: string
+    display_value: string nullable
+    color_code: string nullable
     deleted_at: softDeletes
 
 controllers:
-  Tax:
+  ProductAttributeValue:
     store:
-      validate: name, rate_type, rate_value
-      save: tax
-      redirect: taxes.index
+      validate:
+        - attribute_id
+        - value
+        - display_value
+        - color_code
+      save: productAttributeValue
+      redirect: product-attributes.show
 
     update:
-      validate: name, rate_type, rate_value
-      update: tax
-      redirect: taxes.index
+      validate:
+        - value
+        - display_value
+        - color_code
+      update: productAttributeValue
+      redirect: product-attributes.show
 
 
 inertia_vue:
