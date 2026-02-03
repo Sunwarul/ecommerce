@@ -133,6 +133,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
 
 
+    CrudRouter::setFor('product-attributes', App\Http\Controllers\ProductAttributeController::class);
+    CrudRouter::setFor('product-attribute-values', App\Http\Controllers\ProductAttributeValueController::class);
 
 
 
