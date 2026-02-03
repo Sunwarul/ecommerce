@@ -32,6 +32,18 @@ const model = ref([
                 ],
                 items: [
                     {
+                        label: "Product Attributes",
+                        icon: "pi pi-id-card",
+                        to: route("product-attributes.index"),
+                        permissions: [PERMISSIONS.CATEGORY.INDEX],
+                    },
+                    {
+                        label: "Attributes Values",
+                        icon: "pi pi-id-card",
+                        to: route("product-attribute-values.index"),
+                        permissions: [PERMISSIONS.CATEGORY.INDEX],
+                    },
+                    {
                         label: "Category",
                         icon: "pi pi-id-card",
                         to: route("categories.index"),
