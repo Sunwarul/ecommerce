@@ -24,15 +24,13 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             TagSeeder::class,
             WarehouseSeeder::class,
-            ExpenseSeeder::class,
+            // ExpenseSeeder::class,
             CurrencySeeder::class,
             CustomerSeeder::class,
             ProductAttributeSeeder::class,
             SupplierSeeder::class,
             TaxSeeder::class,
             ProductSeeder::class
-
-
         ]);
 
         // $this->call(CategoryTableSeeder::class);

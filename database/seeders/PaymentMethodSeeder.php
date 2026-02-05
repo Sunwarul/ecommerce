@@ -11,7 +11,7 @@ class PaymentMethodSeeder extends Seeder
     {
         $methods = [
             [
-                'name' => 'Cash on Delivery',
+                'name' => 'Cash in Hand',
                 'photo' => null,
                 'is_active' => true,
             ],
@@ -41,9 +41,9 @@ class PaymentMethodSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'PayPal',
-                'photo' => 'payment/paypal.png',
-                'is_active' => false,
+                'name' => 'Bank Cheque',
+                'photo' => null,
+                'is_active' => true,
             ],
         ];
 
