@@ -27,17 +27,11 @@ const changeBranch = (e) => {
         </label>
 
         <select
-            class="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-indigo-400 transition"
-            :value="currentBranchId"
-            @change="changeBranch"
-        >
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-indigo-400 transition min-w-[120px]"
+            :value="currentBranchId" @change="changeBranch">
             <option disabled value="">Select Branch</option>
 
-            <option
-                v-for="branch in branches"
-                :key="branch.id"
-                :value="branch.id"
-            >
+            <option v-for="branch in branches" :key="branch.id" :value="branch.id">
                 {{ branch.name }}
             </option>
         </select>
