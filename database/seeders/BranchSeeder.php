@@ -13,32 +13,32 @@ class BranchSeeder extends Seeder
         $branches = [
             [
                 'name' => 'Main Branch',
-                'address' => '123 Main Street, Dhaka',
+                'address' => 'Station Road, Rangpur',
                 'code' => 'BR-' . Str::upper(Str::random(4)),
-                'phone' => '01710000000',
+                'phone' => '',
                 'is_active' => true,
             ],
-            [
-                'name' => 'Uttara Branch',
-                'address' => 'House 12, Road 7, Sector 3, Uttara, Dhaka',
-                'code' => 'BR-' . Str::upper(Str::random(4)),
-                'phone' => '01711000001',
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Chittagong Branch',
-                'address' => '56 Agrabad, Chittagong',
-                'code' => 'BR-' . Str::upper(Str::random(4)),
-                'phone' => '01812000002',
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Sylhet Branch',
-                'address' => 'Zindabazar, Sylhet',
-                'code' => 'BR-' . Str::upper(Str::random(4)),
-                'phone' => '01613000003',
-                'is_active' => false,
-            ],
+            // [
+            //     'name' => 'Uttara Branch',
+            //     'address' => 'House 12, Road 7, Sector 3, Uttara, Dhaka',
+            //     'code' => 'BR-' . Str::upper(Str::random(4)),
+            //     'phone' => '01711000001',
+            //     'is_active' => true,
+            // ],
+            // [
+            //     'name' => 'Chittagong Branch',
+            //     'address' => '56 Agrabad, Chittagong',
+            //     'code' => 'BR-' . Str::upper(Str::random(4)),
+            //     'phone' => '01812000002',
+            //     'is_active' => true,
+            // ],
+            // [
+            //     'name' => 'Sylhet Branch',
+            //     'address' => 'Zindabazar, Sylhet',
+            //     'code' => 'BR-' . Str::upper(Str::random(4)),
+            //     'phone' => '01613000003',
+            //     'is_active' => false,
+            // ],
         ];
 
         foreach ($branches as $branch) {

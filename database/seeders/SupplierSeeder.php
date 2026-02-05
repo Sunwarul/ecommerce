@@ -12,35 +12,35 @@ class SupplierSeeder extends Seeder
     {
         $suppliers = [
             [
-                'name' => 'Rahman Electronics',
-                'address' => 'Gulshan 2, Dhaka',
-                'phone' => '01720000001',
+                'name' => 'Haier Bangladesh',
+                'address' => 'Dhaka, Bangladesh',
+                'phone' => '',
                 'status' => true,
             ],
-            [
-                'name' => 'Techno World Ltd.',
-                'address' => 'Agrabad, Chittagong',
-                'phone' => '01821000002',
-                'status' => true,
-            ],
-            [
-                'name' => 'Super Appliance Traders',
-                'address' => 'Zindabazar, Sylhet',
-                'phone' => '01622000003',
-                'status' => true,
-            ],
-            [
-                'name' => 'Digital Zone',
-                'address' => 'Shaheb Bazar, Rajshahi',
-                'phone' => '01523000004',
-                'status' => false,
-            ],
-            [
-                'name' => 'Smart Solutions BD',
-                'address' => 'Khulna Sadar, Khulna',
-                'phone' => '01924000005',
-                'status' => true,
-            ],
+            // [
+            //     'name' => 'Techno World Ltd.',
+            //     'address' => 'Agrabad, Chittagong',
+            //     'phone' => '01821000002',
+            //     'status' => true,
+            // ],
+            // [
+            //     'name' => 'Super Appliance Traders',
+            //     'address' => 'Zindabazar, Sylhet',
+            //     'phone' => '01622000003',
+            //     'status' => true,
+            // ],
+            // [
+            //     'name' => 'Digital Zone',
+            //     'address' => 'Shaheb Bazar, Rajshahi',
+            //     'phone' => '01523000004',
+            //     'status' => false,
+            // ],
+            // [
+            //     'name' => 'Smart Solutions BD',
+            //     'address' => 'Khulna Sadar, Khulna',
+            //     'phone' => '01924000005',
+            //     'status' => true,
+            // ],
         ];
 
         foreach ($suppliers as $supplier) {

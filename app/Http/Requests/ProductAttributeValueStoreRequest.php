@@ -20,11 +20,12 @@ class ProductAttributeValueStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'attribute_id' => ['required', 'integer', 'exists:product_attributes.id,id'],
+            'attribute_id' => ['required', 'integer'],
+            // 'attribute_id' => ['required', 'integer', 'exists:product_attributes.id,id'],
             'value' => ['required', 'string'],
             'display_value' => ['nullable', 'string'],
             'color_code' => ['nullable', 'string'],
-            'deleted_at' => ['required'],
+            'deleted_at' => ['nullable'],
         ];
     }
 }

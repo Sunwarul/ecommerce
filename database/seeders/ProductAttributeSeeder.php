@@ -14,7 +14,7 @@ class ProductAttributeSeeder extends Seeder
         $color = ProductAttribute::create([
             'name' => 'color',
             'display_name' => 'Color',
-            'type' => 'color_picker',
+            'type' => 'color',
             'is_active' => true,
         ]);
 

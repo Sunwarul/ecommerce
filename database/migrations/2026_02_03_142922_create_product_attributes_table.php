@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('display_name');
-            $table->enum('type', ["select","radio","color","button"])->default('select');
+            $table->string('type', 15)->default('select');
             $table->boolean('is_active')->default(true);
             $table->softDeletes('deleted_at');
             $table->timestamps();

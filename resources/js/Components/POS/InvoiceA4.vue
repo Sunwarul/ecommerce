@@ -3,8 +3,10 @@
         <div class="max-w-4xl mx-auto bg-white p-2 text-sm text-gray-800">
             <!-- Header -->
             <div class="relative border-b pb-1 mb-1">
-                <div class="absolute top-2 left-6">
-                    <img src="../../../assets/images/munnaacbazar.jpeg" alt="Logo" class="h-16 object-contain" />
+                
+
+                <div class="absolute top-4 left-6">
+                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-[35px] object-contain" />
                 </div>
 
                 <div class="text-center">
@@ -13,14 +15,15 @@
                         {{ shop?.name ?? "" }}
                     </p>
                     <p>{{ shop?.address ?? "" }}</p>
-                    <p class="text-[10px]">
+                    <!-- <p class="text-[10px]">
                         Contact: {{ shop?.phone ?? "" }}
-                    </p>
+                    </p> -->
                 </div>
 
                 <div class="absolute top-2 right-6">
-                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-16 object-contain" />
+                    <img src="../../../assets/images/munnaacbazar.jpeg" alt="Logo" class="h-16 object-contain" />
                 </div>
+                
             </div>
 
             <!-- Customer & Invoice Info -->

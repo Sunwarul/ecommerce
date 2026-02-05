@@ -11,21 +11,9 @@ class WarehouseSeeder extends Seeder
     {
         $warehouses = [
             [
-                'name' => 'Central Warehouse',
-                'address' => '123 Industrial Area, Tongi, Gazipur',
-                'phone' => '01715000001',
-                'status' => true,
-            ],
-            [
-                'name' => 'Dhaka City Warehouse',
-                'address' => 'House 45, Road 10, Mirpur, Dhaka',
-                'phone' => '01716000002',
-                'status' => true,
-            ],
-            [
                 'name' => 'Rangpur Warehouse',
-                'address' => 'Port Road, Agrabad, Rangpur',
-                'phone' => '01817000003',
+                'address' => 'Station Road, Rangpur',
+                'phone' => '',
                 'status' => true,
             ]
         ];
