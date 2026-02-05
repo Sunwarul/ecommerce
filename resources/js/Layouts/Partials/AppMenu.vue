@@ -5,6 +5,7 @@ import { computed, ref } from "vue";
 import AppMenuItem from "./AppMenuItem.vue";
 
 const model = ref([
+
     // ================= PRODUCTS =================
     {
         label: "Products",
@@ -103,6 +104,12 @@ const model = ref([
                 to: route("pos.orders.index"),
                 permissions: [PERMISSIONS.ORDER.INDEX],
             },
+            {
+                label: "Customers",
+                icon: "pi pi-users",
+                to: route("customers.index"),
+                permissions: [PERMISSIONS.CUSTOMER.INDEX],
+            },
         ],
     },
 
@@ -198,7 +205,6 @@ const model = ref([
                     PERMISSIONS.BASE_UNIT.INDEX,
                     PERMISSIONS.UNIT.INDEX,
                     PERMISSIONS.SUPPLIER.INDEX,
-                    PERMISSIONS.CUSTOMER.INDEX,
                 ],
                 items: [
                     {
@@ -218,12 +224,6 @@ const model = ref([
                         icon: "pi pi-truck",
                         to: route("suppliers.index"),
                         permissions: [PERMISSIONS.SUPPLIER.INDEX],
-                    },
-                    {
-                        label: "Customers",
-                        icon: "pi pi-users",
-                        to: route("customers.index"),
-                        permissions: [PERMISSIONS.CUSTOMER.INDEX],
                     },
                 ],
             },
@@ -297,12 +297,7 @@ const filteredMenu = computed(() => {
 <template>
     <ul class="layout-menu">
         <template v-for="(item, i) in filteredMenu" :key="`${item.label}-${i}`">
-            <AppMenuItem
-                v-if="!item.separator"
-                :item="item"
-                :index="i"
-                :root="true"
-            />
+            <AppMenuItem v-if="!item.separator" :item="item" :index="i" :root="true" />
             <li v-else class="menu-separator"></li>
         </template>
     </ul>

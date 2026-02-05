@@ -421,17 +421,17 @@
       "resources/js/app.js"
     ]
   },
-  "resources/assets/images/haier.jpeg": {
+  "resources/assets/images/brand.jpeg": {
     "file": "assets/haier-CFo_ylgW.jpeg",
-    "src": "resources/assets/images/haier.jpeg"
+    "src": "resources/assets/images/brand.jpeg"
   },
   "resources/assets/images/logo.svg": {
     "file": "assets/logo-9IGgSHLZ.svg",
     "src": "resources/assets/images/logo.svg"
   },
-  "resources/assets/images/munnaacbazar.jpeg": {
+  "resources/assets/images/logo.jpeg": {
     "file": "assets/munnaacbazar-CQbuXDVw.jpeg",
-    "src": "resources/assets/images/munnaacbazar.jpeg"
+    "src": "resources/assets/images/logo.jpeg"
   },
   "resources/assets/images/pos-banner.jpg": {
     "file": "assets/pos-banner-Bnq9Lqg_.jpg",
