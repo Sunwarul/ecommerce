@@ -15,7 +15,7 @@ class CreateProductVariationAttributesTable extends Migration
                 ->constrained('products')
                 ->onDelete('CASCADE');
 
-            $table->foreignId('variation_id')->constrained('product_variations')->onDelete('CASCADE');
+            $table->foreignId('variation_id')->nullable()->constrained('product_variations')->onDelete('CASCADE');
             $table->foreignId('attribute_id')->constrained('product_attributes')->onDelete('CASCADE');
             $table->foreignId('attribute_value_id')->constrained('product_attribute_values')->onDelete('CASCADE');
             $table->timestamps();

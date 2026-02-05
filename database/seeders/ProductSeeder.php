@@ -23,201 +23,191 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-
-            $category = Category::first();
-            $brand = Brand::first();
-            $tax = Tax::first();
-            $tags = Tag::take(3)->pluck('id')->toArray();
-            $warehouses = Warehouse::take(2)->get();
-
-            if (!$category || !$warehouses->count()) {
-                $this->command->warn('Missing category or warehouses. Seeder skipped.');
-                return;
-            }
-
-            /* =========================================================
-             | SIMPLE PRODUCT (all fields + stocks)
-             |=========================================================*/
-            $simpleProduct = Product::create([
-                'category_id' => $category->id,
-                'brand_id' => $brand?->id,
-                'tax_id' => $tax?->id,
-
-                'name' => 'Simple Cotton T-Shirt',
-                'slug' => Str::slug('Simple Cotton T-Shirt'),
-                'thumbnail' => null,
-                'images' => [
-                    'products/gallery/simple-1.jpg',
-                    'products/gallery/simple-2.jpg',
-                ],
-
-                'sku' => 'SIMPLE-TSHIRT-001',
-                'barcode' => '123456789001',
-                'code' => 'TSHIRT-001',
-
-                'base_price' => 25,
-                'base_discount_price' => 20,
-
-                'type' => 'simple',
-
-                'weight' => 0.35,
-                'dimensions' => ['length' => 30, 'width' => 20, 'height' => 2],
-                'materials' => ['Cotton', 'Polyester'],
-
-                'description' => '<p>High quality simple cotton t-shirt.</p>',
-                'additional_info' => '<p>Wash cold, do not bleach.</p>',
-
-                'is_active' => true,
-
-                'meta_title' => 'Simple Cotton T-Shirt',
-                'meta_description' => 'A premium simple cotton t-shirt.',
-                'meta_keywords' => 'tshirt,cotton,simple',
-            ]);
-
-            // Tags
-            if (!empty($tags)) {
-                $simpleProduct->tags()->sync($tags);
-            }
-
-            // Stocks (simple: variation_id = null)
-            foreach ($warehouses as $warehouse) {
-                ProductStock::create([
-                    'branch_id' => 1,
-                    'product_id' => $simpleProduct->id,
-                    'variation_id' => null,
-                    'warehouse_id' => $warehouse->id,
-                    'quantity' => rand(20, 50),
-                    'alert_quantity' => 5,
-                ]);
-            }
-
-            /* =========================================================
-             | VARIABLE PRODUCT (all fields + variations + pivot + stocks)
-             |=========================================================*/
-
-            // Attributes
-            $colorAttr = ProductAttribute::firstOrCreate(
-                ['name' => 'color'],
-                ['display_name' => 'Color', 'type' => 'select', 'is_active' => true]
-            );
-
-            $sizeAttr = ProductAttribute::firstOrCreate(
-                ['name' => 'size'],
-                ['display_name' => 'Size', 'type' => 'select', 'is_active' => true]
-            );
-
-            // Attribute Values
-            $red = ProductAttributeValue::firstOrCreate([
-                'attribute_id' => $colorAttr->id,
-                'value' => 'red',
-                'display_value' => 'Red',
-            ]);
-
-            $blue = ProductAttributeValue::firstOrCreate([
-                'attribute_id' => $colorAttr->id,
-                'value' => 'blue',
-                'display_value' => 'Blue',
-            ]);
-
-            $small = ProductAttributeValue::firstOrCreate([
-                'attribute_id' => $sizeAttr->id,
-                'value' => 'S',
-                'display_value' => 'Small',
-            ]);
-
-            $medium = ProductAttributeValue::firstOrCreate([
-                'attribute_id' => $sizeAttr->id,
-                'value' => 'M',
-                'display_value' => 'Medium',
-            ]);
-
-            // Variable Product
-            $variableProduct = Product::create([
-                'category_id' => $category->id,
-                'brand_id' => $brand?->id,
-                'tax_id' => $tax?->id,
-
-                'name' => 'Variable Hoodie',
-                'slug' => Str::slug('Variable Hoodie'),
-                'thumbnail' => null,
-                'images' => [
-                    'products/gallery/hoodie-1.jpg',
-                    'products/gallery/hoodie-2.jpg',
-                ],
-
-                'sku' => 'HOODIE-MASTER-001',
-                'barcode' => '123456789002',
-                'code' => 'HOODIE-001',
-
-                'base_price' => 60,
-                'base_discount_price' => 55,
-
-                'type' => 'variable',
-
-                'weight' => 1.2,
-                'dimensions' => ['length' => 40, 'width' => 35, 'height' => 8],
-                'materials' => ['Cotton', 'Fleece'],
-
-                'description' => '<p>Comfortable hoodie with multiple variations.</p>',
-                'additional_info' => '<p>Unisex. Warm and soft.</p>',
-
-                'is_active' => true,
-
-                'meta_title' => 'Variable Hoodie',
-                'meta_description' => 'A hoodie with size & color options.',
-                'meta_keywords' => 'hoodie,variable,size,color',
-            ]);
-
-            // Tags
-            if (!empty($tags)) {
-                $variableProduct->tags()->sync($tags);
-            }
-
-            // Variations combinations
-            $combinations = [
-                [$red, $small],
-                [$red, $medium],
-                [$blue, $small],
-                [$blue, $medium],
-            ];
-
-            foreach ($combinations as $combo) {
-                $skuParts = collect($combo)->pluck('value')->implode('-');
-
-                $variation = ProductVariation::create([
-                    'product_id' => $variableProduct->id,
-                    'sku' => 'HOODIE-' . strtoupper($skuParts),
-                    'price' => 60,
-                    'discount_price' => 55,
-                    'image' => null,
-                    'is_active' => true,
-                ]);
-
-                // ✅ Pivot attach (must include product_id because your table requires it)
-                $attachData = [];
-                foreach ($combo as $value) {
-                    $attachData[$value->id] = [
-                        'attribute_id' => $value->attribute_id,
-                        'product_id' => $variableProduct->id,
-                    ];
-                }
-                $variation->attributeValues()->attach($attachData);
-
-                // Variation stocks per warehouse
-                foreach ($warehouses as $warehouse) {
-                    ProductStock::create([
-                        'branch_id' => 1,
-                        'product_id' => $variableProduct->id,
-                        'variation_id' => $variation->id,
-                        'warehouse_id' => $warehouse->id,
-                        'quantity' => rand(5, 15),
-                        'alert_quantity' => 3,
-                    ]);
-                }
-            }
+            $this->seedCatalogue();
         });
     }
 
+    private function seedCatalogue()
+    {
+        $data = $this->getProductData();
+
+        // Handle Brand
+        $brand = Brand::withTrashed()->where('name', 'Haier')->first();
+        if (!$brand) {
+            $brand = Brand::create(['name' => 'Haier', 'is_active' => true]);
+        } elseif ($brand->trashed()) {
+            $brand->restore();
+        }
+
+        $tax = Tax::first();
+        $warehouses = Warehouse::take(2)->get();
+
+        $productTypeMap = [
+            'WH' => 'Water Heater',
+            'HRF' => 'Refrigerator',
+            'HCF' => 'Chest Freezer',
+            'TV' => 'TV',
+            'HWD' => 'Washer Dryer',
+            'HWM' => 'Washing Machine',
+        ];
+
+        foreach ($data as $categoryKey => $products) {
+            $categoryName = Str::title(str_replace('_', ' ', $categoryKey));
+            $slug = Str::slug($categoryName);
+
+            // Handle Category with Soft Deletes
+            $category = Category::withTrashed()->where('slug', $slug)->first();
+            if (!$category) {
+                $category = Category::create([
+                    'name' => $categoryName,
+                    'slug' => $slug,
+                    'is_active' => true
+                ]);
+            } elseif ($category->trashed()) {
+                $category->restore();
+            }
+
+            foreach ($products as $item) {
+                // Determine Name and Codes
+                $model = $item['model'] ?? 'Unknown';
+                $productCode = $item['product'] ?? '';
+                $productTypeName = $productTypeMap[$productCode] ?? Str::singular($categoryName);
+
+                $name = "Haier {$productTypeName} {$model}";
+                // Use material as SKU if available, otherwise generated SKU
+                $sku = $item['material'] ?? ("HAIER-" . Str::slug($model));
+
+                // Check existence (including soft deleted)
+                $existingProduct = Product::withTrashed()->where('sku', $sku)->first();
+                if ($existingProduct) {
+                    if ($existingProduct->trashed()) {
+                        $existingProduct->restore();
+                    }
+                    // Update existing product if needed, or just skip
+                    // For now, we assume if it exists, it's fine.
+                    $product = $existingProduct;
+                    // Ensure attributes are synced below?
+                    // Continue to next iteration if we don't want to update attributes every time
+                    // But to be safe properly ensuring existence:
+                } else {
+                    $mrp = $item['mrp'] ?? 0;
+                    $showroomPrice = $item['showroom_price'] ?? null;
+
+                    // Description
+                    $desc = "<ul>";
+                    if (!empty($item['remarks'])) $desc .= "<li><strong>Remarks:</strong> {$item['remarks']}</li>";
+                    if (!empty($item['specification'])) $desc .= "<li><strong>Specification:</strong> {$item['specification']}</li>";
+                    $desc .= "</ul>";
+
+                    // Ensure unique slug if SKU was unique but slug collided (unlikely with random, but possible)
+                    $productSlug = Str::slug($name);
+                    if (Product::withTrashed()->where('slug', $productSlug)->exists()) {
+                        $productSlug .= '-' . Str::random(4);
+                    }
+
+                    $product = Product::create([
+                        'category_id' => $category->id,
+                        'brand_id' => $brand->id,
+                        'tax_id' => $tax?->id,
+                        'name' => $name,
+                        'slug' => $productSlug,
+                        'sku' => $sku,
+                        'barcode' => $sku,
+                        'code' => $model,
+                        'base_price' => $mrp,
+                        'base_discount_price' => $showroomPrice,
+                        'type' => 'simple',
+                        'description' => $desc,
+                        'additional_info' => json_encode($item),
+                        'is_active' => true,
+                        'materials' => isset($item['material']) ? [$item['material']] : null,
+                    ]);
+                }
+
+                // Dynamic Attributes
+                foreach ($item as $key => $value) {
+                    if (in_array($key, ['product', 'material', 'mrp', 'showroom_price', 'dealer_price', 'remarks'])) continue;
+
+                    // Map key to display name
+                    $attrName = match ($key) {
+                        'model' => 'Model',
+                        'product_category' => 'Category Type',
+                        'capacity' => 'Capacity',
+                        'size' => 'Size',
+                        'type' => 'Type',
+                        'specification' => 'Specification',
+                        default => Str::title(str_replace('_', ' ', $key))
+                    };
+
+                    if (empty($value)) continue;
+
+                    // Create Attribute
+                    $attribute = ProductAttribute::withTrashed()->where('name', Str::slug($attrName))->first();
+                    if (!$attribute) {
+                        $attribute = ProductAttribute::create([
+                            'name' => Str::slug($attrName),
+                            'display_name' => $attrName,
+                            'type' => 'text',
+                            'is_active' => true
+                        ]);
+                    } elseif ($attribute->trashed()) {
+                        $attribute->restore();
+                    }
+
+                    // Create Value
+                    $attributeValue = ProductAttributeValue::withTrashed() // Assuming Value supports soft deletes too? Migration check: yes
+                        ->where('attribute_id', $attribute->id)
+                        ->where('value', (string)$value)
+                        ->first();
+
+                    if (!$attributeValue) {
+                        $attributeValue = ProductAttributeValue::create([
+                            'attribute_id' => $attribute->id,
+                            'value' => (string)$value,
+                            'display_value' => (string)$value
+                        ]);
+                    } elseif ($attributeValue->trashed()) {
+                        $attributeValue->restore();
+                    }
+
+                    // Attach to Simple Product (variation_id = null)
+                    // Check if attached?
+                    $exists = DB::table('product_variation_attributes')
+                        ->where('product_id', $product->id)
+                        ->where('attribute_id', $attribute->id)
+                        ->where('attribute_value_id', $attributeValue->id)
+                        ->whereNull('variation_id') // Important
+                        ->exists();
+
+                    if (!$exists) {
+                        $product->attributes()->attach($attribute->id, [
+                            'attribute_value_id' => $attributeValue->id,
+                            'variation_id' => null
+                        ]);
+                    }
+                }
+
+                // Stock - Check if stock exists?
+                foreach ($warehouses as $warehouse) {
+                    $stockExists = ProductStock::where('product_id', $product->id)
+                        ->where('warehouse_id', $warehouse->id)
+                        ->whereNull('variation_id')
+                        ->exists();
+
+                    if (!$stockExists) {
+                        ProductStock::create([
+                            'branch_id' => 1,
+                            'product_id' => $product->id,
+                            'variation_id' => null,
+                            'warehouse_id' => $warehouse->id,
+                            'quantity' => rand(5, 20),
+                            'alert_quantity' => 2,
+                        ]);
+                    }
+                }
+            }
+        }
+    }
 
     private function getProductData(): array
     {
