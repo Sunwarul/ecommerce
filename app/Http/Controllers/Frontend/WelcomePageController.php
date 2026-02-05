@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Setting;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
 class WelcomePageController extends Controller
 {
@@ -13,6 +14,9 @@ class WelcomePageController extends Controller
      */
     public function __invoke(Request $request)
     {
-        return Inertia::render('Frontend/Welcome');
+        return Inertia::render('Frontend/Welcome', [
+            'app_name' => config('app.name'),
+            'general_address' => Setting::get('general_address'),
+        ]);
     }
 }

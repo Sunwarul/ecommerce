@@ -1,16 +1,12 @@
 <template>
     <div>
         <CrudComponent :form="form">
-            <template #columns
-                ><Column field="photo" header="Photo">
+            <template #columns>
+                <Column field="photo" header="Photo">
                     <template #body="{ data }">
-                        <img
-                            :src="$resolveImagePath(data.photo)"
-                            alt="Category Photo"
-                            class="shadow-md rounded-xl w-16 h-16 object-cover"
-                            style="filter: grayscale(100%)"
-                            @click="() => console.log('data', data)"
-                        />
+                        <img :src="$resolveImagePath(data.photo)" alt="Category Photo"
+                            class="shadow-md rounded-xl w-16 h-16 object-cover" style="filter: grayscale(100%)"
+                            @click="() => console.log('data', data)" />
                     </template>
                 </Column>
                 <Column field="name" header="Name"></Column>
@@ -23,31 +19,21 @@
                         </Badge>
                     </template>
                 </Column>
-                <Column
-                    field="created_at"
-                    header="Created At"
-                    sortable
-                ></Column>
+                <Column field="created_at" header="Created At" sortable></Column>
             </template>
 
-            <template
-                #form="{
+            <template #form="{
+                submitted,
+                handlePhotoUpload,
+                photoPreview,
+                resolveImagePath,
+            }">
+                <Form :form="form" :currencies="currencies" v-bind="{
                     submitted,
                     handlePhotoUpload,
                     photoPreview,
                     resolveImagePath,
-                }"
-            >
-                <Form
-                    :form="form"
-                    :currencies="currencies"
-                    v-bind="{
-                        submitted,
-                        handlePhotoUpload,
-                        photoPreview,
-                        resolveImagePath,
-                    }"
-                />
+                }" />
             </template>
         </CrudComponent>
     </div>
@@ -58,18 +44,16 @@ import { useForm } from "@inertiajs/vue3";
 import Form from "./Form.vue";
 
 const form = useForm({
-    customer_type: "",
+    customer_type: "retailer",
     name: "",
     email: "",
     phone: "",
-    mobile: "",
     whatsapp_number: "",
     tax_number: "",
     currency_id: "",
-    status: "",
-    billing_address: "",
-    shipping_address: "",
-    opening_balance: "",
+    status: 1,
+    address: "",
+    opening_balance: '0',
     opening_balance_date: "",
     opening_balance_type: "",
     credit_limit: "",
