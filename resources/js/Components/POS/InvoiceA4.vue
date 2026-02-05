@@ -2,7 +2,7 @@
     <div class="min-h-screen bg-gray-100 py-3">
         <div class="max-w-4xl mx-auto bg-white p-2 text-sm text-gray-800">
             <!-- Header -->
-            <div class="relative border-b pb-1 mb-1">
+            <div class="relative border-b pb-1 mb-1 min-h-[65px]">
 
 
                 <div class="absolute top-4 left-6">
@@ -20,8 +20,8 @@
                     </p> -->
                 </div>
 
-                <div class="absolute top-2 right-6">
-                    <img src="../../../assets/images/logo.jpeg" alt="Logo" class="h-16 object-contain" />
+                <div class="absolute top-0 right-6">
+                    <img src="../../../assets/images/logo.jpeg" alt="Logo" class="h-[58px] object-contain" />
                 </div>
 
             </div>
@@ -29,20 +29,20 @@
             <!-- Customer & Invoice Info -->
             <div class="grid grid-cols-2 gap-1 mb-2">
                 <div>
-                    <p class="text-[10px]">
+                    <!-- <p class="text-[10px]">
                         <span class="font-semibold">Customer ID:</span>
                         {{ order?.customer?.id ?? "" }}
-                    </p>
+                    </p> -->
                     <p class="text-[10px]">
                         <span class="font-semibold">Customer Name:</span>
                         {{ order?.customer?.name ?? "" }}
                     </p>
                     <p class="text-[10px]">
-                        <span class="font-semibold">Customer Phone No:</span>
+                        <span class="font-semibold">Phone No:</span>
                         {{ order?.customer?.phone ?? "" }}
                     </p>
                     <p class="text-[10px]">
-                        <span class="font-semibold">Billing Address:</span>
+                        <span class="font-semibold">Address:</span>
                         {{ order?.customer?.address ?? "" }}
                     </p>
                 </div>
@@ -53,7 +53,7 @@
                         {{ formatDate(order?.created_at) }}
                     </p>
                     <p class="text-[10px]">
-                        <span class="font-semibold">Receipt #:</span>
+                        <span class="font-semibold">Invoice No.:</span>
                         {{ order?.invoice_no ?? "" }}
                     </p>
                     <p class="text-[10px]">
@@ -71,13 +71,13 @@
                 <table class="w-full border border-gray-800 text-xs">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border px-2 py-1 text-left">SKU</th>
+                            <th class="border px-2 py-1 text-left">SKU/Model/Serial</th>
                             <th class="border px-2 py-1 text-left">Product</th>
                             <th class="border px-2 py-1">Unit Price</th>
                             <th class="border px-2 py-1">Qty</th>
                             <th class="border px-2 py-1">Discount</th>
                             <th class="border px-2 py-1">Tax</th>
-                            <th class="border px-2 py-1">Total (BDT)</th>
+                            <th class="border px-2 py-1">Total</th>
                         </tr>
                     </thead>
 
@@ -131,16 +131,16 @@
             <div class="grid grid-cols-3 gap-4 mt-3">
                 <!-- Amount in Words -->
                 <div class="text-xs mt-4 col-span-2">
-                    <p>
+                    <!-- <p>
                         <span class="font-semibold">Invoice No:</span>
                         {{ order?.invoice_no ?? "" }}
-                    </p>
+                    </p> -->
                     <p>
                         <span class="font-semibold">Warranty Info:</span>
                         {{ order?.warranty_info ?? "" }}
                     </p>
                     <p class="italic text-xs">
-                        Amount in words:
+                        Amount in Words:
                         <strong>
                             {{ amountInWords(order?.total_amount) }}
                         </strong>
@@ -173,7 +173,7 @@
             </div>
 
             <div class="text-center mt-6 text-xs">
-                Thank you for your purchase!
+                Thank you for your purchase.
             </div>
         </div>
     </div>
