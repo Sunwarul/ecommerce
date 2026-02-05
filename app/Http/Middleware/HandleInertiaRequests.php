@@ -39,6 +39,10 @@ class HandleInertiaRequests extends Middleware
                     ? $user->getAllPermissions()->pluck('name')->values()
                     : [],
             ],
+            'configs' => [
+                'app_name' => config('app.name'),
+                'logo' => asset('images/logo.jpeg'),
+            ],
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),

@@ -12,17 +12,15 @@ return new class extends Migration {
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->enum('customer_type', ["retailer", "wholesaler"])->default('retailer');
+            $table->enum('customer_type', ["retailer", "wholesaler"])->nullable()->default('retailer');
             $table->string('name');
             $table->string('email')->nullable();
-            $table->string('phone')->nullable();
-            $table->string('mobile')->nullable();
+            $table->string('phone');
             $table->string('whatsapp_number')->nullable();
             $table->string('tax_number')->nullable();
             $table->string('currency_id')->nullable();
             $table->boolean('status')->default(true);
-            $table->text('billing_address')->nullable();
-            $table->text('shipping_address')->nullable();
+            $table->text('address')->nullable();
             $table->string('opening_balance')->default('0.00');
             $table->date('opening_balance_date')->nullable();
             $table->enum('opening_balance_type', ["to_pay", "to_receive"])->default('to_receive');

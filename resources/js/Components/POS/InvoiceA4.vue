@@ -3,10 +3,10 @@
         <div class="max-w-4xl mx-auto bg-white p-2 text-sm text-gray-800">
             <!-- Header -->
             <div class="relative border-b pb-1 mb-1">
-                
+
 
                 <div class="absolute top-4 left-6">
-                    <img src="../../../assets/images/haier.jpeg" alt="Logo" class="h-[35px] object-contain" />
+                    <img src="../../../assets/images/brand.jpeg" alt="Logo" class="h-[35px] object-contain" />
                 </div>
 
                 <div class="text-center">
@@ -21,9 +21,9 @@
                 </div>
 
                 <div class="absolute top-2 right-6">
-                    <img src="../../../assets/images/munnaacbazar.jpeg" alt="Logo" class="h-16 object-contain" />
+                    <img src="../../../assets/images/logo.jpeg" alt="Logo" class="h-16 object-contain" />
                 </div>
-                
+
             </div>
 
             <!-- Customer & Invoice Info -->
@@ -43,7 +43,7 @@
                     </p>
                     <p class="text-[10px]">
                         <span class="font-semibold">Billing Address:</span>
-                        {{ order?.customer?.billing_address ?? "" }}
+                        {{ order?.customer?.address ?? "" }}
                     </p>
                 </div>
 

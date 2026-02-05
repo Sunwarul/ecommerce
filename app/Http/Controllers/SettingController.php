@@ -41,6 +41,7 @@ class SettingController extends Controller
             'sms_vonage_from' => Setting::get('sms_vonage_from'),
         ];
 
+        // dd($settings);
         return Inertia::render('Admin/Settings/General', compact('settings'));
     }
 
@@ -63,5 +64,4 @@ class SettingController extends Controller
 
         return redirect()->route('settings.general')->with('success', 'Settings saved.');
     }
-
 }
