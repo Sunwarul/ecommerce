@@ -44,38 +44,7 @@ onUnmounted(() => {
     if (timer) clearInterval(timer);
 });
 
-// ✅ Populate if editing draft
-watch(() => props.order, (newOrder) => {
-    if (newOrder) {
-        // Customer
-        if (newOrder.customer) {
-            selectedCustomer.value = newOrder.customer;
-        }
-        // Cart Items
-        if (newOrder.items) {
-            cartItems.value = newOrder.items.map(i => ({
-                product_id: i.product_id,
-                variation_id: i.variation_id,
-                name: i.name, // or product name
-                sku: i.sku,
-                unit_price: Number(i.unit_price),
-                sell_price: Number(i.unit_price), // assuming unit_price is final sell price stored
-                quantity: Number(i.quantity),
-                discount_price: 0, // difficult to reconstruct exact discount context without more data, but basic edit works
-                line_discount_amount: Number(i.discount_amount),
-                tax_amount: Number(i.tax_amount),
-            }));
-        }
-        // Discount
-        if (newOrder.discount_amount > 0) {
-            // simplified: we might not know if it was percent or fixed unless stored.
-            // checks order_discount_type in backend? or inference.
-            // For now assume fixed if we can't tell.
-            discountMode.value = 'fixed';
-            discountValue.value = Number(newOrder.discount_amount) - cartItems.value.reduce((sum, item) => sum + Number(item.discount_amount), 0);
-        }
-    }
-}, { immediate: true });
+
 
 
 // product search
@@ -244,6 +213,51 @@ const selectedVariation = computed(() => {
     return (p.variations || []).find((v) => v.id === selectedVariationId.value);
 });
 
+// ✅ Populate if editing draft
+watch(() => props.order, (newOrder) => {
+    if (newOrder) {
+        // Customer
+        if (newOrder.customer) {
+            selectedCustomer.value = newOrder.customer;
+        }
+        if (newOrder.warranty_info) {
+            warranty_info.value = newOrder.warranty_info;
+        }
+        // Cart Items
+        if (newOrder.items) {
+            cartItems.value = newOrder.items.map(i => ({
+                product_id: i.product_id,
+                variation_id: i.variation_id,
+                name: i.name, // or product name
+                sku: i.sku,
+                unit_price: Number(i.unit_price),
+                sell_price: Number(i.unit_price), // assuming unit_price is final sell price stored
+                quantity: Number(i.quantity),
+                discount_price: 0, // difficult to reconstruct exact discount context without more data, but basic edit works
+                line_discount_amount: Number(i.discount_amount),
+                tax_amount: Number(i.tax_amount),
+            }));
+        }
+        // Discount
+        if (newOrder.discount_amount > 0) {
+            // simplified: we might not know if it was percent or fixed unless stored.
+            // checks order_discount_type in backend? or inference.
+            // For now assume fixed if we can't tell.
+            discountMode.value = 'fixed';
+            discountValue.value = Number(newOrder.discount_amount) - cartItems.value.reduce((sum, item) => sum + Number(item.discount_amount), 0);
+        }
+    }
+}, { immediate: true });
+
+function formatCurrency(value) {
+    if (value === undefined || value === null) {
+        return "";
+    }
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: page.props.currency || "BDT",
+    }).format(value);
+}
 function ensureSession() {
     if (posSession.value) return true;
     toast.add({
@@ -791,7 +805,7 @@ function handleSuccess(page) {
                                         <div class="flex flex-col">
                                             <span class="font-medium">{{ slotProps.option.name }}</span>
                                             <span class="text-xs text-gray-500">{{ slotProps.option.phone || 'No phone'
-                                                }}</span>
+                                            }}</span>
                                         </div>
                                     </template>
                                 </AutoComplete>
@@ -906,7 +920,7 @@ function handleSuccess(page) {
                                     <span>Subtotal</span>
                                     <span class="font-medium text-slate-700">{{
                                         subtotal.toFixed(2)
-                                        }}</span>
+                                    }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500">
@@ -918,7 +932,7 @@ function handleSuccess(page) {
                                     <span>Tax</span>
                                     <span class="font-medium text-slate-700">{{
                                         taxTotal.toFixed(2)
-                                        }}</span>
+                                    }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-sm mt-2">
@@ -1004,7 +1018,7 @@ function handleSuccess(page) {
                                     <span>Due</span>
                                     <span class="font-semibold text-rose-600">{{
                                         due.toFixed(2)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                             </div>
 
