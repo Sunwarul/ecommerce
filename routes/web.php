@@ -105,6 +105,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/pos/orders', [PosOrderController::class, 'store'])
         ->name('pos.orders.store');
 
+    Route::get('/pos/orders/{order}/edit', [PosOrderController::class, 'edit'])
+        ->name('pos.orders.edit');
+
+    Route::put('/pos/orders/{order}', [PosOrderController::class, 'update'])
+        ->name('pos.orders.update');
+
     // invoice MUST be before index
     Route::get('/pos/orders/{order}/invoice', [PosOrderController::class, 'invoice'])
         ->name('pos.orders.invoice');
@@ -135,7 +141,4 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     CrudRouter::setFor('product-attributes', App\Http\Controllers\ProductAttributeController::class);
     CrudRouter::setFor('product-attribute-values', App\Http\Controllers\ProductAttributeValueController::class);
-
-
-
 });

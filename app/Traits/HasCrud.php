@@ -36,12 +36,11 @@ trait HasCrud
         });
 
         if ($request->has('trashed')) {
-            $query->when($request->trashed, fn ($query) => $query->onlyTrashed());
+            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
         }
 
         $query = $this->modifyQuery($query);
         $items = $query->latest()->paginate($perPage);
-        $x = [...$this->addProps()];
 
         $dataArray = [
             'items' => $items,
@@ -92,7 +91,7 @@ trait HasCrud
         }
         $res = $model->update($validatedData);
 
-        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Updated successfully');
     }
 
     public function destroy($id)
@@ -103,12 +102,12 @@ trait HasCrud
         // }
         $model->delete();
 
-        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Deleted successfully');
+        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Deleted successfully');
     }
 
     public function bulkDestroy(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         foreach ($request->ids as $id) {
             $model = $this->modelClass::find($id);
             if ($model) {
@@ -116,18 +115,18 @@ trait HasCrud
             }
         }
 
-        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Items deleted successfully');
+        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Items deleted successfully');
     }
 
     public function bulkRestore(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         $this->modelClass::whereIn('id', $request->ids)->restore();
     }
 
     public function bulkForceDelete(Request $request)
     {
-        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:'.$this->modelClass.',id']);
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:' . $this->modelClass . ',id']);
         // $this->modelClass::whereIn('id', $request->ids)->forceDelete();
         foreach ($request->ids as $id) {
             $model = $this->modelClass::withTrashed()->find($id);
@@ -144,7 +143,7 @@ trait HasCrud
     {
         $search = $request->input('search');
 
-        $filename = strtolower(class_basename($this->modelClass)).'-'.now()->format('Y-m-d-H-i-s').'.xlsx';
+        $filename = strtolower(class_basename($this->modelClass)) . '-' . now()->format('Y-m-d-H-i-s') . '.xlsx';
 
         return Excel::download(new $this->exportClass($search), $filename);
     }

@@ -104,6 +104,7 @@ class PosOrderController extends Controller
             // manual order discount fallback (optional)
             'order_discount_type' => ['nullable', 'in:none,percent,fixed'],
             'order_discount_value' => ['nullable', 'numeric', 'min:0'],
+            'warranty_info' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $userId = Auth::id();
@@ -252,7 +253,8 @@ class PosOrderController extends Controller
                 'status' => $isDraft ? 'draft' : 'completed',
 
                 // optional if you have columns
-                // 'discount_id' => $data['discount_id'] ?? null,
+                'discount_id' => $data['discount_id'] ?? null,
+                'warranty_info' => $data['warranty_info'] ?? null,
             ]);
 
             foreach ($preparedItems as $it) {
@@ -620,4 +622,213 @@ class PosOrderController extends Controller
     }
 
 
+    public function edit(PosOrder $order)
+    {
+        if ($order->status !== 'draft') {
+            return to_route('pos.index')->with('error', 'Only draft orders can be edited.');
+        }
+
+        $order->load(['items.product.variations', 'customer']);
+
+        // share same data as index
+        $products = Product::where('is_active', true)
+            ->select('id', 'name', 'sku', 'barcode', 'base_price', 'base_discount_price', 'thumbnail', 'type')
+            ->with(['variations:id,product_id,sku,price,discount_price'])
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Admin/POS/Index', [
+            'products' => $products,
+            'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
+            'paymentMethods' => PaymentMethod::where('is_active', 1)->select('id', 'name')->orderBy('name')->get(),
+            'currentSession' => PosSession::where('user_id', Auth::id())->where('status', 'open')->latest('id')->first(),
+            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
+            'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
+            'order' => $order, // ✅ Pass order for editing
+        ]);
+    }
+
+    public function update(Request $request, PosOrder $order, StockService $stockService)
+    {
+        if ($order->status !== 'draft') {
+            return back()->with('error', 'Cannot update non-draft order.');
+        }
+
+        // validation same as store
+        $data = $request->validate([
+            'action' => ['required', 'in:draft,complete,complete_print'],
+            'pos_session_id' => ['required', 'exists:pos_sessions,id'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
+            'warehouse_id' => ['required', 'exists:warehouses,id'],
+            'discount_id' => ['nullable', 'exists:discounts,id'],
+
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.variation_id' => ['nullable', 'exists:product_variations,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
+
+            'payments' => ['nullable', 'array'],
+            'payments.*.payment_method_id' => ['required_with:payments.*.amount', 'exists:payment_methods,id'],
+            'payments.*.amount' => ['required_with:payments.*.payment_method_id', 'numeric', 'min:0'],
+            'payments.*.transaction_ref' => ['nullable', 'string', 'max:100'],
+            'payments.*.notes' => ['nullable', 'string', 'max:500'],
+            'payments.*.meta' => ['nullable', 'array'],
+
+            'order_discount_type' => ['nullable', 'in:none,percent,fixed'],
+            'order_discount_value' => ['nullable', 'numeric', 'min:0'],
+            'warranty_info' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $userId = Auth::id();
+
+        return DB::transaction(function () use ($data, $userId, $stockService, $order) {
+            $isDraft = $data['action'] === 'draft';
+            $warehouseId = (int) $data['warehouse_id'];
+
+            // products
+            $productIds = collect($data['items'])->pluck('product_id')->unique()->values()->all();
+            $products = Product::whereIn('id', $productIds)
+                ->with(['variations:id,product_id,sku,price,discount_price'])
+                ->get()
+                ->keyBy('id');
+
+            $subtotal = 0;
+            $lineDiscountTotal = 0;
+            $taxTotal = 0;
+            $preparedItems = [];
+
+            foreach ($data['items'] as $item) {
+                $product = $products->get($item['product_id']);
+                if (!$product) continue;
+
+                $variation = null;
+                if (!empty($item['variation_id'])) {
+                    $variation = $product->variations->firstWhere('id', (int) $item['variation_id']);
+                }
+
+                $unitPrice = $item['unit_price'] ?? ($variation ? ($variation->discount_price ?? $variation->price) : ($product->base_discount_price ?? $product->base_price));
+                $qty = (int) $item['quantity'];
+
+                $lineSub = (float) $unitPrice * $qty;
+                $lineDiscount = (float) ($item['discount_amount'] ?? 0);
+                $lineTax = (float) ($item['tax_amount'] ?? 0);
+
+                $subtotal += $lineSub;
+                $lineDiscountTotal += $lineDiscount;
+                $taxTotal += $lineTax;
+
+                $preparedItems[] = [
+                    'product' => $product,
+                    'variation' => $variation,
+                    'quantity' => $qty,
+                    'unit_price' => (float) $unitPrice,
+                    'discount_amount' => $lineDiscount,
+                    'tax_amount' => $lineTax,
+                ];
+            }
+
+            // order discount
+            $orderDiscountAmount = 0;
+            $t = $data['order_discount_type'] ?? 'none';
+            $v = (float) ($data['order_discount_value'] ?? 0);
+            if ($t === 'percent') {
+                $p = min(max($v, 0), 100);
+                $orderDiscountAmount = ($subtotal * $p) / 100;
+            } elseif ($t === 'fixed') {
+                $orderDiscountAmount = min(max($v, 0), $subtotal);
+            }
+
+            $discountTotal = $lineDiscountTotal + $orderDiscountAmount;
+            $total = $subtotal - $discountTotal + $taxTotal;
+
+            // payments
+            $payments = collect($data['payments'] ?? [])
+                ->filter(fn($p) => !empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
+                ->values();
+
+            $paidAmount = $isDraft ? 0 : (float) $payments->sum('amount');
+            $change = $isDraft ? 0 : max(0, $paidAmount - $total);
+
+            // validate payment if complete
+            if (!$isDraft && $payments->isEmpty()) {
+                throw ValidationException::withMessages(['payments' => ['At least one payment is required.']]);
+            }
+
+            $invoiceNo = (!$isDraft && !$order->invoice_no) ? ('POS-' . now()->format('YmdHis') . '-' . $userId) : $order->invoice_no;
+
+            // Update Order
+            $order->update([
+                'pos_session_id' => $data['pos_session_id'], // update session to current?
+                'branch_id' => $data['branch_id'] ?? null,
+                'warehouse_id' => $warehouseId,
+                'customer_id' => $data['customer_id'] ?? null,
+                'invoice_no' => $invoiceNo,
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountTotal,
+                'tax_amount' => $taxTotal,
+                'total_amount' => $total,
+                'paid_amount' => $paidAmount,
+                'change_amount' => $change,
+                'status' => $isDraft ? 'draft' : 'completed',
+                'payment_status' => $isDraft ? 'unpaid' : ($paidAmount >= $total ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid')),
+                'warranty_info' => $data['warranty_info'] ?? null,
+            ]);
+
+            // Sync Items (delete all and recreate)
+            $order->items()->delete();
+            foreach ($preparedItems as $it) {
+                $order->items()->create([
+                    'product_id' => $it['product']->id,
+                    'variation_id' => $it['variation']?->id,
+                    'sku' => $it['variation']?->sku ?? $it['product']->sku,
+                    'name' => $it['product']->name,
+                    'quantity' => $it['quantity'],
+                    'unit_price' => $it['unit_price'],
+                    'discount_amount' => $it['discount_amount'],
+                    'tax_amount' => $it['tax_amount'],
+                    'line_total' => ($it['unit_price'] * $it['quantity']) - $it['discount_amount'] + $it['tax_amount'],
+                ]);
+
+                if (!$isDraft) {
+                    $stockService->stockOut([
+                        'type' => 'out',
+                        'product_id' => $it['product']->id,
+                        'variation_id' => $it['variation']?->id,
+                        'branch_id' => $order->branch_id ?? session('current_branch_id'),
+                        'quantity' => $it['quantity'],
+                        'from_warehouse_id' => $warehouseId,
+                        'reference' => $order->invoice_no,
+                        'note' => 'POS sale (update)',
+                        'created_by' => $userId,
+                    ]);
+                }
+            }
+
+            // Sync Payments (delete old drafts? no, draft has no payments usually. delete all and recreate)
+            $order->payments()->delete();
+            if (!$isDraft) {
+                foreach ($payments as $payment) {
+                    $order->payments()->create([
+                        'branch_id' => $order->branch_id ?? session('current_branch_id'),
+                        'payment_method_id' => $payment['payment_method_id'],
+                        'amount' => $payment['amount'],
+                        'paid_at' => now(),
+                        'transaction_ref' => $payment['transaction_ref'] ?? null,
+                        'notes' => $payment['notes'] ?? null,
+                        'meta' => $payment['meta'] ?? null,
+                    ]);
+                }
+            }
+
+            if ($isDraft) {
+                return redirect()->back()->with('success', 'Draft updated successfully');
+            }
+
+            return redirect()->route('pos.orders.invoice', $order->id);
+        });
+    }
 }

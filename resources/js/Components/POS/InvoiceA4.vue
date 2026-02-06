@@ -71,7 +71,7 @@
                 <table class="w-full border border-gray-800 text-xs">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border px-2 py-1 text-left">SKU/Model/Serial</th>
+                            <th class="border px-2 py-1 text-left">Barcode/SKU/Serial</th>
                             <th class="border px-2 py-1 text-left">Product</th>
                             <th class="border px-2 py-1">Unit Price</th>
                             <th class="border px-2 py-1">Qty</th>
@@ -84,25 +84,26 @@
                     <tbody>
                         <tr v-for="item in order?.items ?? []" :key="item.id" class="text-center">
                             <td class="border px-2 py-1 text-left text-[10px]">
-                                {{ item.sku ?? "" }}
+                                {{ item?.product?.barcode ?? item?.variation?.sku ?? item?.sku ?? item?.product?.serial
+                                }}
                             </td>
                             <td class="border px-2 py-1 text-left text-[10px]">
-                                {{ item.name ?? "" }}
+                                {{ item?.name ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.unit_price ?? "" }}
+                                {{ item?.unit_price ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.quantity ?? 0 }}
+                                {{ item?.quantity ?? 0 }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.discount_amount ?? "" }}
+                                {{ item?.discount_amount ?? "" }}
                             </td>
                             <td class="border px-2 py-1">
-                                {{ item.tax_amount ?? "" }}
+                                {{ item?.tax_amount ?? "" }}
                             </td>
                             <td class="border px-2 py-1 font-semibold">
-                                {{ item.line_total ?? "" }}
+                                {{ item?.line_total ?? "" }}
                             </td>
                         </tr>
 
@@ -138,6 +139,10 @@
                     <p>
                         <span class="font-semibold">Warranty Info:</span>
                         {{ order?.warranty_info ?? "" }}
+                    </p>
+                    <p class="text-[10px] mt-1" v-if="order?.note">
+                        <span class="font-semibold">Note:</span>
+                        {{ order?.note }}
                     </p>
                     <p class="italic text-xs">
                         Amount in Words:

@@ -26,6 +26,7 @@ class PosOrder extends BaseModel
         'change_amount',
         'payment_status',
         'status',
+        'warranty_info',
     ];
 
     protected $casts = [
@@ -72,5 +73,4 @@ class PosOrder extends BaseModel
     {
         return $this->belongsTo(Warehouse::class);
     }
-
 }

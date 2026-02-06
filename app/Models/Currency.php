@@ -34,7 +34,7 @@ class Currency extends Model
         return [
             'id' => 'integer',
             'date' => 'date',
-            'exchange_rate' => 'decimal',
+            'exchange_rate' => 'decimal:2',
             'status' => 'boolean',
         ];
     }
