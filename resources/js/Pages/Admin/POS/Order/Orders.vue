@@ -413,6 +413,11 @@ function submitPayDue() {
         }
     );
 }
+
+function editDraft(order) {
+    if (!order) return;
+    router.visit(route("pos.orders.edit", order.id));
+}
 </script>
 
 <template>
@@ -522,6 +527,10 @@ function submitPayDue() {
                                 <Button v-if="canCompleteDraft(data)" icon="pi pi-check"
                                     class="p-button-text p-button-sm p-button-success"
                                     @click="openCompleteModal(data)" />
+
+                                <!-- ✅ Draft => Edit (New) -->
+                                <Button v-if="data.status === 'draft'" icon="pi pi-file-edit"
+                                    class="p-button-text p-button-sm p-button-info" @click="editDraft(data)" />
 
                                 <!-- ✅ Void (draft or completed, not void) -->
                                 <Button v-if="canVoid(data)" icon="pi pi-ban"
