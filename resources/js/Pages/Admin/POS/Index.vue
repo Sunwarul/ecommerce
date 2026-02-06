@@ -223,28 +223,56 @@ watch(() => props.order, (newOrder) => {
         if (newOrder.warranty_info) {
             warranty_info.value = newOrder.warranty_info;
         }
+
+        let totalLineDiscount = 0;
+
         // Cart Items
-        if (newOrder.items) {
-            cartItems.value = newOrder.items.map(i => ({
-                product_id: i.product_id,
-                variation_id: i.variation_id,
-                name: i.name, // or product name
-                sku: i.sku,
-                unit_price: Number(i.unit_price),
-                sell_price: Number(i.unit_price), // assuming unit_price is final sell price stored
-                quantity: Number(i.quantity),
-                discount_price: 0, // difficult to reconstruct exact discount context without more data, but basic edit works
-                line_discount_amount: Number(i.discount_amount),
-                tax_amount: Number(i.tax_amount),
-            }));
+        if (newOrder.items && Array.isArray(newOrder.items)) {
+            cartItems.value = newOrder.items.map((i) => {
+                const qty = Number(i.quantity) || 1;
+                const unitPrice = Number(i.unit_price) || 0;
+
+                // if we strictly assume unit_price is what was sold
+                const sellPrice = unitPrice;
+
+                // discount_amount in table is total for the line? or per unit? 
+                // Usually line_total = (unit * qty) - discount + tax.
+                // But here let's assume discount_amount is TOTAL line discount
+                const lineDisc = Number(i.discount_amount) || 0;
+                const lineTax = Number(i.tax_amount) || 0;
+
+                totalLineDiscount += lineDisc;
+
+                return {
+                    product_id: i.product_id,
+                    variation_id: i.variation_id,
+                    name: i.name,
+                    sku: i.sku,
+                    unit_price: unitPrice,
+                    sell_price: sellPrice,
+                    quantity: qty,
+
+                    // we can't easily revert to original base price if not stored
+                    // so we assume discount_price is 0 for editing purpose unless we refetch product
+                    discount_price: 0,
+
+                    line_discount_amount: lineDisc,
+                    tax_amount: lineTax,
+                };
+            });
         }
-        // Discount
-        if (newOrder.discount_amount > 0) {
-            // simplified: we might not know if it was percent or fixed unless stored.
-            // checks order_discount_type in backend? or inference.
-            // For now assume fixed if we can't tell.
+
+        // Order Discount
+        // Total discount stored in order = sum(line discounts) + order_discount
+        const totalOrderDiscount = Number(newOrder.discount_amount) || 0;
+        const diff = totalOrderDiscount - totalLineDiscount;
+
+        if (diff > 0.01) {
             discountMode.value = 'fixed';
-            discountValue.value = Number(newOrder.discount_amount) - cartItems.value.reduce((sum, item) => sum + Number(item.discount_amount), 0);
+            discountValue.value = diff;
+        } else {
+            discountMode.value = 'none';
+            discountValue.value = 0;
         }
     }
 }, { immediate: true });
