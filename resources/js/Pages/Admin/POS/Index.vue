@@ -17,6 +17,7 @@ import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
+import Textarea from "primevue/textarea";
 
 const props = defineProps({
     products: { type: Array, default: () => [] },
@@ -25,6 +26,7 @@ const props = defineProps({
     currentSession: { type: Object, default: null },
     warehouses: { type: Array, default: () => [] },
     branches: { type: Array, default: () => [] },
+    order: { type: Object, default: null }, // ✅ Edit Draft Order
 });
 
 const toast = useToast();
@@ -42,8 +44,45 @@ onUnmounted(() => {
     if (timer) clearInterval(timer);
 });
 
+// ✅ Populate if editing draft
+watch(() => props.order, (newOrder) => {
+    if (newOrder) {
+        // Customer
+        if (newOrder.customer) {
+            selectedCustomer.value = newOrder.customer;
+        }
+        // Cart Items
+        if (newOrder.items) {
+            cartItems.value = newOrder.items.map(i => ({
+                product_id: i.product_id,
+                variation_id: i.variation_id,
+                name: i.name, // or product name
+                sku: i.sku,
+                unit_price: Number(i.unit_price),
+                sell_price: Number(i.unit_price), // assuming unit_price is final sell price stored
+                quantity: Number(i.quantity),
+                discount_price: 0, // difficult to reconstruct exact discount context without more data, but basic edit works
+                line_discount_amount: Number(i.discount_amount),
+                tax_amount: Number(i.tax_amount),
+            }));
+        }
+        // Discount
+        if (newOrder.discount_amount > 0) {
+            // simplified: we might not know if it was percent or fixed unless stored.
+            // checks order_discount_type in backend? or inference.
+            // For now assume fixed if we can't tell.
+            discountMode.value = 'fixed';
+            discountValue.value = Number(newOrder.discount_amount) - cartItems.value.reduce((sum, item) => sum + Number(item.discount_amount), 0);
+        }
+    }
+}, { immediate: true });
+
+
+// product search
 // product search
 const search = ref("");
+const warranty_info = ref("");
+
 
 // -----------------------------
 // ✅ Customer Remote Search (Backend)
@@ -494,24 +533,24 @@ function submitOrder(action = "complete") {
             action === "draft"
                 ? []
                 : validPayments.map((p) => ({
-                      payment_method_id: p.payment_method_id,
-                      amount: p.amount,
+                    payment_method_id: p.payment_method_id,
+                    amount: p.amount,
 
-                      transaction_ref: p.transaction_ref || null,
-                      notes: p.notes || null,
+                    transaction_ref: p.transaction_ref || null,
+                    notes: p.notes || null,
 
-                      meta: isBankRow(p)
-                          ? {
-                                customer_bank_name:
-                                    p.meta?.customer_bank_name || null,
-                                customer_account_no:
-                                    p.meta?.customer_account_no || null,
-                                received_to_bank_account_id:
-                                    p.meta?.received_to_bank_account_id || null,
-                                txn_ref: p.meta?.txn_ref || null,
-                            }
-                          : null,
-                  })),
+                    meta: isBankRow(p)
+                        ? {
+                            customer_bank_name:
+                                p.meta?.customer_bank_name || null,
+                            customer_account_no:
+                                p.meta?.customer_account_no || null,
+                            received_to_bank_account_id:
+                                p.meta?.received_to_bank_account_id || null,
+                            txn_ref: p.meta?.txn_ref || null,
+                        }
+                        : null,
+                })),
 
         order_discount_type: discountMode.value,
         order_discount_value: discountValue.value,
@@ -522,34 +561,47 @@ function submitOrder(action = "complete") {
         due_amount: due.value,
 
         notes: null,
+        warranty_info: warranty_info.value,
     };
 
-    router.post(route("pos.orders.store"), payload, {
-        preserveScroll: true,
-        onSuccess: (page) => {
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: "Order saved",
-                life: 2000,
-            });
-            console.log(page);
-            console.log(action, page.props.flash?.order_id);
+    if (props.order?.id && props.order.status === 'draft') {
+        router.put(route("pos.orders.update", props.order.id), payload, {
+            preserveScroll: true,
+            onSuccess: handleSuccess,
+        });
+    } else {
+        router.post(route("pos.orders.store"), payload, {
+            preserveScroll: true,
+            onSuccess: handleSuccess,
+        });
+    }
+}
 
-            if (action === "complete_print") {
-                const orderId = page?.props?.flash?.order_id;
-                if (orderId) router.visit(route("pos.orders.invoice", orderId));
-            }
-
-            cartItems.value = [];
-            selectedCustomer.value = null;
-            discountMode.value = "none";
-            discountValue.value = 0;
-            payments.value = [
-                { id: paymentRowId++, payment_method_id: null, amount: 0 },
-            ];
-        },
+function handleSuccess(page) {
+    toast.add({
+        severity: "success",
+        summary: "Success",
+        detail: "Order saved",
+        life: 2000,
     });
+
+    // Checking flash or prop? router.reload might clear flash.
+    // But usually we get the result.
+    // If action was complete_print, redirect happens in controller likely, or handled here.
+
+    // Logic handled in controller redirect usually.
+    // But if we stayed on page (draft save), clear cart.
+
+    // However, if we edited a draft, we might want to stay or go to keys?
+    // If user clicked "Save Draft", we stay?
+    cartItems.value = [];
+    selectedCustomer.value = null;
+    discountMode.value = "none";
+    discountValue.value = 0;
+    warranty_info.value = "";
+    payments.value = [
+        { id: paymentRowId++, payment_method_id: null, amount: 0 },
+    ];
 }
 </script>
 
@@ -557,12 +609,9 @@ function submitOrder(action = "complete") {
     <AuthenticatedLayout>
         <div class="h-[95vh] flex overflow-y-auto">
             <main
-                class="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4"
-            >
+                class="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
                 <!-- Header -->
-                <header
-                    class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6"
-                >
+                <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
                     <div>
                         <h1 class="text-lg font-semibold text-slate-800">
                             Point of Sale
@@ -578,16 +627,12 @@ function submitOrder(action = "complete") {
 
                     <div class="flex items-center gap-3 text-xs text-slate-500">
                         <div class="flex items-center justify-between mb-3">
-                            <SessionBar
-                                :currentSession="props.currentSession"
-                                :branches="props.branches"
-                                :warehouses="props.warehouses"
-                            />
+                            <SessionBar :currentSession="props.currentSession" :branches="props.branches"
+                                :warehouses="props.warehouses" />
                         </div>
 
                         <span
-                            class="px-3 py-1 rounded-full text-lg mb-3 bg-emerald-50 text-emerald-600 flex items-center gap-2"
-                        >
+                            class="px-3 py-1 rounded-full text-lg mb-3 bg-emerald-50 text-emerald-600 flex items-center gap-2">
                             <i class="pi pi-clock text-4xl" />
                             {{ now.toLocaleTimeString() }}
                         </span>
@@ -598,13 +643,9 @@ function submitOrder(action = "complete") {
                 <div class="flex-1 flex overflow-hidden">
                     <!-- PRODUCTS -->
                     <section class="flex-1 p-5 overflow-y-auto">
-                        <div
-                            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4"
-                        >
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                             <div>
-                                <h2
-                                    class="text-xl font-semibold text-slate-800"
-                                >
+                                <h2 class="text-xl font-semibold text-slate-800">
                                     Product Catalog
                                 </h2>
                                 <p class="text-xs text-slate-400">
@@ -615,96 +656,58 @@ function submitOrder(action = "complete") {
 
                             <div class="flex items-center gap-3">
                                 <InputGroup class="w-full max-w-md">
-                                    <InputGroupAddon
-                                        ><i class="pi pi-search"></i
-                                    ></InputGroupAddon>
-                                    <InputText
-                                        v-model="search"
-                                        placeholder="Search product, SKU, barcode"
-                                        class="w-full text-sm"
-                                    />
+                                    <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
+                                    <InputText v-model="search" placeholder="Search product, SKU, barcode"
+                                        class="w-full text-sm" />
                                 </InputGroup>
                             </div>
                         </div>
 
-                        <div
-                            class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-                        >
-                            <div
-                                v-for="product in filteredProducts"
-                                :key="product.id"
-                                class="col-12 sm:col-6 md:col-4 xl:col-3"
-                            >
-                                <div
-                                    class="rounded-2xl shadow-sm border border-slate-300 bg-slate-100 p-3 flex flex-col h-full cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition"
-                                    @click="addProduct(product)"
-                                >
+                        <div class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                            <div v-for="product in filteredProducts" :key="product.id"
+                                class="col-12 sm:col-6 md:col-4 xl:col-3">
+                                <div class="rounded-2xl shadow-sm border border-slate-300 bg-slate-100 p-3 flex flex-col h-full cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition"
+                                    @click="addProduct(product)">
                                     <div
-                                        class="relative rounded-xl bg-white mb-3 h-28 flex items-center justify-center overflow-hidden"
-                                    >
-                                        <span
-                                            v-if="!product.thumbnail"
-                                            class="text-slate-300 text-xs uppercase tracking-wide"
-                                            >Image</span
-                                        >
+                                        class="relative rounded-xl bg-white mb-3 h-28 flex items-center justify-center overflow-hidden">
+                                        <span v-if="!product.thumbnail"
+                                            class="text-slate-300 text-xs uppercase tracking-wide">Image</span>
 
-                                        <img
-                                            v-else
-                                            :src="
-                                                resolveImagePath(
-                                                    product.thumbnail
-                                                )
-                                            "
-                                            alt=""
-                                            class="h-full object-contain"
-                                        />
+                                        <img v-else :src="resolveImagePath(
+                                            product.thumbnail
+                                        )
+                                            " alt="" class="h-full object-contain" />
 
                                         <div class="absolute top-2 left-2">
-                                            <Badge
-                                                :severity="
-                                                    product.type === 'variable'
-                                                        ? 'info'
-                                                        : 'secondary'
-                                                "
-                                                :value="product.type"
-                                            />
+                                            <Badge :severity="product.type === 'variable'
+                                                ? 'info'
+                                                : 'secondary'
+                                                " :value="product.type" />
                                         </div>
 
-                                        <div
-                                            v-if="
-                                                getProductDiscountPrice(product)
-                                            "
-                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[11px] font-semibold px-2 py-1 rounded-full"
-                                        >
+                                        <div v-if="
+                                            getProductDiscountPrice(product)
+                                        "
+                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[11px] font-semibold px-2 py-1 rounded-full">
                                             -{{
                                                 productDiscountPercent(product)
                                             }}%
                                         </div>
                                     </div>
 
-                                    <div
-                                        class="flex-1 flex flex-col justify-between gap-2"
-                                    >
+                                    <div class="flex-1 flex flex-col justify-between gap-2">
                                         <div>
-                                            <div
-                                                class="text-sm font-semibold text-slate-800 truncate"
-                                            >
+                                            <div class="text-sm font-semibold text-slate-800 truncate">
                                                 {{ product.name }}
                                             </div>
-                                            <div
-                                                class="text-xs text-slate-400 mt-0.5 truncate"
-                                            >
+                                            <div class="text-xs text-slate-400 mt-0.5 truncate">
                                                 {{ product.sku }}
                                             </div>
                                         </div>
 
-                                        <div
-                                            class="flex items-end justify-between mt-1 gap-2"
-                                        >
+                                        <div class="flex items-end justify-between mt-1 gap-2">
                                             <div class="min-w-0">
-                                                <div
-                                                    class="text-base font-bold text-emerald-600"
-                                                >
+                                                <div class="text-base font-bold text-emerald-600">
                                                     {{
                                                         (
                                                             getProductDiscountPrice(
@@ -717,48 +720,34 @@ function submitOrder(action = "complete") {
                                                     }}
                                                 </div>
 
-                                                <div
-                                                    v-if="
-                                                        getProductDiscountPrice(
+                                                <div v-if="
+                                                    getProductDiscountPrice(
+                                                        product
+                                                    )
+                                                " class="text-xs text-slate-400 flex items-center gap-2">
+                                                    <span class="line-through">{{
+                                                        getProductUnitPrice(
                                                             product
-                                                        )
-                                                    "
-                                                    class="text-xs text-slate-400 flex items-center gap-2"
-                                                >
-                                                    <span
-                                                        class="line-through"
-                                                        >{{
-                                                            getProductUnitPrice(
-                                                                product
-                                                            ).toFixed(2)
-                                                        }}</span
-                                                    >
-                                                    <span
-                                                        class="text-rose-600 font-semibold"
-                                                        >Save
+                                                        ).toFixed(2)
+                                                    }}</span>
+                                                    <span class="text-rose-600 font-semibold">Save
                                                         {{
                                                             productDiscountPercent(
                                                                 product
                                                             )
-                                                        }}%</span
-                                                    >
+                                                        }}%</span>
                                                 </div>
                                             </div>
 
-                                            <Button
-                                                icon="pi pi-plus"
-                                                class="p-button-rounded p-button-sm p-button-success"
-                                                type="button"
-                                            />
+                                            <Button icon="pi pi-plus"
+                                                class="p-button-rounded p-button-sm p-button-success" type="button" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div
-                                v-if="!filteredProducts.length"
-                                class="col-12 text-center text-slate-400 text-sm py-10"
-                            >
+                            <div v-if="!filteredProducts.length"
+                                class="col-12 text-center text-slate-400 text-sm py-10">
                                 No products found
                             </div>
                         </div>
@@ -766,17 +755,12 @@ function submitOrder(action = "complete") {
 
                     <!-- ORDER PANEL -->
                     <aside
-                        class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto"
-                    >
+                        class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
                         <div class="flex flex-col flex-1">
                             <!-- header -->
-                            <div
-                                class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100"
-                            >
+                            <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
                                 <div>
-                                    <h3
-                                        class="text-base font-semibold text-slate-800"
-                                    >
+                                    <h3 class="text-base font-semibold text-slate-800">
                                         Order Summary
                                     </h3>
                                     <p class="text-xs text-slate-400">
@@ -789,8 +773,7 @@ function submitOrder(action = "complete") {
                                 </div>
 
                                 <span
-                                    class="px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-600 font-medium"
-                                >
+                                    class="px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-600 font-medium">
                                     {{ cartItems.length }} items
                                 </span>
                             </div>
@@ -798,85 +781,49 @@ function submitOrder(action = "complete") {
                             <!-- ✅ customer remote search -->
                             <div class="mb-4">
                                 <p class="text-xs text-slate-500 mb-1">
-                                    Customer (optional)
+                                    Customer Search
                                 </p>
-
-                                <AutoComplete
-                                    v-model="selectedCustomer"
-                                    :suggestions="customerSuggestions"
-                                    @complete="onCustomerComplete"
-                                    optionLabel="name"
-                                    showClear
-                                    dropdown
-                                    :loading="customerLoading"
-                                    placeholder="Search by name / phone / email"
-                                    class="w-full text-sm"
-                                >
+                                <AutoComplete v-model="selectedCustomer" :suggestions="customerSuggestions"
+                                    :optionLabel="customerLabel" class="w-full" inputClass="w-full text-sm"
+                                    placeholder="Search by name or phone" :loading="customerLoading"
+                                    @complete="onCustomerComplete">
                                     <template #option="slotProps">
                                         <div class="flex flex-col">
-                                            <span class="font-medium">{{
-                                                slotProps.option.name
-                                            }}</span>
-                                            <span
-                                                class="text-xs text-slate-500"
-                                            >
-                                                {{
-                                                    slotProps.option.phone ||
-                                                    "—"
-                                                }}
-                                                •
-                                                {{
-                                                    slotProps.option.email ||
-                                                    "—"
-                                                }}
-                                            </span>
+                                            <span class="font-medium">{{ slotProps.option.name }}</span>
+                                            <span class="text-xs text-gray-500">{{ slotProps.option.phone || 'No phone'
+                                                }}</span>
                                         </div>
                                     </template>
                                 </AutoComplete>
-
-                                <div class="text-[11px] text-slate-400 mt-1">
-                                    Leave empty for Walk-in customer
+                                <!-- warranty info -->
+                                <div class="mt-2">
+                                    <label class="text-xs text-slate-500">Warranty Info</label>
+                                    <Textarea v-model="warranty_info" rows="2" class="w-full text-sm mt-1"
+                                        placeholder="Warranty details..." />
                                 </div>
                             </div>
 
+
                             <!-- cart items -->
-                            <div
-                                class="flex-1 overflow-y-auto space-y-3 pr-1 mb-3"
-                            >
-                                <div
-                                    v-for="(item, index) in cartItems"
-                                    :key="`${item.product_id}-${
-                                        item.variation_id || 'simple'
+                            <div class="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
+                                <div v-for="(item, index) in cartItems" :key="`${item.product_id}-${item.variation_id || 'simple'
                                     }`"
-                                    class="flex items-start justify-between bg-white border-slate-300 border rounded-xl px-3 py-2"
-                                >
+                                    class="flex items-start justify-between bg-white border-slate-300 border rounded-xl px-3 py-2">
                                     <div class="flex-1">
-                                        <div
-                                            class="text-xs font-semibold text-slate-800"
-                                        >
+                                        <div class="text-xs font-semibold text-slate-800">
                                             {{ item.name }}
                                         </div>
-                                        <div
-                                            class="text-[11px] text-slate-400 mb-1"
-                                        >
+                                        <div class="text-[11px] text-slate-400 mb-1">
                                             {{ item.sku }}
                                         </div>
 
-                                        <div
-                                            class="text-[11px] text-slate-500 mb-1"
-                                        >
-                                            <span
-                                                class="font-semibold text-slate-700"
-                                                >{{
-                                                    Number(
-                                                        item.sell_price || 0
-                                                    ).toFixed(2)
-                                                }}</span
-                                            >
-                                            <span
-                                                v-if="item.discount_price"
-                                                class="ml-2 text-rose-600"
-                                            >
+                                        <div class="text-[11px] text-slate-500 mb-1">
+                                            <span class="font-semibold text-slate-700">{{
+                                                Number(
+                                                    item.sell_price || 0
+                                                ).toFixed(2)
+                                            }}</span>
+                                            <span v-if="item.discount_price" class="ml-2 text-rose-600">
                                                 (was
                                                 {{
                                                     Number(
@@ -887,21 +834,13 @@ function submitOrder(action = "complete") {
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            <InputNumber
-                                                v-model="item.quantity"
-                                                :min="1"
-                                                inputClass="!w-14 !text-xs"
-                                                showButtons
-                                                buttonLayout="horizontal"
-                                                incrementButtonIcon="pi pi-plus"
+                                            <InputNumber v-model="item.quantity" :min="1" inputClass="!w-14 !text-xs"
+                                                showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus"
                                                 decrementButtonIcon="pi pi-minus"
                                                 incrementButtonClass="p-button-text p-button-sm"
-                                                decrementButtonClass="p-button-text p-button-sm"
-                                            />
+                                                decrementButtonClass="p-button-text p-button-sm" />
 
-                                            <span
-                                                class="text-[11px] text-slate-400"
-                                            >
+                                            <span class="text-[11px] text-slate-400">
                                                 x
                                                 {{
                                                     Number(
@@ -913,9 +852,7 @@ function submitOrder(action = "complete") {
                                     </div>
 
                                     <div class="text-right ml-2">
-                                        <div
-                                            class="text-xs font-semibold text-slate-800"
-                                        >
+                                        <div class="text-xs font-semibold text-slate-800">
                                             {{
                                                 (
                                                     Number(
@@ -926,232 +863,127 @@ function submitOrder(action = "complete") {
                                             }}
                                         </div>
 
-                                        <Button
-                                            icon="pi pi-trash"
+                                        <Button icon="pi pi-trash"
                                             class="p-button-text p-button-danger p-button-sm mt-1"
-                                            @click="removeFromCart(index)"
-                                            type="button"
-                                        />
+                                            @click="removeFromCart(index)" type="button" />
                                     </div>
                                 </div>
 
-                                <div
-                                    v-if="!cartItems.length"
-                                    class="text-center text-xs text-slate-400 py-6"
-                                >
+                                <div v-if="!cartItems.length" class="text-center text-xs text-slate-400 py-6">
                                     No items in order yet
                                 </div>
                             </div>
 
                             <!-- ORDER DISCOUNT -->
-                            <div
-                                class="mb-3 p-3 rounded-2xl bg-white border border-slate-200"
-                            >
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Order Discount</span
-                                    >
-                                    <span
-                                        v-if="orderDiscount > 0"
-                                        class="text-sm font-semibold text-rose-600"
-                                    >
+                            <div class="mb-3 p-3 rounded-2xl bg-white border border-slate-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-semibold text-slate-800">Order Discount</span>
+                                    <span v-if="orderDiscount > 0" class="text-sm font-semibold text-rose-600">
                                         -{{ orderDiscount.toFixed(2) }}
                                     </span>
                                 </div>
 
-                                <div
-                                    class="flex items-center gap-2 mb-1 min-w-0"
-                                >
-                                    <Dropdown
-                                        v-model="discountMode"
-                                        :options="[
-                                            { label: 'None', value: 'none' },
-                                            {
-                                                label: 'Percent %',
-                                                value: 'percent',
-                                            },
-                                            { label: 'Fixed', value: 'fixed' },
-                                        ]"
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        class="flex-1 min-w-0 text-xs"
-                                    />
-                                    <InputNumber
-                                        v-model="discountValue"
-                                        :min="0"
-                                        class="w-24 shrink-0"
-                                        inputClass="!text-xs !w-full"
-                                        :suffix="
-                                            discountMode === 'percent'
-                                                ? '%'
-                                                : ''
-                                        "
-                                        :disabled="discountMode === 'none'"
-                                    />
+                                <div class="flex items-center gap-2 mb-1 min-w-0">
+                                    <Dropdown v-model="discountMode" :options="[
+                                        { label: 'None', value: 'none' },
+                                        {
+                                            label: 'Percent %',
+                                            value: 'percent',
+                                        },
+                                        { label: 'Fixed', value: 'fixed' },
+                                    ]" optionLabel="label" optionValue="value" class="flex-1 min-w-0 text-xs" />
+                                    <InputNumber v-model="discountValue" :min="0" class="w-24 shrink-0"
+                                        inputClass="!text-xs !w-full" :suffix="discountMode === 'percent'
+                                            ? '%'
+                                            : ''
+                                            " :disabled="discountMode === 'none'" />
                                 </div>
                             </div>
 
                             <!-- totals -->
-                            <div
-                                class="border-t border-slate-200 pt-3 space-y-1"
-                            >
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500"
-                                >
+                            <div class="border-t border-slate-200 pt-3 space-y-1">
+                                <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>Subtotal</span>
                                     <span class="font-medium text-slate-700">{{
                                         subtotal.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
 
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500"
-                                >
+                                <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>Discount</span>
-                                    <span class="font-medium text-rose-600"
-                                        >-{{ discountTotal.toFixed(2) }}</span
-                                    >
+                                    <span class="font-medium text-rose-600">-{{ discountTotal.toFixed(2) }}</span>
                                 </div>
 
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500"
-                                >
+                                <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>Tax</span>
                                     <span class="font-medium text-slate-700">{{
                                         taxTotal.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
 
-                                <div
-                                    class="flex items-center justify-between text-sm mt-2"
-                                >
-                                    <span class="font-semibold text-slate-800"
-                                        >Total Payable</span
-                                    >
-                                    <span
-                                        class="text-lg font-bold text-emerald-600"
-                                        >{{ total.toFixed(2) }}</span
-                                    >
+                                <div class="flex items-center justify-between text-sm mt-2">
+                                    <span class="font-semibold text-slate-800">Total Payable</span>
+                                    <span class="text-lg font-bold text-emerald-600">{{ total.toFixed(2) }}</span>
                                 </div>
                             </div>
 
                             <!-- payments -->
                             <div class="mt-3 space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-slate-500"
-                                        >Payments</span
-                                    >
-                                    <Button
-                                        icon="pi pi-plus"
-                                        class="p-button-text p-button-sm"
-                                        label="Add"
-                                        @click="addPaymentRow"
-                                        type="button"
-                                    />
+                                    <span class="text-xs text-slate-500">Payments</span>
+                                    <Button icon="pi pi-plus" class="p-button-text p-button-sm" label="Add"
+                                        @click="addPaymentRow" type="button" />
                                 </div>
 
-                                <div
-                                    class="space-y-3 max-h-72 overflow-y-auto pr-1"
-                                >
-                                    <div
-                                        v-for="(row, index) in payments"
-                                        :key="row.id"
-                                        class="bg-white border border-slate-200 rounded-xl p-3"
-                                    >
+                                <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                    <div v-for="(row, index) in payments" :key="row.id"
+                                        class="bg-white border border-slate-200 rounded-xl p-3">
                                         <div class="flex items-center gap-2">
-                                            <Dropdown
-                                                v-model="row.payment_method_id"
-                                                :options="paymentMethods"
-                                                optionLabel="name"
-                                                optionValue="id"
-                                                placeholder="Method"
-                                                class="flex-1 text-xs"
-                                            />
-                                            <InputNumber
-                                                v-model="row.amount"
-                                                :min="0"
-                                                class="w-28"
-                                                inputClass="!text-xs"
-                                            />
-                                            <Button
-                                                icon="pi pi-trash"
-                                                class="p-button-text p-button-danger p-button-sm"
-                                                @click="removePaymentRow(index)"
-                                                type="button"
-                                            />
+                                            <Dropdown v-model="row.payment_method_id" :options="paymentMethods"
+                                                optionLabel="name" optionValue="id" placeholder="Method"
+                                                class="flex-1 text-xs" />
+                                            <InputNumber v-model="row.amount" :min="0" class="w-28"
+                                                inputClass="!text-xs" />
+                                            <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
+                                                @click="removePaymentRow(index)" type="button" />
                                         </div>
 
                                         <!-- common extra fields -->
-                                        <div
-                                            class="grid grid-cols-1 gap-2 mt-2"
-                                        >
-                                            <InputText
-                                                v-model="row.transaction_ref"
-                                                placeholder="Transaction ref (optional)"
-                                                class="w-full text-xs"
-                                            />
-                                            <InputText
-                                                v-model="row.notes"
-                                                placeholder="Notes (optional)"
-                                                class="w-full text-xs"
-                                            />
+                                        <div class="grid grid-cols-1 gap-2 mt-2">
+                                            <InputText v-model="row.transaction_ref"
+                                                placeholder="Transaction ref (optional)" class="w-full text-xs" />
+                                            <InputText v-model="row.notes" placeholder="Notes (optional)"
+                                                class="w-full text-xs" />
                                         </div>
 
                                         <!-- ✅ BANK META FIELDS -->
-                                        <div
-                                            v-if="isBankRow(row)"
-                                            class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
-                                        >
+                                        <div v-if="isBankRow(row)"
+                                            class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                                             <div
-                                                class="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2"
-                                            >
+                                                class="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                                                 <i class="pi pi-building"></i>
                                                 Bank Details
                                             </div>
 
                                             <div class="grid grid-cols-1 gap-2">
-                                                <InputText
-                                                    v-model="
-                                                        row.meta
-                                                            .customer_bank_name
-                                                    "
-                                                    placeholder="Customer bank name"
-                                                    class="w-full text-xs"
-                                                />
-                                                <InputText
-                                                    v-model="
-                                                        row.meta
-                                                            .customer_account_no
-                                                    "
-                                                    placeholder="Customer account no"
-                                                    class="w-full text-xs"
-                                                />
+                                                <InputText v-model="row.meta
+                                                    .customer_bank_name
+                                                    " placeholder="Customer bank name" class="w-full text-xs" />
+                                                <InputText v-model="row.meta
+                                                    .customer_account_no
+                                                    " placeholder="Customer account no" class="w-full text-xs" />
 
                                                 <!-- If you don't have bank accounts list yet, keep it as InputText or InputNumber -->
-                                                <InputNumber
-                                                    v-model="
-                                                        row.meta
-                                                            .received_to_bank_account_id
-                                                    "
-                                                    :min="1"
-                                                    placeholder="Received to bank account ID"
-                                                    class="w-full"
-                                                    inputClass="!text-xs"
-                                                />
+                                                <InputNumber v-model="row.meta
+                                                    .received_to_bank_account_id
+                                                    " :min="1" placeholder="Received to bank account ID" class="w-full"
+                                                    inputClass="!text-xs" />
 
-                                                <InputText
-                                                    v-model="row.meta.txn_ref"
-                                                    placeholder="Bank txn ref / cheque no"
-                                                    class="w-full text-xs"
-                                                />
+                                                <InputText v-model="row.meta.txn_ref"
+                                                    placeholder="Bank txn ref / cheque no" class="w-full text-xs" />
                                             </div>
 
-                                            <div
-                                                class="text-[11px] text-slate-400 mt-2"
-                                            >
+                                            <div class="text-[11px] text-slate-400 mt-2">
                                                 These fields go to
                                                 <b>payments.*.meta</b> in
                                                 backend.
@@ -1160,64 +992,34 @@ function submitOrder(action = "complete") {
                                     </div>
                                 </div>
 
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500 mt-1"
-                                >
+                                <div class="flex items-center justify-between text-xs text-slate-500 mt-1">
                                     <span>Total Paid</span>
-                                    <span
-                                        class="font-semibold text-slate-800"
-                                        >{{ totalPaid.toFixed(2) }}</span
-                                    >
+                                    <span class="font-semibold text-slate-800">{{ totalPaid.toFixed(2) }}</span>
                                 </div>
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500"
-                                >
+                                <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>Change</span>
-                                    <span
-                                        class="font-semibold text-slate-800"
-                                        >{{ change.toFixed(2) }}</span
-                                    >
+                                    <span class="font-semibold text-slate-800">{{ change.toFixed(2) }}</span>
                                 </div>
-                                <div
-                                    class="flex items-center justify-between text-xs text-slate-500"
-                                >
+                                <div class="flex items-center justify-between text-xs text-slate-500">
                                     <span>Due</span>
                                     <span class="font-semibold text-rose-600">{{
                                         due.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-1 gap-2 mt-4">
-                                <Button
-                                    label="Save Draft"
-                                    icon="pi pi-save"
-                                    class="w-full"
-                                    severity="war"
-                                    :disabled="!cartItems.length || !posSession"
-                                    @click="submitOrder('draft')"
-                                    type="button"
-                                />
+                                <Button label="Save Draft" icon="pi pi-save" class="w-full" severity="war"
+                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('draft')"
+                                    type="button" />
 
-                                <Button
-                                    label="Complete"
-                                    icon="pi pi-check"
-                                    class="w-full"
-                                    severity="info"
-                                    :disabled="!cartItems.length || !posSession"
-                                    @click="submitOrder('complete')"
-                                    type="button"
-                                />
+                                <Button label="Complete" icon="pi pi-check" class="w-full" severity="info"
+                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('complete')"
+                                    type="button" />
 
-                                <Button
-                                    label="Complete & Print"
-                                    icon="pi pi-print"
-                                    class="w-full"
-                                    :disabled="!cartItems.length || !posSession"
-                                    @click="submitOrder('complete_print')"
-                                    type="button"
-                                    severity="success"
-                                />
+                                <Button label="Complete & Print" icon="pi pi-print" class="w-full"
+                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('complete_print')"
+                                    type="button" severity="success" />
                             </div>
                         </div>
                     </aside>
@@ -1226,12 +1028,7 @@ function submitOrder(action = "complete") {
         </div>
 
         <!-- Variation Dialog -->
-        <Dialog
-            v-model:visible="showVariationDialog"
-            modal
-            header="Select Variation"
-            :style="{ width: '420px' }"
-        >
+        <Dialog v-model:visible="showVariationDialog" modal header="Select Variation" :style="{ width: '420px' }">
             <div v-if="dialogProduct" class="space-y-3">
                 <div class="text-sm font-semibold text-slate-800">
                     {{ dialogProduct.name }}
@@ -1240,20 +1037,10 @@ function submitOrder(action = "complete") {
                     Choose a variation to add to cart.
                 </div>
 
-                <Dropdown
-                    v-model="selectedVariationId"
-                    :options="dialogVariations"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select variation"
-                    class="w-full"
-                    showClear
-                />
+                <Dropdown v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
+                    optionValue="value" placeholder="Select variation" class="w-full" showClear />
 
-                <div
-                    v-if="selectedVariation"
-                    class="p-3 rounded-xl border border-slate-200 bg-slate-50"
-                >
+                <div v-if="selectedVariation" class="p-3 rounded-xl border border-slate-200 bg-slate-50">
                     <div class="text-xs text-slate-500">Price</div>
                     <div class="flex items-end gap-2">
                         <div class="text-lg font-bold text-emerald-600">
@@ -1267,10 +1054,8 @@ function submitOrder(action = "complete") {
                             }}
                         </div>
 
-                        <div
-                            v-if="getVariationDiscountPrice(selectedVariation)"
-                            class="text-sm text-slate-400 line-through"
-                        >
+                        <div v-if="getVariationDiscountPrice(selectedVariation)"
+                            class="text-sm text-slate-400 line-through">
                             {{
                                 getVariationUnitPrice(
                                     selectedVariation
@@ -1278,27 +1063,17 @@ function submitOrder(action = "complete") {
                             }}
                         </div>
 
-                        <div
-                            v-if="getVariationDiscountPrice(selectedVariation)"
-                            class="text-xs text-rose-600 font-semibold"
-                        >
+                        <div v-if="getVariationDiscountPrice(selectedVariation)"
+                            class="text-xs text-rose-600 font-semibold">
                             -{{ variationDiscountPercent(selectedVariation) }}%
                         </div>
                     </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="showVariationDialog = false"
-                    />
-                    <Button
-                        label="Add to Cart"
-                        icon="pi pi-check"
-                        :disabled="!selectedVariationId"
-                        @click="confirmAddVariation"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="showVariationDialog = false" />
+                    <Button label="Add to Cart" icon="pi pi-check" :disabled="!selectedVariationId"
+                        @click="confirmAddVariation" />
                 </div>
             </div>
         </Dialog>

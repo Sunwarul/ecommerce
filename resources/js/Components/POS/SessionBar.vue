@@ -47,7 +47,7 @@ function openSession() {
                 life: 2000,
             });
             openDialog.value = false;
-            router.reload({ only: ["currentSession"] }); // refresh session prop
+            window.location.reload();
         },
         onError: () => {
             toast.add({
@@ -71,7 +71,7 @@ function closeSession() {
                 life: 2000,
             });
             closeDialog.value = false;
-            router.reload({ only: ["currentSession"] });
+            window.location.reload();
         },
         onError: () => {
             toast.add({
@@ -87,58 +87,29 @@ function closeSession() {
 
 <template>
     <div class="flex items-center gap-2">
-        <Button
-            v-if="!posSession"
-            label="Open POS Session"
-            icon="pi pi-play"
-            @click="openDialog = true"
-        />
+        <Button v-if="!posSession" label="Open POS Session" icon="pi pi-play" @click="openDialog = true" />
 
-        <Button
-            v-else
-            label="Close POS Session"
-            icon="pi pi-stop"
-            class="p-button-danger"
-            @click="closeDialog = true"
-        />
+        <Button v-else label="Close POS Session" icon="pi pi-stop" class="p-button-danger"
+            @click="closeDialog = true" />
 
         <!-- OPEN DIALOG -->
-        <Dialog
-            v-model:visible="openDialog"
-            modal
-            header="Open POS Session"
-            :style="{ width: '420px' }"
-        >
+        <Dialog v-model:visible="openDialog" modal header="Open POS Session" :style="{ width: '420px' }">
             <div class="space-y-3">
                 <div>
                     <label class="text-sm font-medium">Branch *</label>
-                    <Dropdown
-                        v-model="openForm.branch_id"
-                        :options="branches"
-                        optionLabel="name"
-                        optionValue="id"
-                        class="w-full"
-                    />
+                    <Dropdown v-model="openForm.branch_id" :options="branches" optionLabel="name" optionValue="id"
+                        class="w-full" />
                 </div>
 
                 <div>
                     <label class="text-sm font-medium">Warehouse *</label>
-                    <Dropdown
-                        v-model="openForm.warehouse_id"
-                        :options="warehouses"
-                        optionLabel="name"
-                        optionValue="id"
-                        class="w-full"
-                    />
+                    <Dropdown v-model="openForm.warehouse_id" :options="warehouses" optionLabel="name" optionValue="id"
+                        class="w-full" />
                 </div>
 
                 <div>
                     <label class="text-sm font-medium">Opening Cash</label>
-                    <InputNumber
-                        v-model="openForm.opening_cash"
-                        class="w-full"
-                        :min="0"
-                    />
+                    <InputNumber v-model="openForm.opening_cash" class="w-full" :min="0" />
                 </div>
 
                 <div>
@@ -147,27 +118,14 @@ function closeSession() {
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="openDialog = false"
-                    />
-                    <Button
-                        label="Open"
-                        icon="pi pi-check"
-                        @click="openSession"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="openDialog = false" />
+                    <Button label="Open" icon="pi pi-check" @click="openSession" />
                 </div>
             </div>
         </Dialog>
 
         <!-- CLOSE DIALOG -->
-        <Dialog
-            v-model:visible="closeDialog"
-            modal
-            header="Close POS Session"
-            :style="{ width: '420px' }"
-        >
+        <Dialog v-model:visible="closeDialog" modal header="Close POS Session" :style="{ width: '420px' }">
             <div class="space-y-3">
                 <div class="text-sm text-slate-600">
                     Closing session will stop sales until you open a new
@@ -176,11 +134,7 @@ function closeSession() {
 
                 <div>
                     <label class="text-sm font-medium">Closing Cash</label>
-                    <InputNumber
-                        v-model="closeForm.closing_cash"
-                        class="w-full"
-                        :min="0"
-                    />
+                    <InputNumber v-model="closeForm.closing_cash" class="w-full" :min="0" />
                 </div>
 
                 <div>
@@ -189,17 +143,8 @@ function closeSession() {
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="closeDialog = false"
-                    />
-                    <Button
-                        label="Close"
-                        icon="pi pi-check"
-                        class="p-button-danger"
-                        @click="closeSession"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="closeDialog = false" />
+                    <Button label="Close" icon="pi pi-check" class="p-button-danger" @click="closeSession" />
                 </div>
             </div>
         </Dialog>
