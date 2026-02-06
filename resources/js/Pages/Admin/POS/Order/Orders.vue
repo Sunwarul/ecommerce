@@ -14,6 +14,7 @@ import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Tag from "primevue/tag";
 import { useToast } from "primevue/usetoast";
+import { v4 as uuidv4 } from 'uuid';
 
 const toast = useToast();
 
@@ -133,7 +134,7 @@ function openInvoiceModal(order) {
 /* ---------------- Shared: Payment Row Factory ---------------- */
 function newPaymentRow() {
     return {
-        id: crypto?.randomUUID?.() || String(Date.now() + Math.random()),
+        id: uuidv4(),
         payment_method_id: null,
         amount: 0,
         transaction_ref: "",
@@ -429,9 +430,7 @@ function submitPayDue() {
                     </p>
                 </div>
 
-                <div
-                    class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold"
-                >
+                <div class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold">
                     Page Total: {{ pageTotal.toFixed(2) }}
                 </div>
             </div>
@@ -439,80 +438,35 @@ function submitPayDue() {
             <!-- FILTER BAR -->
             <div class="card p-3 flex flex-wrap gap-3 items-center">
                 <InputGroup class="max-w-sm">
-                    <InputGroupAddon
-                        ><i class="pi pi-search"></i
-                    ></InputGroupAddon>
-                    <InputText
-                        v-model="search"
-                        placeholder="Invoice / customer / cashier"
-                        class="w-full"
-                        @keyup.enter="applyFilter"
-                    />
+                    <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
+                    <InputText v-model="search" placeholder="Invoice / customer / cashier" class="w-full"
+                        @keyup.enter="applyFilter" />
                 </InputGroup>
 
-                <Dropdown
-                    v-model="status"
-                    :options="statusOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Order Status"
-                    class="w-full md:w-44"
-                />
-                <Dropdown
-                    v-model="paymentStatus"
-                    :options="paymentStatusOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Payment Status"
-                    class="w-full md:w-44"
-                />
+                <Dropdown v-model="status" :options="statusOptions" optionLabel="label" optionValue="value"
+                    placeholder="Order Status" class="w-full md:w-44" />
+                <Dropdown v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
+                    optionValue="value" placeholder="Payment Status" class="w-full md:w-44" />
 
-                <Calendar
-                    v-model="dateFrom"
-                    placeholder="From"
-                    dateFormat="yy-mm-dd"
-                    showIcon
-                    class="w-full md:w-44"
-                />
-                <Calendar
-                    v-model="dateTo"
-                    placeholder="To"
-                    dateFormat="yy-mm-dd"
-                    showIcon
-                    class="w-full md:w-44"
-                />
+                <Calendar v-model="dateFrom" placeholder="From" dateFormat="yy-mm-dd" showIcon class="w-full md:w-44" />
+                <Calendar v-model="dateTo" placeholder="To" dateFormat="yy-mm-dd" showIcon class="w-full md:w-44" />
 
-                <Button
-                    label="Apply"
-                    icon="pi pi-filter"
-                    class="p-button-outlined"
-                    @click="applyFilter"
-                />
-                <Button
-                    label="Reset"
-                    icon="pi pi-refresh"
-                    class="p-button-text"
-                    @click="resetFilter"
-                />
+                <Button label="Apply" icon="pi pi-filter" class="p-button-outlined" @click="applyFilter" />
+                <Button label="Reset" icon="pi pi-refresh" class="p-button-text" @click="resetFilter" />
             </div>
 
             <!-- TABLE -->
             <div class="card">
-                <DataTable
-                    :value="rows"
-                    responsiveLayout="scroll"
-                    size="small"
-                    showGridlines
-                >
+                <DataTable :value="rows" responsiveLayout="scroll" size="small" showGridlines>
                     <Column header="Invoice">
                         <template #body="{ data }">
                             <div class="flex flex-col">
                                 <span class="font-semibold text-slate-800">{{
                                     invoiceLabel(data)
-                                }}</span>
+                                    }}</span>
                                 <span class="text-xs text-slate-500">{{
                                     new Date(data.created_at).toLocaleString()
-                                }}</span>
+                                    }}</span>
                             </div>
                         </template>
                     </Column>
@@ -520,123 +474,79 @@ function submitPayDue() {
                     <Column header="Customer">
                         <template #body="{ data }">{{
                             data.customer?.name || "Walk-in"
-                        }}</template>
+                            }}</template>
                     </Column>
 
                     <Column header="Cashier">
                         <template #body="{ data }">{{
                             data.user?.name || "-"
-                        }}</template>
+                            }}</template>
                     </Column>
 
                     <Column header="Total">
                         <template #body="{ data }">
                             <span class="font-semibold text-emerald-600">{{
                                 Number(data.total_amount || 0).toFixed(2)
-                            }}</span>
+                                }}</span>
                         </template>
                     </Column>
 
                     <Column header="Payment">
                         <template #body="{ data }">
-                            <Tag
-                                :value="data.payment_status"
-                                :severity="paymentSeverity(data.payment_status)"
-                            />
+                            <Tag :value="data.payment_status" :severity="paymentSeverity(data.payment_status)" />
                         </template>
                     </Column>
 
                     <Column header="Status">
                         <template #body="{ data }">
-                            <Tag
-                                :value="data.status"
-                                :severity="statusSeverity(data.status)"
-                            />
+                            <Tag :value="data.status" :severity="statusSeverity(data.status)" />
                         </template>
                     </Column>
 
                     <Column header="Actions">
                         <template #body="{ data }">
                             <div class="flex gap-1 flex-wrap">
-                                <Button
-                                    icon="pi pi-eye"
-                                    class="p-button-text p-button-sm"
-                                    @click="openInvoiceModal(data)"
-                                />
-                                <Button
-                                    icon="pi pi-external-link"
-                                    class="p-button-text p-button-sm"
-                                    @click="openInvoicePage(data)"
-                                />
+                                <Button icon="pi pi-eye" class="p-button-text p-button-sm"
+                                    @click="openInvoiceModal(data)" />
+                                <Button icon="pi pi-external-link" class="p-button-text p-button-sm"
+                                    @click="openInvoicePage(data)" />
 
-                                <Button
-                                    v-if="data.status !== 'void'"
-                                    icon="pi pi-print"
-                                    class="p-button-text p-button-sm"
-                                    @click="printInvoice(data)"
-                                />
+                                <Button v-if="data.status !== 'void'" icon="pi pi-print"
+                                    class="p-button-text p-button-sm" @click="printInvoice(data)" />
 
                                 <!-- ✅ Completed but Partial/Unpaid => Pay Due -->
-                                <Button
-                                    v-if="canPayDue(data)"
-                                    icon="pi pi-wallet"
-                                    class="p-button-text p-button-sm p-button-warning"
-                                    @click="openPayDueModal(data)"
-                                />
+                                <Button v-if="canPayDue(data)" icon="pi pi-wallet"
+                                    class="p-button-text p-button-sm p-button-warning" @click="openPayDueModal(data)" />
 
                                 <!-- ✅ Draft => Complete Draft -->
-                                <Button
-                                    v-if="canCompleteDraft(data)"
-                                    icon="pi pi-check"
+                                <Button v-if="canCompleteDraft(data)" icon="pi pi-check"
                                     class="p-button-text p-button-sm p-button-success"
-                                    @click="openCompleteModal(data)"
-                                />
+                                    @click="openCompleteModal(data)" />
 
                                 <!-- ✅ Void (draft or completed, not void) -->
-                                <Button
-                                    v-if="canVoid(data)"
-                                    icon="pi pi-ban"
-                                    class="p-button-text p-button-sm p-button-danger"
-                                    @click="openVoidModal(data)"
-                                />
+                                <Button v-if="canVoid(data)" icon="pi pi-ban"
+                                    class="p-button-text p-button-sm p-button-danger" @click="openVoidModal(data)" />
                             </div>
                         </template>
                     </Column>
                 </DataTable>
 
                 <!-- PAGINATION -->
-                <div
-                    class="flex justify-between items-center mt-3 text-sm text-gray-500"
-                >
-                    <span
-                        >Showing {{ orders.from }}–{{ orders.to }} of
-                        {{ orders.total }}</span
-                    >
+                <div class="flex justify-between items-center mt-3 text-sm text-gray-500">
+                    <span>Showing {{ orders.from }}–{{ orders.to }} of
+                        {{ orders.total }}</span>
                     <div class="flex gap-1">
-                        <Button
-                            icon="pi pi-angle-left"
-                            class="p-button-text"
-                            :disabled="!orders.prev_page_url"
-                            @click="goToPage(orders.prev_page_url)"
-                        />
-                        <Button
-                            icon="pi pi-angle-right"
-                            class="p-button-text"
-                            :disabled="!orders.next_page_url"
-                            @click="goToPage(orders.next_page_url)"
-                        />
+                        <Button icon="pi pi-angle-left" class="p-button-text" :disabled="!orders.prev_page_url"
+                            @click="goToPage(orders.prev_page_url)" />
+                        <Button icon="pi pi-angle-right" class="p-button-text" :disabled="!orders.next_page_url"
+                            @click="goToPage(orders.next_page_url)" />
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- INVOICE PREVIEW MODAL -->
-        <Dialog
-            v-model:visible="showInvoiceModal"
-            modal
-            header="Invoice Preview"
-            :style="{ width: '760px' }"
-        >
+        <Dialog v-model:visible="showInvoiceModal" modal header="Invoice Preview" :style="{ width: '760px' }">
             <div v-if="selectedOrder" class="space-y-3">
                 <div class="flex justify-between gap-3 flex-wrap">
                     <div>
@@ -654,19 +564,10 @@ function submitPayDue() {
                     </div>
 
                     <div class="flex gap-2">
-                        <Button
-                            label="Open"
-                            icon="pi pi-external-link"
-                            severity="secondary"
-                            @click="openInvoicePage(selectedOrder)"
-                        />
-                        <Button
-                            v-if="selectedOrder.status !== 'void'"
-                            label="Print"
-                            icon="pi pi-print"
-                            class="p-button-success"
-                            @click="printInvoice(selectedOrder)"
-                        />
+                        <Button label="Open" icon="pi pi-external-link" severity="secondary"
+                            @click="openInvoicePage(selectedOrder)" />
+                        <Button v-if="selectedOrder.status !== 'void'" label="Print" icon="pi pi-print"
+                            class="p-button-success" @click="printInvoice(selectedOrder)" />
                     </div>
                 </div>
 
@@ -704,16 +605,9 @@ function submitPayDue() {
         </Dialog>
 
         <!-- VOID MODAL -->
-        <Dialog
-            v-model:visible="showVoidModal"
-            modal
-            header="Void Order"
-            :style="{ width: '520px' }"
-        >
+        <Dialog v-model:visible="showVoidModal" modal header="Void Order" :style="{ width: '520px' }">
             <div v-if="voidTarget" class="space-y-3">
-                <div
-                    class="p-3 rounded-xl border bg-red-50 border-red-200 text-red-800 text-sm"
-                >
+                <div class="p-3 rounded-xl border bg-red-50 border-red-200 text-red-800 text-sm">
                     <div class="font-bold">This will void the order.</div>
                     <div class="text-xs mt-1">
                         If order is <b>completed</b>, stock will be restored
@@ -731,33 +625,17 @@ function submitPayDue() {
                 </div>
 
                 <div class="flex justify-end gap-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="showVoidModal = false"
-                    />
-                    <Button
-                        label="Void Now"
-                        icon="pi pi-ban"
-                        class="p-button-danger"
-                        :loading="voidLoading"
-                        @click="voidOrder"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="showVoidModal = false" />
+                    <Button label="Void Now" icon="pi pi-ban" class="p-button-danger" :loading="voidLoading"
+                        @click="voidOrder" />
                 </div>
             </div>
         </Dialog>
 
         <!-- COMPLETE DRAFT MODAL -->
-        <Dialog
-            v-model:visible="showCompleteModal"
-            modal
-            header="Complete Draft"
-            :style="{ width: '760px' }"
-        >
+        <Dialog v-model:visible="showCompleteModal" modal header="Complete Draft" :style="{ width: '760px' }">
             <div v-if="completeTarget" class="space-y-4">
-                <div
-                    class="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm"
-                >
+                <div class="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm">
                     <div class="font-bold">Complete this draft order?</div>
                     <div class="text-xs mt-1">
                         Add payments and bank info (if bank method).
@@ -785,22 +663,13 @@ function submitPayDue() {
                         <div class="text-xs text-gray-500 font-semibold">
                             Due / Change
                         </div>
-                        <div
-                            class="font-semibold text-rose-600"
-                            v-if="draftDue > 0"
-                        >
+                        <div class="font-semibold text-rose-600" v-if="draftDue > 0">
                             Due: {{ draftDue.toFixed(2) }}
                         </div>
-                        <div
-                            class="font-semibold text-emerald-600"
-                            v-if="draftChange > 0"
-                        >
+                        <div class="font-semibold text-emerald-600" v-if="draftChange > 0">
                             Change: {{ draftChange.toFixed(2) }}
                         </div>
-                        <div
-                            class="font-semibold text-slate-700"
-                            v-if="draftDue === 0 && draftChange === 0"
-                        >
+                        <div class="font-semibold text-slate-700" v-if="draftDue === 0 && draftChange === 0">
                             Balanced
                         </div>
                     </div>
@@ -810,55 +679,30 @@ function submitPayDue() {
 
                 <div class="flex items-center justify-between">
                     <div class="font-semibold">Payments</div>
-                    <Button
-                        label="Add payment"
-                        icon="pi pi-plus"
-                        class="p-button-text"
-                        @click="addRow(completeRows)"
-                    />
+                    <Button label="Add payment" icon="pi pi-plus" class="p-button-text" @click="addRow(completeRows)" />
                 </div>
 
                 <div class="space-y-3">
-                    <div
-                        v-for="(row, idx) in completeRows"
-                        :key="row.id"
-                        class="border rounded-xl p-3 bg-white"
-                    >
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
-                        >
+                    <div v-for="(row, idx) in completeRows" :key="row.id" class="border rounded-xl p-3 bg-white">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Method <span class="text-red-600">*</span>
                                 </div>
-                                <Dropdown
-                                    v-model="row.payment_method_id"
-                                    :options="paymentMethods"
-                                    optionLabel="name"
-                                    optionValue="id"
-                                    placeholder="Select method"
-                                    class="w-full"
-                                />
+                                <Dropdown v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
+                                    optionValue="id" placeholder="Select method" class="w-full" />
                             </div>
 
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Amount <span class="text-red-600">*</span>
                                 </div>
-                                <InputNumber
-                                    v-model="row.amount"
-                                    :min="0"
-                                    class="w-full"
-                                    inputClass="w-full"
-                                />
+                                <InputNumber v-model="row.amount" :min="0" class="w-full" inputClass="w-full" />
                             </div>
 
                             <div class="flex gap-2 justify-end">
-                                <Button
-                                    icon="pi pi-trash"
-                                    class="p-button-text p-button-danger"
-                                    @click="removeRow(completeRows, idx)"
-                                />
+                                <Button icon="pi pi-trash" class="p-button-text p-button-danger"
+                                    @click="removeRow(completeRows, idx)" />
                             </div>
                         </div>
 
@@ -867,28 +711,19 @@ function submitPayDue() {
                                 <div class="text-xs text-slate-500 mb-1">
                                     Txn Ref
                                 </div>
-                                <InputText
-                                    v-model="row.transaction_ref"
-                                    class="w-full"
-                                    placeholder="Gateway / Slip ref (optional)"
-                                />
+                                <InputText v-model="row.transaction_ref" class="w-full"
+                                    placeholder="Gateway / Slip ref (optional)" />
                             </div>
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Notes
                                 </div>
-                                <InputText
-                                    v-model="row.notes"
-                                    class="w-full"
-                                    placeholder="Optional note"
-                                />
+                                <InputText v-model="row.notes" class="w-full" placeholder="Optional note" />
                             </div>
                         </div>
 
-                        <div
-                            v-if="row.payment_method_id && needsBankMeta(row)"
-                            class="mt-3 rounded-lg border bg-slate-50 p-3"
-                        >
+                        <div v-if="row.payment_method_id && needsBankMeta(row)"
+                            class="mt-3 rounded-lg border bg-slate-50 p-3">
                             <div class="font-semibold text-sm mb-2">
                                 Bank Info (Required for bank)
                             </div>
@@ -899,10 +734,7 @@ function submitPayDue() {
                                         Customer Bank Name
                                         <span class="text-red-600">*</span>
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.customer_bank_name"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.customer_bank_name" class="w-full" />
                                 </div>
 
                                 <div>
@@ -910,33 +742,22 @@ function submitPayDue() {
                                         Customer Account No
                                         <span class="text-red-600">*</span>
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.customer_account_no"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.customer_account_no" class="w-full" />
                                 </div>
 
                                 <div>
                                     <div class="text-xs text-slate-500 mb-1">
                                         Received To Bank Account ID
                                     </div>
-                                    <InputNumber
-                                        v-model="
-                                            row.meta.received_to_bank_account_id
-                                        "
-                                        class="w-full"
-                                        inputClass="w-full"
-                                    />
+                                    <InputNumber v-model="row.meta.received_to_bank_account_id
+                                        " class="w-full" inputClass="w-full" />
                                 </div>
 
                                 <div>
                                     <div class="text-xs text-slate-500 mb-1">
                                         Bank Txn / Cheque No
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.txn_ref"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.txn_ref" class="w-full" />
                                 </div>
                             </div>
                         </div>
@@ -946,41 +767,24 @@ function submitPayDue() {
                 <Divider />
 
                 <div class="flex justify-end gap-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="showCompleteModal = false"
-                    />
-                    <Button
-                        label="Complete Draft"
-                        icon="pi pi-check"
-                        class="p-button-success"
-                        :loading="completeLoading"
-                        @click="completeDraft"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="showCompleteModal = false" />
+                    <Button label="Complete Draft" icon="pi pi-check" class="p-button-success"
+                        :loading="completeLoading" @click="completeDraft" />
                 </div>
             </div>
         </Dialog>
 
         <!-- PAY DUE MODAL -->
-        <Dialog
-            v-model:visible="showPayDueModal"
-            modal
-            header="Pay Due"
-            :style="{ width: '760px' }"
-        >
+        <Dialog v-model:visible="showPayDueModal" modal header="Pay Due" :style="{ width: '760px' }">
             <div v-if="payDueTarget" class="space-y-4">
-                <div
-                    class="p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-900 text-sm"
-                >
+                <div class="p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-900 text-sm">
                     <div class="font-bold">Add payment for this sale</div>
                     <div class="text-xs mt-1">
                         Current Due: <b>{{ currentDue.toFixed(2) }}</b> • After
                         Pay: <b>{{ dueAfterPay.toFixed(2) }}</b>
                         <span v-if="changeAfterPay > 0">
                             • Change:
-                            <b>{{ changeAfterPay.toFixed(2) }}</b></span
-                        >
+                            <b>{{ changeAfterPay.toFixed(2) }}</b></span>
                     </div>
                 </div>
 
@@ -1015,55 +819,30 @@ function submitPayDue() {
 
                 <div class="flex items-center justify-between">
                     <div class="font-semibold">Payments</div>
-                    <Button
-                        label="Add payment"
-                        icon="pi pi-plus"
-                        class="p-button-text"
-                        @click="addRow(payDueRows)"
-                    />
+                    <Button label="Add payment" icon="pi pi-plus" class="p-button-text" @click="addRow(payDueRows)" />
                 </div>
 
                 <div class="space-y-3">
-                    <div
-                        v-for="(row, idx) in payDueRows"
-                        :key="row.id"
-                        class="border rounded-xl p-3 bg-white"
-                    >
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
-                        >
+                    <div v-for="(row, idx) in payDueRows" :key="row.id" class="border rounded-xl p-3 bg-white">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Method <span class="text-red-600">*</span>
                                 </div>
-                                <Dropdown
-                                    v-model="row.payment_method_id"
-                                    :options="paymentMethods"
-                                    optionLabel="name"
-                                    optionValue="id"
-                                    placeholder="Select method"
-                                    class="w-full"
-                                />
+                                <Dropdown v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
+                                    optionValue="id" placeholder="Select method" class="w-full" />
                             </div>
 
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Amount <span class="text-red-600">*</span>
                                 </div>
-                                <InputNumber
-                                    v-model="row.amount"
-                                    :min="0"
-                                    class="w-full"
-                                    inputClass="w-full"
-                                />
+                                <InputNumber v-model="row.amount" :min="0" class="w-full" inputClass="w-full" />
                             </div>
 
                             <div class="flex gap-2 justify-end">
-                                <Button
-                                    icon="pi pi-trash"
-                                    class="p-button-text p-button-danger"
-                                    @click="removeRow(payDueRows, idx)"
-                                />
+                                <Button icon="pi pi-trash" class="p-button-text p-button-danger"
+                                    @click="removeRow(payDueRows, idx)" />
                             </div>
                         </div>
 
@@ -1072,28 +851,19 @@ function submitPayDue() {
                                 <div class="text-xs text-slate-500 mb-1">
                                     Txn Ref
                                 </div>
-                                <InputText
-                                    v-model="row.transaction_ref"
-                                    class="w-full"
-                                    placeholder="Gateway / Slip ref (optional)"
-                                />
+                                <InputText v-model="row.transaction_ref" class="w-full"
+                                    placeholder="Gateway / Slip ref (optional)" />
                             </div>
                             <div>
                                 <div class="text-xs text-slate-500 mb-1">
                                     Notes
                                 </div>
-                                <InputText
-                                    v-model="row.notes"
-                                    class="w-full"
-                                    placeholder="Optional note"
-                                />
+                                <InputText v-model="row.notes" class="w-full" placeholder="Optional note" />
                             </div>
                         </div>
 
-                        <div
-                            v-if="row.payment_method_id && needsBankMeta(row)"
-                            class="mt-3 rounded-lg border bg-slate-50 p-3"
-                        >
+                        <div v-if="row.payment_method_id && needsBankMeta(row)"
+                            class="mt-3 rounded-lg border bg-slate-50 p-3">
                             <div class="font-semibold text-sm mb-2">
                                 Bank Info (Required for bank)
                             </div>
@@ -1104,10 +874,7 @@ function submitPayDue() {
                                         Customer Bank Name
                                         <span class="text-red-600">*</span>
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.customer_bank_name"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.customer_bank_name" class="w-full" />
                                 </div>
 
                                 <div>
@@ -1115,33 +882,22 @@ function submitPayDue() {
                                         Customer Account No
                                         <span class="text-red-600">*</span>
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.customer_account_no"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.customer_account_no" class="w-full" />
                                 </div>
 
                                 <div>
                                     <div class="text-xs text-slate-500 mb-1">
                                         Received To Bank Account ID
                                     </div>
-                                    <InputNumber
-                                        v-model="
-                                            row.meta.received_to_bank_account_id
-                                        "
-                                        class="w-full"
-                                        inputClass="w-full"
-                                    />
+                                    <InputNumber v-model="row.meta.received_to_bank_account_id
+                                        " class="w-full" inputClass="w-full" />
                                 </div>
 
                                 <div>
                                     <div class="text-xs text-slate-500 mb-1">
                                         Bank Txn / Cheque No
                                     </div>
-                                    <InputText
-                                        v-model="row.meta.txn_ref"
-                                        class="w-full"
-                                    />
+                                    <InputText v-model="row.meta.txn_ref" class="w-full" />
                                 </div>
                             </div>
                         </div>
@@ -1151,18 +907,9 @@ function submitPayDue() {
                 <Divider />
 
                 <div class="flex justify-end gap-2">
-                    <Button
-                        label="Cancel"
-                        class="p-button-text"
-                        @click="showPayDueModal = false"
-                    />
-                    <Button
-                        label="Submit Payment"
-                        icon="pi pi-check"
-                        class="p-button-warning"
-                        :loading="payDueLoading"
-                        @click="submitPayDue"
-                    />
+                    <Button label="Cancel" class="p-button-text" @click="showPayDueModal = false" />
+                    <Button label="Submit Payment" icon="pi pi-check" class="p-button-warning" :loading="payDueLoading"
+                        @click="submitPayDue" />
                 </div>
             </div>
         </Dialog>
