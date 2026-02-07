@@ -41,7 +41,7 @@ class StoreProductRequest extends FormRequest
             // ✅ SIMPLE: warehouse stocks
             'stocks' => ['required_if:type,simple', 'array', 'min:1'],
             'stocks.*.warehouse_id' => ['required', 'exists:warehouses,id'],
-            // 'stocks.*.quantity' => ['required', 'numeric', 'min:0'],
+            'stocks.*.quantity' => ['required', 'numeric', 'min:0'],
             'stocks.*.alert_quantity' => ['nullable', 'numeric', 'min:0'],
 
             // Other fields
@@ -89,7 +89,7 @@ class StoreProductRequest extends FormRequest
             'tag_ids.*' => 'Tag',
             'variations.*.attribute_value_ids.*' => 'Attribute value',
             'variations.*.stocks.*.warehouse_id' => 'Warehouse',
-            
+
         ];
     }
 }

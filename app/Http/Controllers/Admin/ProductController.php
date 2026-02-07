@@ -220,6 +220,7 @@ class ProductController extends Controller
             $productData['created_by'] = auth()->id();
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
+            $productData['branch_id'] = $request?->branch_id ?? 1;
 
             // Ensure scalar *_id fields
             foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
@@ -250,6 +251,7 @@ class ProductController extends Controller
             if ($product->type === 'simple') {
                 foreach ($data['stocks'] as $s) {
                     ProductStock::create([
+                        'branch_id' => $request?->branch_id ?? 1,
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
@@ -290,6 +292,7 @@ class ProductController extends Controller
                     // Create stocks for this variation per warehouse
                     foreach ($variationInput['stocks'] as $s) {
                         ProductStock::create([
+                            'branch_id' => $request?->branch_id ?? 1,
                             'product_id' => $product->id,
                             'variation_id' => $variation->id,
                             'warehouse_id' => $s['warehouse_id'],
@@ -335,6 +338,7 @@ class ProductController extends Controller
 
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
+            $productData['branch_id'] = $request?->branch_id ?? 1;
 
             // ensure scalar *_id
             foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
@@ -411,6 +415,7 @@ class ProductController extends Controller
 
                 foreach (($data['stocks'] ?? []) as $s) {
                     ProductStock::create([
+                        'branch_id' => $request?->branch_id ?? 1,
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
@@ -505,6 +510,7 @@ class ProductController extends Controller
                             'warehouse_id' => $s['warehouse_id'],
                         ],
                         [
+                            'branch_id' => $request?->branch_id ?? 1,
                             'quantity' => $s['quantity'] ?? 0,
                             'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]
