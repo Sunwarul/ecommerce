@@ -220,6 +220,7 @@ class ProductController extends Controller
             $productData['created_by'] = auth()->id();
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
+            $productData['branch_id'] = $request?->branch_id ?? 1;
 
             // Ensure scalar *_id fields
             foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
@@ -335,6 +336,7 @@ class ProductController extends Controller
 
             $productData['slug'] = $productData['slug'] ?? Str::slug($productData['name']);
             $productData['is_active'] = $request->boolean('is_active');
+            $productData['branch_id'] = $request?->branch_id ?? 1;
 
             // ensure scalar *_id
             foreach (['category_id', 'tax_id', 'brand_id'] as $key) {
@@ -411,6 +413,7 @@ class ProductController extends Controller
 
                 foreach (($data['stocks'] ?? []) as $s) {
                     ProductStock::create([
+                        'branch_id' => $request?->branch_id ?? 1,
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
