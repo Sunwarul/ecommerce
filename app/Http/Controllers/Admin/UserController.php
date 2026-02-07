@@ -50,6 +50,7 @@ class UserController extends Controller
             $validatedData['photo'] = $request->file('photo')->store($this->resource);
         }
         $model = new $this->modelClass;
+        $validatedData['branch_id'] = $validatedData['branch_id'] ?? 1;
         $model->fill($validatedData);
         $model->save();
 
