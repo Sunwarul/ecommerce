@@ -682,7 +682,7 @@ function handleSuccess(page) {
                 </header>
 
                 <!-- BODY -->
-                <div class="flex-1 flex overflow-hidden">
+                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
                     <!-- PRODUCTS -->
                     <section class="flex-1 p-5 overflow-y-auto">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
@@ -797,7 +797,7 @@ function handleSuccess(page) {
 
                     <!-- ORDER PANEL -->
                     <aside
-                        class="w-full lg:w-80 xl:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
+                        class="w-full lg:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto h-1/2 lg:h-auto border-t lg:border-t-0">
                         <div class="flex flex-col flex-1">
                             <!-- header -->
                             <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">

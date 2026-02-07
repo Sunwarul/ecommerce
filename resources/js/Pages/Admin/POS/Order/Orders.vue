@@ -555,7 +555,8 @@ function editDraft(order) {
         </div>
 
         <!-- INVOICE PREVIEW MODAL -->
-        <Dialog v-model:visible="showInvoiceModal" modal header="Invoice Preview" :style="{ width: '760px' }">
+        <Dialog v-model:visible="showInvoiceModal" modal header="Invoice Preview" :style="{ width: '760px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
             <div v-if="selectedOrder" class="space-y-3">
                 <div class="flex justify-between gap-3 flex-wrap">
                     <div>
@@ -614,7 +615,8 @@ function editDraft(order) {
         </Dialog>
 
         <!-- VOID MODAL -->
-        <Dialog v-model:visible="showVoidModal" modal header="Void Order" :style="{ width: '520px' }">
+        <Dialog v-model:visible="showVoidModal" modal header="Void Order" :style="{ width: '520px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
             <div v-if="voidTarget" class="space-y-3">
                 <div class="p-3 rounded-xl border bg-red-50 border-red-200 text-red-800 text-sm">
                     <div class="font-bold">This will void the order.</div>
@@ -642,7 +644,8 @@ function editDraft(order) {
         </Dialog>
 
         <!-- COMPLETE DRAFT MODAL -->
-        <Dialog v-model:visible="showCompleteModal" modal header="Complete Draft" :style="{ width: '760px' }">
+        <Dialog v-model:visible="showCompleteModal" modal header="Complete Draft" :style="{ width: '760px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
             <div v-if="completeTarget" class="space-y-4">
                 <div class="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm">
                     <div class="font-bold">Complete this draft order?</div>
@@ -784,7 +787,8 @@ function editDraft(order) {
         </Dialog>
 
         <!-- PAY DUE MODAL -->
-        <Dialog v-model:visible="showPayDueModal" modal header="Pay Due" :style="{ width: '760px' }">
+        <Dialog v-model:visible="showPayDueModal" modal header="Pay Due" :style="{ width: '760px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
             <div v-if="payDueTarget" class="space-y-4">
                 <div class="p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-900 text-sm">
                     <div class="font-bold">Add payment for this sale</div>
