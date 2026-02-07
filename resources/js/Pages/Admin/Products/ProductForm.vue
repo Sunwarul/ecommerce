@@ -181,28 +181,39 @@ const categoryTreeNodes = computed(() => {
 watch(
     selectedCategoryKey,
     (newVal) => {
-        if (!newVal) return (form.category_id = null);
-
-        if (typeof newVal === "string" || typeof newVal === "number") {
-            form.category_id = Number(newVal);
+        if (!newVal) {
+            form.category_id = null;
             return;
         }
 
-        if (typeof newVal === "object" && newVal.key) {
-            form.category_id = Number(newVal.key);
-            return;
-        }
-
+        // PrimeVue TreeSelect v-model logic:
+        // Ensure we handle both object keys { "ID": true } and primitives (though TreeSelect usually uses object for selection)
         if (typeof newVal === "object") {
             const keys = Object.keys(newVal);
-            form.category_id = keys.length ? Number(keys[0]) : null;
-            return;
+            if (keys.length > 0) {
+                // Return the first key as number
+                form.category_id = Number(keys[0]);
+            } else {
+                form.category_id = null;
+            }
+        } else {
+            // Fallback for primitive values
+            form.category_id = Number(newVal);
         }
-
-        form.category_id = null;
     },
     { immediate: true }
 );
+
+// Fix initial value mapping to compatible TreeSelect format { ID: true }
+const initCategory = () => {
+    if (props.product?.category_id) {
+        selectedCategoryKey.value = { [String(props.product.category_id)]: true };
+    } else {
+        selectedCategoryKey.value = null;
+    }
+};
+
+
 
 // -----------------------------
 // MATERIALS INPUT (STRING <-> ARRAY)
@@ -212,9 +223,9 @@ const materialsInput = ref("");
 watch(materialsInput, (value) => {
     form.materials = value
         ? value
-              .split(",")
-              .map((v) => v.trim())
-              .filter(Boolean)
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean)
         : [];
 });
 
@@ -261,9 +272,8 @@ const attributeValueOptions = computed(() => {
         (attr.values || []).forEach((val) => {
             opts.push({
                 id: val.id,
-                label: `${attr.display_name || attr.name}: ${
-                    val.display_value || val.value
-                }`,
+                label: `${attr.display_name || attr.name}: ${val.display_value || val.value
+                    }`,
             });
         });
     });
@@ -408,9 +418,7 @@ const resetFromProps = () => {
         ? mapped.materials.join(", ")
         : "";
 
-    selectedCategoryKey.value = mapped.category_id
-        ? String(mapped.category_id)
-        : null;
+    initCategory();
 
     photoPreview.value = props.product?.thumbnail
         ? resolveImagePath(props.product.thumbnail)
@@ -464,16 +472,9 @@ const cancel = () => emit("cancel");
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Name -->
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="name" class="block font-bold mb-2"
-                        >Name *</label
-                    >
-                    <InputText
-                        id="name"
-                        v-model.trim="form.name"
-                        required
-                        class="w-full"
-                        :class="{ 'p-invalid': submitted && !form.name }"
-                    />
+                    <label for="name" class="block font-bold mb-2">Name *</label>
+                    <InputText id="name" v-model.trim="form.name" required class="w-full"
+                        :class="{ 'p-invalid': submitted && !form.name }" />
                     <small v-if="form.errors.name" class="p-error">{{
                         form.errors.name
                     }}</small>
@@ -481,16 +482,9 @@ const cancel = () => emit("cancel");
 
                 <!-- Slug -->
                 <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="slug" class="block font-bold mb-2"
-                        >Slug *</label
-                    >
-                    <InputText
-                        id="slug"
-                        v-model.trim="form.slug"
-                        required
-                        class="w-full"
-                        :class="{ 'p-invalid': submitted && !form.slug }"
-                    />
+                    <label for="slug" class="block font-bold mb-2">Slug *</label>
+                    <InputText id="slug" v-model.trim="form.slug" required class="w-full"
+                        :class="{ 'p-invalid': submitted && !form.slug }" />
                     <small v-if="form.errors.slug" class="p-error">{{
                         form.errors.slug
                     }}</small>
@@ -499,11 +493,7 @@ const cancel = () => emit("cancel");
                 <!-- SKU -->
                 <div class="field col-12 md:col-4 mb-4 pr-md-2">
                     <label for="sku" class="block font-bold mb-2">SKU</label>
-                    <InputText
-                        id="sku"
-                        v-model.trim="form.sku"
-                        class="w-full"
-                    />
+                    <InputText id="sku" v-model.trim="form.sku" class="w-full" />
                     <small v-if="form.errors.sku" class="p-error">{{
                         form.errors.sku
                     }}</small>
@@ -511,14 +501,8 @@ const cancel = () => emit("cancel");
 
                 <!-- Barcode -->
                 <div class="field col-12 md:col-4 mb-4 px-md-2">
-                    <label for="barcode" class="block font-bold mb-2"
-                        >Barcode</label
-                    >
-                    <InputText
-                        id="barcode"
-                        v-model.trim="form.barcode"
-                        class="w-full"
-                    />
+                    <label for="barcode" class="block font-bold mb-2">Barcode</label>
+                    <InputText id="barcode" v-model.trim="form.barcode" class="w-full" />
                     <small v-if="form.errors.barcode" class="p-error">{{
                         form.errors.barcode
                     }}</small>
@@ -526,14 +510,8 @@ const cancel = () => emit("cancel");
 
                 <!-- Product Code -->
                 <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="code" class="block font-bold mb-2"
-                        >Product Code</label
-                    >
-                    <InputText
-                        id="code"
-                        v-model.trim="form.code"
-                        class="w-full"
-                    />
+                    <label for="code" class="block font-bold mb-2">Product Code</label>
+                    <InputText id="code" v-model.trim="form.code" class="w-full" />
                     <small v-if="form.errors.code" class="p-error">{{
                         form.errors.code
                     }}</small>
@@ -541,19 +519,10 @@ const cancel = () => emit("cancel");
 
                 <!-- Product Type -->
                 <div class="field col-12 md:col-4 mb-4 pr-md-2">
-                    <label for="type" class="block font-bold mb-2"
-                        >Product Type *</label
-                    >
-                    <Dropdown
-                        id="type"
-                        v-model="form.type"
-                        :options="productTypes"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select Type"
-                        class="w-full"
-                        :class="{ 'p-invalid': form.errors.type }"
-                    />
+                    <label for="type" class="block font-bold mb-2">Product Type *</label>
+                    <Dropdown id="type" v-model="form.type" :options="productTypes" optionLabel="label"
+                        optionValue="value" placeholder="Select Type" class="w-full"
+                        :class="{ 'p-invalid': form.errors.type }" />
                     <small v-if="form.errors.type" class="p-error">{{
                         form.errors.type
                     }}</small>
@@ -561,9 +530,7 @@ const cancel = () => emit("cancel");
 
                 <!-- Active / Inactive -->
                 <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="status" class="block font-bold mb-2"
-                        >Status</label
-                    >
+                    <label for="status" class="block font-bold mb-2">Status</label>
                     <div class="pt-2 flex items-center">
                         <ToggleSwitch v-model="form.is_active" />
                         <span class="ml-2">{{
@@ -583,16 +550,9 @@ const cancel = () => emit("cancel");
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Base Price -->
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="base_price" class="block font-bold mb-2"
-                        >Base Price *</label
-                    >
-                    <InputNumber
-                        id="base_price"
-                        v-model.number="form.base_price"
-                        class="w-full"
-                        :min="0"
-                        :class="{ 'p-invalid': form.errors.base_price }"
-                    />
+                    <label for="base_price" class="block font-bold mb-2">Base Price *</label>
+                    <InputNumber id="base_price" v-model.number="form.base_price" class="w-full" :min="0"
+                        :class="{ 'p-invalid': form.errors.base_price }" />
                     <small v-if="form.errors.base_price" class="p-error">{{
                         form.errors.base_price
                     }}</small>
@@ -600,22 +560,10 @@ const cancel = () => emit("cancel");
 
                 <!-- Discount Price -->
                 <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label
-                        for="base_discount_price"
-                        class="block font-bold mb-2"
-                        >Discount Price</label
-                    >
-                    <InputNumber
-                        id="base_discount_price"
-                        v-model.number="form.base_discount_price"
-                        class="w-full"
-                        :min="0"
-                        :max="form.base_price || null"
-                    />
-                    <small
-                        v-if="form.errors.base_discount_price"
-                        class="p-error"
-                    >
+                    <label for="base_discount_price" class="block font-bold mb-2">Discount Price</label>
+                    <InputNumber id="base_discount_price" v-model.number="form.base_discount_price" class="w-full"
+                        :min="0" :max="form.base_price || null" />
+                    <small v-if="form.errors.base_discount_price" class="p-error">
                         {{ form.errors.base_discount_price }}
                     </small>
                 </div>
@@ -634,11 +582,7 @@ const cancel = () => emit("cancel");
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr
-                                    v-for="(s, i) in form.stocks"
-                                    :key="s.warehouse_id"
-                                    class="border-b"
-                                >
+                                <tr v-for="(s, i) in form.stocks" :key="s.warehouse_id" class="border-b">
                                     <td class="p-2">
                                         {{
                                             warehouses.find(
@@ -647,18 +591,10 @@ const cancel = () => emit("cancel");
                                         }}
                                     </td>
                                     <td class="p-2">
-                                        <InputNumber
-                                            v-model.number="s.quantity"
-                                            class="w-full"
-                                            :min="0"
-                                        />
+                                        <InputNumber v-model="s.quantity" class="w-full" :min="0" />
                                     </td>
                                     <td class="p-2">
-                                        <InputNumber
-                                            v-model.number="s.alert_quantity"
-                                            class="w-full"
-                                            :min="0"
-                                        />
+                                        <InputNumber v-model="s.alert_quantity" class="w-full" :min="0" />
                                     </td>
                                 </tr>
                             </tbody>
@@ -681,73 +617,36 @@ const cancel = () => emit("cancel");
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Category (TreeSelect) -->
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="category_id" class="block font-bold mb-2"
-                        >Category *</label
-                    >
+                    <label for="category_id" class="block font-bold mb-2">Category *</label>
 
-                    <TreeSelect
-                        id="category_id"
-                        v-model="selectedCategoryKey"
-                        :options="categoryTreeNodes"
-                        placeholder="Select Category"
-                        class="w-full"
-                        selectionMode="single"
-                        :class="{ 'p-invalid': submitted && !form.category_id }"
-                    />
+                    <TreeSelect id="category_id" v-model="selectedCategoryKey" :options="categoryTreeNodes"
+                        placeholder="Select Category" class="w-full" selectionMode="single"
+                        :class="{ 'p-invalid': submitted && !form.category_id }" />
 
-                    <small
-                        v-if="submitted && !form.category_id"
-                        class="p-error"
-                    >
+                    <small v-if="submitted && !form.category_id" class="p-error">
                         Category is required.
                     </small>
                 </div>
 
                 <!-- Brand -->
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="brand_id" class="block font-bold mb-2"
-                        >Brand</label
-                    >
-                    <Dropdown
-                        id="brand_id"
-                        v-model="form.brand_id"
-                        :options="brands"
-                        optionLabel="name"
-                        optionValue="id"
-                        placeholder="Select Brand"
-                        class="w-full"
-                    />
+                    <label for="brand_id" class="block font-bold mb-2">Brand</label>
+                    <Dropdown id="brand_id" v-model="form.brand_id" :options="brands" optionLabel="name"
+                        optionValue="id" placeholder="Select Brand" class="w-full" />
                 </div>
 
                 <!-- Tax -->
                 <div class="field col-12 sm:col-6 mb-4 pl-md-2">
                     <label for="tax_id" class="block font-bold mb-2">Tax</label>
-                    <Dropdown
-                        id="tax_id"
-                        v-model="form.tax_id"
-                        :options="taxes"
-                        optionLabel="name"
-                        optionValue="id"
-                        placeholder="Select Tax"
-                        class="w-full"
-                    />
+                    <Dropdown id="tax_id" v-model="form.tax_id" :options="taxes" optionLabel="name" optionValue="id"
+                        placeholder="Select Tax" class="w-full" />
                 </div>
 
                 <!-- Tags -->
                 <div class="field col-12 mb-4 col-span-full">
-                    <label for="tag_ids" class="block font-bold mb-2"
-                        >Tags</label
-                    >
-                    <MultiSelect
-                        id="tag_ids"
-                        v-model="form.tag_ids"
-                        :options="tags"
-                        optionLabel="name"
-                        optionValue="id"
-                        display="chip"
-                        placeholder="Select Tags"
-                        class="w-full"
-                    />
+                    <label for="tag_ids" class="block font-bold mb-2">Tags</label>
+                    <MultiSelect id="tag_ids" v-model="form.tag_ids" :options="tags" optionLabel="name" optionValue="id"
+                        display="chip" placeholder="Select Tags" class="w-full" />
                 </div>
             </div>
         </div>
@@ -761,57 +660,28 @@ const cancel = () => emit("cancel");
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Weight -->
                 <div class="field col-12 md:col-4 mb-4 pr-md-2">
-                    <label for="weight" class="block font-bold mb-2"
-                        >Weight (kg)</label
-                    >
-                    <InputNumber
-                        id="weight"
-                        v-model.number="form.weight"
-                        class="w-full"
-                        :min="0"
-                        placeholder="e.g. 1.5"
-                    />
+                    <label for="weight" class="block font-bold mb-2">Weight (kg)</label>
+                    <InputNumber id="weight" v-model.number="form.weight" class="w-full" :min="0"
+                        placeholder="e.g. 1.5" />
                 </div>
 
                 <!-- Dimensions -->
                 <div class="field col-span-2 mb-4 px-md-2">
                     <label class="block font-bold mb-2">Dimensions (cm)</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <InputNumber
-                            v-model.number="form.dimensions.length"
-                            :min="0"
-                            placeholder="L"
-                        />
-                        <InputNumber
-                            v-model.number="form.dimensions.width"
-                            :min="0"
-                            placeholder="W"
-                        />
-                        <InputNumber
-                            v-model.number="form.dimensions.height"
-                            :min="0"
-                            placeholder="H"
-                        />
+                        <InputNumber v-model.number="form.dimensions.length" :min="0" placeholder="L" />
+                        <InputNumber v-model.number="form.dimensions.width" :min="0" placeholder="W" />
+                        <InputNumber v-model.number="form.dimensions.height" :min="0" placeholder="H" />
                     </div>
-                    <small class="text-gray-500"
-                        >Stored as JSON: { length, width, height }</small
-                    >
+                    <small class="text-gray-500">Stored as JSON: { length, width, height }</small>
                 </div>
 
                 <!-- Materials -->
                 <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="materials" class="block font-bold mb-2"
-                        >Materials</label
-                    >
-                    <InputText
-                        id="materials"
-                        v-model.trim="materialsInput"
-                        class="w-full"
-                        placeholder="e.g. Cotton, Polyester"
-                    />
-                    <small class="text-gray-500"
-                        >Comma-separated, stored as array.</small
-                    >
+                    <label for="materials" class="block font-bold mb-2">Materials</label>
+                    <InputText id="materials" v-model.trim="materialsInput" class="w-full"
+                        placeholder="e.g. Cotton, Polyester" />
+                    <small class="text-gray-500">Comma-separated, stored as array.</small>
                 </div>
             </div>
         </div>
@@ -822,41 +692,22 @@ const cancel = () => emit("cancel");
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="field col-12 mb-4">
-                    <label for="thumbnail" class="block font-bold mb-2"
-                        >Thumbnail</label
-                    >
+                    <label for="thumbnail" class="block font-bold mb-2">Thumbnail</label>
 
                     <div class="flex items-center gap-4">
-                        <div
-                            v-if="photoPreview || form.thumbnail"
-                            class="thumbnail-preview mb-3"
-                        >
-                            <img
-                                :src="
-                                    photoPreview
-                                        ? photoPreview
-                                        : resolveImagePath(form.thumbnail)
-                                "
-                                alt="Product Thumbnail"
-                                class="w-20 h-20 object-cover rounded"
-                            />
+                        <div v-if="photoPreview || form.thumbnail" class="thumbnail-preview mb-3">
+                            <img :src="photoPreview
+                                ? photoPreview
+                                : resolveImagePath(form.thumbnail)
+                                " alt="Product Thumbnail" class="w-20 h-20 object-cover rounded" />
                         </div>
 
-                        <FileUpload
-                            mode="basic"
-                            name="thumbnail"
-                            accept="image/*"
-                            :maxFileSize="2000000"
-                            @select="handlePhotoUpload"
-                            :auto="true"
-                            chooseLabel="Browse"
-                        />
+                        <FileUpload mode="basic" name="thumbnail" accept="image/*" :maxFileSize="2000000"
+                            @select="handlePhotoUpload" :auto="true" chooseLabel="Browse" />
                     </div>
 
-                    <small class="text-gray-500"
-                        >Max size: 2MB. Accepted formats: JPEG, PNG, JPG,
-                        GIF</small
-                    >
+                    <small class="text-gray-500">Max size: 2MB. Accepted formats: JPEG, PNG, JPG,
+                        GIF</small>
                 </div>
             </div>
         </div>
@@ -875,54 +726,30 @@ const cancel = () => emit("cancel");
                             attr.display_name || attr.name
                         }}</label>
 
-                        <MultiSelect
-                            v-model="selectedAttrValues[attr.id]"
-                            :options="
-                                (attr.values || []).map((v) => ({
-                                    id: v.id,
-                                    label: v.display_value || v.value,
-                                }))
-                            "
-                            optionLabel="label"
-                            optionValue="id"
-                            display="chip"
-                            placeholder="Select values"
-                            class="w-full"
-                        />
+                        <MultiSelect v-model="selectedAttrValues[attr.id]" :options="(attr.values || []).map((v) => ({
+                            id: v.id,
+                            label: v.display_value || v.value,
+                        }))
+                            " optionLabel="label" optionValue="id" display="chip" placeholder="Select values"
+                            class="w-full" />
                     </div>
                 </div>
 
                 <div class="flex gap-2 mt-3">
-                    <Button
-                        label="Generate Variations"
-                        icon="pi pi-sitemap"
-                        class="p-button-sm"
-                        @click="generateVariations"
-                    />
-                    <Button
-                        label="Clear"
-                        icon="pi pi-times"
-                        class="p-button-sm p-button-secondary"
-                        @click="clearGeneratedVariations"
-                    />
+                    <Button label="Generate Variations" icon="pi pi-sitemap" class="p-button-sm"
+                        @click="generateVariations" />
+                    <Button label="Clear" icon="pi pi-times" class="p-button-sm p-button-secondary"
+                        @click="clearGeneratedVariations" />
                 </div>
             </div>
 
             <div class="mb-3">
-                <Button
-                    label="Add Variation"
-                    icon="pi pi-plus"
-                    class="p-button-sm"
-                    @click="addVariation"
-                />
-                <small
-                    v-if="
-                        submitted &&
-                        form.type === 'variable' &&
-                        !form.variations.length
-                    "
-                    class="p-error ml-3"
-                >
+                <Button label="Add Variation" icon="pi pi-plus" class="p-button-sm" @click="addVariation" />
+                <small v-if="
+                    submitted &&
+                    form.type === 'variable' &&
+                    !form.variations.length
+                " class="p-error ml-3">
                     At least one variation is required for variable products.
                 </small>
             </div>
@@ -946,80 +773,53 @@ const cancel = () => emit("cancel");
                     </thead>
 
                     <tbody>
-                        <tr
-                            v-for="(variation, index) in form.variations"
-                            :key="index"
-                            class="border-b align-top"
-                        >
+                        <tr v-for="(variation, index) in form.variations" :key="index" class="border-b align-top">
                             <!-- SKU -->
                             <td class="p-2">
-                                <InputText
-                                    v-model.trim="variation.sku"
-                                    class="w-full"
-                                    placeholder="Variation SKU"
+                                <InputText v-model.trim="variation.sku" class="w-full" placeholder="Variation SKU"
                                     :class="{
                                         'p-invalid ':
                                             submitted && !variation.sku,
-                                    }"
-                                />
+                                    }" />
                             </td>
 
                             <!-- Price -->
                             <td class="p-2">
                                 <div class="grid grid-cols-4">
-                                    <InputNumber
-                                        v-model.number="variation.price"
-                                        :min="0"
-                                        :class="{
-                                            'p-invalid':
-                                                submitted && !variation.price,
-                                        }"
-                                    />
+                                    <InputNumber v-model.number="variation.price" :min="0" :class="{
+                                        'p-invalid':
+                                            submitted && !variation.price,
+                                    }" />
                                 </div>
                             </td>
 
                             <!-- Discount -->
                             <td class="p-2">
-                                <InputNumber
-                                    v-model.number="variation.discount_price"
-                                    :min="0"
-                                />
+                                <InputNumber v-model.number="variation.discount_price" :min="0" />
                             </td>
 
                             <!-- Attribute Values -->
                             <td class="p-2">
                                 <div class="max-w-[260px]">
-                                    <MultiSelect
-                                        v-model="variation.attribute_value_ids"
-                                        :options="attributeValueOptions"
-                                        optionLabel="label"
-                                        optionValue="id"
-                                        display="chip"
-                                        placeholder="Select attribute values"
-                                        class="w-full"
-                                        :class="{
+                                    <MultiSelect v-model="variation.attribute_value_ids"
+                                        :options="attributeValueOptions" optionLabel="label" optionValue="id"
+                                        display="chip" placeholder="Select attribute values" class="w-full" :class="{
                                             'p-invalid':
                                                 submitted &&
                                                 (!variation.attribute_value_ids ||
                                                     !variation
                                                         .attribute_value_ids
                                                         .length),
-                                        }"
-                                    />
+                                        }" />
                                 </div>
                             </td>
 
                             <!-- Warehouse Stocks -->
                             <td class="p-2">
                                 <div class="space-y-2">
-                                    <div
-                                        v-for="(s, si) in variation.stocks"
-                                        :key="s.warehouse_id ?? si"
-                                        class="grid grid-cols-12 gap-2 items-center"
-                                    >
-                                        <span
-                                            class="col-span-5 text-xs truncate"
-                                        >
+                                    <div v-for="(s, si) in variation.stocks" :key="s.warehouse_id ?? si"
+                                        class="grid grid-cols-12 gap-2 items-center">
+                                        <span class="col-span-5 text-xs truncate">
                                             {{
                                                 warehouses.find(
                                                     (w) =>
@@ -1037,14 +837,8 @@ const cancel = () => emit("cancel");
                                         </div> -->
 
                                         <div class="col-span-4">
-                                            <InputNumber
-                                                v-model.number="
-                                                    s.alert_quantity
-                                                "
-                                                class="w-full"
-                                                :min="0"
-                                                placeholder="Alert"
-                                            />
+                                            <InputNumber v-model.number="s.alert_quantity
+                                                " class="w-full" :min="0" placeholder="Alert" />
                                         </div>
                                     </div>
                                 </div>
@@ -1052,20 +846,15 @@ const cancel = () => emit("cancel");
 
                             <!-- Image -->
                             <td class="p-2">
-                                <InputText
-                                    v-model.trim="variation.image"
-                                    class="w-full"
-                                    placeholder="e.g. products/hoodie/red-s.jpg"
-                                />
+                                <InputText v-model.trim="variation.image" class="w-full"
+                                    placeholder="e.g. products/hoodie/red-s.jpg" />
                             </td>
 
                             <!-- Remove -->
                             <td class="p-2 text-right">
-                                <Button
-                                    icon="pi pi-trash"
+                                <Button icon="pi pi-trash"
                                     class="p-button-rounded p-button-text p-button-danger p-button-sm"
-                                    @click="removeVariation(index)"
-                                />
+                                    @click="removeVariation(index)" />
                             </td>
                         </tr>
                     </tbody>
@@ -1085,23 +874,13 @@ const cancel = () => emit("cancel");
 
             <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div class="field col-12 mb-4">
-                    <label for="description" class="block font-bold mb-2"
-                        >Description</label
-                    >
-                    <Editor
-                        v-model="form.description"
-                        editorStyle="height: 250px"
-                    />
+                    <label for="description" class="block font-bold mb-2">Description</label>
+                    <Editor v-model="form.description" editorStyle="height: 250px" />
                 </div>
 
                 <div class="field col-12 mb-4">
-                    <label for="additional_info" class="block font-bold mb-2"
-                        >Additional Information</label
-                    >
-                    <Editor
-                        v-model="form.additional_info"
-                        editorStyle="height: 150px"
-                    />
+                    <label for="additional_info" class="block font-bold mb-2">Additional Information</label>
+                    <Editor v-model="form.additional_info" editorStyle="height: 150px" />
                 </div>
             </div>
         </div>
@@ -1114,55 +893,26 @@ const cancel = () => emit("cancel");
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="meta_title" class="block font-bold mb-2"
-                        >Meta Title</label
-                    >
-                    <InputText
-                        id="meta_title"
-                        v-model.trim="form.meta_title"
-                        class="w-full"
-                    />
+                    <label for="meta_title" class="block font-bold mb-2">Meta Title</label>
+                    <InputText id="meta_title" v-model.trim="form.meta_title" class="w-full" />
                 </div>
 
                 <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="meta_keywords" class="block font-bold mb-2"
-                        >Meta Keywords</label
-                    >
-                    <InputText
-                        id="meta_keywords"
-                        v-model.trim="form.meta_keywords"
-                        class="w-full"
-                    />
+                    <label for="meta_keywords" class="block font-bold mb-2">Meta Keywords</label>
+                    <InputText id="meta_keywords" v-model.trim="form.meta_keywords" class="w-full" />
                 </div>
 
                 <div class="field col-12 mb-4 col-span-full">
-                    <label for="meta_description" class="block font-bold mb-2"
-                        >Meta Description</label
-                    >
-                    <Textarea
-                        id="meta_description"
-                        v-model="form.meta_description"
-                        rows="4"
-                        class="w-full"
-                    />
+                    <label for="meta_description" class="block font-bold mb-2">Meta Description</label>
+                    <Textarea id="meta_description" v-model="form.meta_description" rows="4" class="w-full" />
                 </div>
             </div>
         </div>
 
         <!-- Buttons -->
         <div class="flex justify-end gap-2 pt-2">
-            <Button
-                type="button"
-                label="Cancel"
-                icon="pi pi-times"
-                class="p-button-text"
-                @click="cancel"
-            />
-            <Button
-                type="submit"
-                :label="isEditing ? 'Update Product' : 'Create Product'"
-                icon="pi pi-check"
-            />
+            <Button type="button" label="Cancel" icon="pi pi-times" class="p-button-text" @click="cancel" />
+            <Button type="submit" :label="isEditing ? 'Update Product' : 'Create Product'" icon="pi pi-check" />
         </div>
     </form>
 </template>
