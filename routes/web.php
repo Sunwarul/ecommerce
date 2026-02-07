@@ -40,6 +40,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
         ->name('products.edit');
+    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])
+        ->name('products.restore');
+    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])
+        ->name('products.bulk-restore');
+    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])
+        ->name('products.bulk-delete');
+    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])
+        ->name('products.bulk-force-delete');
 
 
     CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);

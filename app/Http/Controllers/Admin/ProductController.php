@@ -16,6 +16,7 @@ use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
+use App\Models\StockMovement;
 use App\Models\Tag;
 use App\Models\Tax;
 use App\Models\Warehouse;
@@ -77,18 +78,68 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $products = Product::query()
+        $perPage = $request->input('per_page', 10);
+        $search = $request->input('search');
+        $category_id = $request->input('category_id');
+        $brand_id = $request->input('brand_id');
+        $status = $request->input('status'); // 'active', 'inactive'
+        $trashed = $request->input('trashed'); // 'with', 'only'
+
+        $query = Product::query()
             ->with([
                 'category:id,name',
                 'brand:id,name',
             ])
-            ->withSum('stocks as total_stock', 'quantity') // ✅ total stock
-            ->orderByDesc('id')
-            ->paginate(10)
+            ->withSum('stocks as total_stock', 'quantity');
+
+        // Search
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        // Filters
+        if ($category_id) {
+            $query->where('category_id', $category_id);
+        }
+        if ($brand_id) {
+            $query->where('brand_id', $brand_id);
+        }
+        if ($status) {
+            if ($status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        // Trashed
+        if ($trashed === 'only') {
+            $query->onlyTrashed();
+        } elseif ($trashed === 'with') {
+            $query->withTrashed();
+        }
+
+        $products = $query->orderByDesc('id')
+            ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,
+            'filters' => [
+                'search' => $search,
+                'category_id' => $category_id,
+                'brand_id' => $brand_id,
+                'status' => $status,
+                'trashed' => $trashed,
+                'per_page' => $perPage,
+            ],
+            // Pass filter options
+            'categories' => Category::select('id', 'name')->get(),
+            'brands' => Brand::select('id', 'name')->get(),
         ]);
     }
 
@@ -202,7 +253,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
-                        'quantity' => 0,
+                        'quantity' => $s['quantity'] ?? 0,
                         'alert_quantity' => $s['alert_quantity'] ?? null,
                     ]);
                 }
@@ -242,7 +293,7 @@ class ProductController extends Controller
                             'product_id' => $product->id,
                             'variation_id' => $variation->id,
                             'warehouse_id' => $s['warehouse_id'],
-                            'quantity' => 0,
+                            'quantity' => $s['quantity'] ?? 0,
                             'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]);
                     }
@@ -363,7 +414,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'variation_id' => null,
                         'warehouse_id' => $s['warehouse_id'],
-                        'quantity' => 0,
+                        'quantity' => $s['quantity'] ?? 0,
                         'alert_quantity' => $s['alert_quantity'] ?? null,
                     ]);
                 }
@@ -454,7 +505,7 @@ class ProductController extends Controller
                             'warehouse_id' => $s['warehouse_id'],
                         ],
                         [
-                            'quantity' => 0,
+                            'quantity' => $s['quantity'] ?? 0,
                             'alert_quantity' => $s['alert_quantity'] ?? null,
                         ]
                     );
@@ -517,141 +568,47 @@ class ProductController extends Controller
 
 
 
-    public function indexDisabledForNow(Request $request)
+    public function bulkDestroy(Request $request)
     {
-        $perPage = $request->input('per_page', 15);
-        $search = $request->input('search');
-
-        $query = Product::query();
-        $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
-        $query->with(['category:id,name', 'brand:id,name', 'tags:id,name']);
-
-        $searchColumns = ['name', 'slug'];
-
-        $query->when($search, function ($query, $search) {
-            $query->where(function ($query) use ($search) {
-                foreach ($searchColumns as $column) {
-                    $query->orWhere($column, 'like', "%{$search}%")
-                        ->orWhere();
-                }
-            });
-        });
-
-        if ($request->has('trashed')) {
-            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
-            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
-        }
-
-        $query = $this->modifyQuery($query);
-        $items = $query->latest()->paginate($perPage);
-
-        return Inertia::render($this->componentPath, [
-            'items' => $items,
-            'filters' => ['search' => $search],
-            'config' => $this->makeConfig(),
-            ...$this->addProps(),
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
         ]);
+
+        Product::whereIn('id', $request->ids)->delete();
+
+        return back()->with('success', 'Selected products moved to trash.');
     }
 
-    // public function storeOld(ProductStoreRequest $request)
-    // // public function store(StoreProductRequest $request)
-    // {
-    //     $data = $request->validated();
-    //     return DB::transaction(function () use ($data, $request) {
-    //         // 1) Create product
-    //         $productData = [
-    //             'name' => $data['name'],
-    //             'slug' => $data['slug'] ?? Str::slug($data['name']),
-    //             'category_id' => $data['category_id'] ?? null,
-    //             'brand_id' => $data['brand_id'] ?? null,
-    //             'description' => $data['description'] ?? null,
-    //             'is_active' => $data['is_active'] ?? true,
-    //             'has_variants' => $data['has_variants'] ?? false,
-    //             'base_unit_id' => $data['base_unit_id'] ?? null,
-    //             'tax_class_id' => $data['tax_class_id'] ?? null,
-    //             'meta_json' => $data['meta_json'] ?? [],
-    //         ];
-    //         /** @var \App\Models\Product $product */
+    public function bulkRestore(Request $request)
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
+        ]);
 
-    //         $product = Product::create($productData);
-    //         // 2) Attach attributes (Color, Size, etc.)
-    //         if (!empty($data['attribute_ids'])) {
-    //             $product->attributes()->sync($data['attribute_ids']);
-    //         }
-    //         // 3) Handle images (if you’re uploading on the same request)
-    //         if ($request->hasFile('images')) {
-    //             foreach ($request->file('images') as $index => $file) {
-    //                 $path = $file->store('products', 'public');
-    //                 $image = ProductImage::create([
-    //                     'product_id' => $product->id,
-    //                     'path' => $path,
-    //                     'is_primary' => $index === 0, // first image as primary
+        Product::onlyTrashed()
+            ->whereIn('id', $request->ids)
+            ->restore();
 
-    //                     'sort' => $index,
-    //                 ]);
-    //                 if ($index === 0) {
-    //                     // optional: set this as default image for SKUs later
-    //                 }
-    //             }
-    //         }
-    //         // 4) If SKUs are provided, create them + inventory
-    //         if (!empty($data['skus'])) {
-    //             foreach ($data['skus'] as $skuData) {
-    //                 $sku = Sku::create([
-    //                     'product_id' => $product->id,
-    //                     'code' => $skuData['code'],
+        // Also restore variations if needed, but usually cascading soft deletes handles this or we need manual looped restore.
+        // Assuming simple restore for now. If using cascading package, it handles it.
+        // If standard Laravel, we might need to manually restore relations if they were soft deleted.
+        // Let's assume user just wants the product back for now.
 
-    //                     'barcode' => $skuData['barcode'] ?? null,
-    //                     'price' => $skuData['price'],
-    //                     'compare_at_price' => $skuData['compare_at_price'] ?? null,
-    //                     'cost_price' => $skuData['cost_price'] ?? null,
-    //                     'currency' => $skuData['currency'] ?? 'USD',
-    //                     'is_active' => $skuData['is_active'] ?? true,
-    //                 ]);
-    //                 // attach variant values (attribute_value_ids)
-    //                 if (!empty($skuData['attribute_value_ids'])) {
+        return back()->with('success', 'Selected products restored successfully.');
+    }
 
-    //                     $pivotData = [];
+    public function restore($id)
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+        $product->restore();
+        return back()->with('success', 'Product restored successfully.');
+    }
 
-    //                     foreach ($skuData['attribute_value_ids'] as $valueId) {
-
-    //                         /** @var AttributeValue $val */
-    //                         $val = AttributeValue::find($valueId);
-
-    //                         if (!$val) {
-    //                             continue;
-    //                         }
-
-    //                         $pivotData[$val->id] = [
-
-    //                             'attribute_id' => $val->attribute_id,
-    //                         ];
-    //                     }
-
-    //                     $sku->attributeValues()->sync($pivotData);
-
-    //                 }
-    //                 // create inventory record if provided
-    //                 if (!empty($skuData['inventory'])) {
-    //                     $inv = $skuData['inventory'];
-    //                     InventoryItem::create([
-    //                         'sku_id' => $sku->id,
-
-    //                         'warehouse_id' => $inv['warehouse_id'],
-    //                         'qty_on_hand' => $inv['qty_on_hand'],
-    //                         'qty_reserved' => 0,
-
-    //                         'low_stock_threshold' => $inv['low_stock_threshold'] ?? 0,
-
-    //                     ]);
-    //                 }
-    //             }
-    //         }
-    //         return redirect()
-    //             ->route('admin.products.edit', $product)
-    //             ->with('success', 'Product created successfully.');
-    //     });
-
-
-    // }
+    public function destroy(Product $product)
+    {
+        $product->delete();
+        return back()->with('success', 'Product moved to trash.');
+    }
 }

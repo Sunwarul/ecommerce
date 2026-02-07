@@ -3,29 +3,31 @@
         <div class="card">
             <Toolbar class="">
                 <template #start>
-                    <Button label="Create New" icon="pi pi-plus" class="mr-5" @click="openNew" outlined
-                        severity="primary" />
-                    <ButtonGroup class="mr-2">
-                        <Link :href="vueProps.config.indexRoute" v-if="vueProps.config.indexRoute">
-                        <Button label="All Items" icon="pi pi-list" :class="{ 'border-bottom-2': !isTrashedPage }"
-                            text />
-                        </Link>
-                        <Link :href="vueProps.config.indexRouteTrashed" v-if="vueProps.config.bulkRestoreRoute">
-                        <Button label="Trashed" icon="pi pi-ban" :class="{ 'border-bottom-2': isTrashedPage }" text />
-                        </Link>
-                    </ButtonGroup>
-                    <Button label="Bulk Delete" icon="pi pi-trash" class="mr-2" severity="danger" outlined
-                        @click="confirmDeleteSelected"
-                        v-show="!(!selectedItems || !selectedItems?.length) && !isTrashedPage"
-                        v-if="vueProps.config.bulkRestoreRoute" />
-                    <Button label="Bulk Restore" icon="pi pi-undo" class="mr-2" severity="warn" outlined
-                        @click="restoreSelected" v-show="!(!selectedItems || !selectedItems?.length) && isTrashedPage"
-                        v-if="vueProps.config.bulkRestoreRoute" />
+                    <div class="flex flex-wrap gap-2">
+                        <Button label="Create New" icon="pi pi-plus" @click="openNew" outlined severity="primary" />
+                        <ButtonGroup>
+                            <Link :href="vueProps.config.indexRoute" v-if="vueProps.config.indexRoute">
+                                <Button label="All Items" icon="pi pi-list"
+                                    :class="{ 'border-bottom-2': !isTrashedPage }" text />
+                            </Link>
+                            <Link :href="vueProps.config.indexRouteTrashed" v-if="vueProps.config.bulkRestoreRoute">
+                                <Button label="Trashed" icon="pi pi-ban" :class="{ 'border-bottom-2': isTrashedPage }"
+                                    text />
+                            </Link>
+                        </ButtonGroup>
+                        <Button label="Bulk Delete" icon="pi pi-trash" severity="danger" outlined
+                            @click="confirmDeleteSelected"
+                            v-show="!(!selectedItems || !selectedItems?.length) && !isTrashedPage"
+                            v-if="vueProps.config.bulkRestoreRoute" />
+                        <Button label="Bulk Restore" icon="pi pi-undo" severity="warn" outlined @click="restoreSelected"
+                            v-show="!(!selectedItems || !selectedItems?.length) && isTrashedPage"
+                            v-if="vueProps.config.bulkRestoreRoute" />
 
-                    <Button label="Force Delete" icon="pi pi-trash" class="mr-2" severity="danger" outlined
-                        @click="forceDeleteSelected"
-                        v-show="!(!selectedItems || !selectedItems?.length) && isTrashedPage"
-                        v-if="vueProps.config.bulkRestoreRoute" />
+                        <Button label="Force Delete" icon="pi pi-trash" severity="danger" outlined
+                            @click="forceDeleteSelected"
+                            v-show="!(!selectedItems || !selectedItems?.length) && isTrashedPage"
+                            v-if="vueProps.config.bulkRestoreRoute" />
+                    </div>
                 </template>
                 <template #center>
                     <slot name="messages"></slot>
@@ -78,7 +80,8 @@
 
         <!-- Create & Edit Form Dialog -->
         <Dialog v-model:visible="itemDialog" maximizable :style="{ width: formWidth ?? '60vw' }"
-            :header="`${vueProps.config.modelRaw} Details`" pt:mask:class="backdrop-blur-sm">
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }" :header="`${vueProps.config.modelRaw} Details`"
+            pt:mask:class="backdrop-blur-sm">
 
             <slot name="form" v-bind="{ submitted, statuses, handlePhotoUpload, photoPreview, resolveImagePath }">
             </slot>
