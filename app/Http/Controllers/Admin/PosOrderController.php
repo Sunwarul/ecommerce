@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\PaymentMethod;
@@ -41,8 +43,8 @@ class PosOrderController extends Controller
             'currentSession' => PosSession::where('user_id', Auth::id())->where('status', 'open')->latest('id')->first(),
 
             // ✅ add these
-            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
-            'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
+            'branches' => Branch::select('id', 'name')->orderBy('id')->get(),
+            'warehouses' => Warehouse::select('id', 'name')->orderBy('id')->get(),
         ]);
     }
 
@@ -365,7 +367,12 @@ class PosOrderController extends Controller
         $dateFrom = $request->date('date_from');
         $dateTo = $request->date('date_to');
 
-        $query = PosOrder::with(['customer', 'user', 'session'])
+        // Advanced Filters
+        $category_id = $request->get('category_id');
+        $brand_id = $request->get('brand_id');
+        $product_id = $request->get('product_id');
+
+        $query = PosOrder::with(['customer', 'user', 'session', 'items.product.category', 'items.product.brand'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('invoice_no', 'like', "%{$search}%")
@@ -383,19 +390,44 @@ class PosOrderController extends Controller
             })
             ->when($status, fn($q) => $q->where('status', $status))
             ->when($paymentStatus, fn($q) => $q->where('payment_status', $paymentStatus))
-            ->when(
-                $dateFrom,
-                fn($q) =>
-                $q->whereDate('created_at', '>=', $dateFrom)
-            )
-            ->when(
-                $dateTo,
-                fn($q) =>
-                $q->whereDate('created_at', '<=', $dateTo)
-            )
+            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+            ->when($category_id, function ($q) use ($category_id) {
+                $q->whereHas('items.product', fn($p) => $p->where('category_id', $category_id));
+            })
+            ->when($brand_id, function ($q) use ($brand_id) {
+                $q->whereHas('items.product', fn($p) => $p->where('brand_id', $brand_id));
+            })
+            ->when($product_id, function ($q) use ($product_id) {
+                $q->whereHas('items', fn($i) => $i->where('product_id', $product_id));
+            })
             ->latest('id');
 
-        $orders = $query->paginate(10)->withQueryString();
+        // Handle Exports
+        if ($request->has('export')) {
+            if ($request->get('export') === 'pdf') {
+                return $this->exportPdf($query->get());
+            } elseif ($request->get('export') === 'excel') {
+                return $this->exportExcel($query->get());
+            }
+        }
+
+        $orders = $query->paginate(15)->withQueryString();
+
+        // Insights (Top Selling Products)
+        $topProducts = PosOrderItem::select('product_id', 'name', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(line_total) as total_amount'))
+            ->groupBy('product_id', 'name')
+            ->orderByDesc('total_qty')
+            ->limit(5)
+            ->get();
+
+        // Insights (Sales by Brand)
+        $brandSales = PosOrderItem::join('products', 'pos_order_items.product_id', '=', 'products.id')
+            ->join('brands', 'products.brand_id', '=', 'brands.id')
+            ->select('brands.name', DB::raw('SUM(pos_order_items.quantity) as total_qty'), DB::raw('SUM(pos_order_items.line_total) as total_amount'))
+            ->groupBy('brands.name')
+            ->orderByDesc('total_amount')
+            ->get();
 
         return Inertia::render('Admin/POS/Order/Orders', [
             'orders' => $orders,
@@ -405,9 +437,38 @@ class PosOrderController extends Controller
                 'payment_status' => $paymentStatus,
                 'date_from' => $dateFrom?->format('Y-m-d'),
                 'date_to' => $dateTo?->format('Y-m-d'),
+                'category_id' => $category_id,
+                'brand_id' => $brand_id,
+                'product_id' => $product_id,
             ],
-            "paymentMethods" => PaymentMethod::where('is_active', 1)->get(),
+            'categories' => Category::select('id', 'name')->orderBy('name')->get(),
+            'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
+            'available_products' => Product::select('id', 'name')->orderBy('name')->get(),
+            'paymentMethods' => PaymentMethod::where('is_active', 1)->get(),
+            'insights' => [
+                'top_products' => $topProducts,
+                'brand_sales' => $brandSales
+            ]
         ]);
+    }
+
+    protected function exportPdf($orders)
+    {
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pos_orders_pdf', [
+            'orders' => $orders,
+            'shop' => [
+                'name' => Setting::get('general_application_name'),
+                'address' => Setting::get('general_address'),
+                'phone' => Setting::get('general_phone'),
+            ],
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->stream('pos_orders_report.pdf');
+    }
+
+    protected function exportExcel($orders)
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\OrderExport($orders), 'pos_orders_report.xlsx');
     }
 
 

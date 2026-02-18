@@ -13,15 +13,22 @@ import Dropdown from "primevue/dropdown";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Tag from "primevue/tag";
+import Tooltip from 'primevue/tooltip';
 import { useToast } from "primevue/usetoast";
 import { v4 as uuidv4 } from 'uuid';
+
+const vTooltip = Tooltip;
 
 const toast = useToast();
 
 const props = defineProps({
     orders: Object,
     filters: Object,
-    paymentMethods: { type: Array, default: () => [] }, // [{id,name}]
+    paymentMethods: { type: Array, default: () => [] },
+    categories: { type: Array, default: () => [] },
+    brands: { type: Array, default: () => [] },
+    available_products: { type: Array, default: () => [] },
+    insights: { type: Object, default: () => ({}) },
 });
 
 /* ---------------- Filters ---------------- */
@@ -34,6 +41,13 @@ const dateFrom = ref(
 const dateTo = ref(
     props.filters?.date_to ? new Date(props.filters.date_to) : null
 );
+
+// Advanced Filters
+const categoryId = ref(props.filters?.category_id || null);
+const brandId = ref(props.filters?.brand_id || null);
+const productId = ref(props.filters?.product_id || null);
+
+const showInsights = ref(false);
 
 const statusOptions = [
     { label: "All", value: "" },
@@ -66,6 +80,9 @@ function applyFilter() {
             payment_status: paymentStatus.value || undefined,
             date_from: dateFrom.value ? fmtDate(dateFrom.value) : undefined,
             date_to: dateTo.value ? fmtDate(dateTo.value) : undefined,
+            category_id: categoryId.value || undefined,
+            brand_id: brandId.value || undefined,
+            product_id: productId.value || undefined,
         },
         { preserveState: true, replace: true }
     );
@@ -77,7 +94,27 @@ function resetFilter() {
     paymentStatus.value = "";
     dateFrom.value = null;
     dateTo.value = null;
+    categoryId.value = null;
+    brandId.value = null;
+    productId.value = null;
     router.get(route("pos.orders.index"), {}, { replace: true });
+}
+
+function exportReport(format) {
+    const params = {
+        search: search.value || undefined,
+        status: status.value || undefined,
+        payment_status: paymentStatus.value || undefined,
+        date_from: dateFrom.value ? fmtDate(dateFrom.value) : undefined,
+        date_to: dateTo.value ? fmtDate(dateTo.value) : undefined,
+        category_id: categoryId.value || undefined,
+        brand_id: brandId.value || undefined,
+        product_id: productId.value || undefined,
+        export: format
+    };
+
+    const url = route('pos.orders.index', params);
+    window.open(url, '_blank');
 }
 
 /* ---------------- Pagination ---------------- */
@@ -424,40 +461,125 @@ function editDraft(order) {
     <AuthenticatedLayout>
         <div class="p-4 md:p-6 space-y-4">
             <!-- HEADER -->
-            <div class="flex justify-between flex-wrap gap-3">
+            <div class="flex justify-between items-start flex-wrap gap-3">
                 <div>
                     <h2 class="text-xl font-semibold flex items-center gap-2">
                         <i class="pi pi-receipt text-primary"></i>
                         POS Sales
                     </h2>
                     <p class="text-sm text-gray-500">
-                        View and manage Point of Sale orders
+                        View and manage Point of Sale orders with rich insights
                     </p>
                 </div>
 
-                <div class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold">
-                    Page Total: {{ pageTotal.toFixed(2) }}
+                <div class="flex items-center gap-2">
+                    <Button :label="showInsights ? 'Hide Insights' : 'Show Insights'"
+                        :icon="showInsights ? 'pi pi-chart-bar' : 'pi pi-chart-line'" class="p-button-text p-button-sm"
+                        @click="showInsights = !showInsights" />
+
+                    <div
+                        class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold border border-emerald-100">
+                        Page Total: {{ pageTotal.toFixed(2) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- INSIGHTS SECTION -->
+            <div v-if="showInsights && insights" class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fadein">
+                <!-- Top Products -->
+                <div class="card p-4 border-l-4 border-primary">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="pi pi-star-fill text-amber-400"></i>
+                            Top Selling Products
+                        </h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div v-for="item in insights.top_products" :key="item.product_id"
+                            class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-slate-800">{{ item.name }}</span>
+                                <span class="text-xs text-slate-500">Sold: {{ item.total_qty }} units</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-bold text-emerald-600">{{ Number(item.total_amount).toFixed(2)
+                                }}</div>
+                            </div>
+                        </div>
+                        <div v-if="!insights.top_products?.length"
+                            class="text-center py-4 text-slate-400 text-sm italic">
+                            No data available
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales by Brand -->
+                <div class="card p-4 border-l-4 border-emerald-500">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="pi pi-tags text-emerald-500"></i>
+                            Sales by Brand
+                        </h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div v-for="item in insights.brand_sales" :key="item.name"
+                            class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-slate-800">{{ item.name }}</span>
+                                <span class="text-xs text-slate-500">Items: {{ item.total_qty }}</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-bold text-emerald-600">{{ Number(item.total_amount).toFixed(2)
+                                }}</div>
+                            </div>
+                        </div>
+                        <div v-if="!insights.brand_sales?.length"
+                            class="text-center py-4 text-slate-400 text-sm italic">
+                            No data available
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- FILTER BAR -->
-            <div class="card p-3 flex flex-wrap gap-3 items-center">
-                <InputGroup class="max-w-sm">
-                    <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
-                    <InputText v-model="search" placeholder="Invoice / customer / cashier" class="w-full"
-                        @keyup.enter="applyFilter" />
-                </InputGroup>
+            <div class="card p-4 space-y-4">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <InputGroup class="max-w-sm">
+                        <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
+                        <InputText v-model="search" placeholder="Invoice / customer / cashier" class="w-full"
+                            @keyup.enter="applyFilter" />
+                    </InputGroup>
 
-                <Dropdown v-model="status" :options="statusOptions" optionLabel="label" optionValue="value"
-                    placeholder="Order Status" class="w-full md:w-44" />
-                <Dropdown v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
-                    optionValue="value" placeholder="Payment Status" class="w-full md:w-44" />
+                    <Dropdown v-model="status" :options="statusOptions" optionLabel="label" optionValue="value"
+                        placeholder="Order Status" class="w-1/2 md:w-44" />
+                    <Dropdown v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
+                        optionValue="value" placeholder="Payment Status" class="w-1/2 md:w-44" />
 
-                <Calendar v-model="dateFrom" placeholder="From" dateFormat="yy-mm-dd" showIcon class="w-full md:w-44" />
-                <Calendar v-model="dateTo" placeholder="To" dateFormat="yy-mm-dd" showIcon class="w-full md:w-44" />
+                    <Calendar v-model="dateFrom" placeholder="From" dateFormat="yy-mm-dd" showIcon
+                        class="w-1/2 md:w-44" />
+                    <Calendar v-model="dateTo" placeholder="To" dateFormat="yy-mm-dd" showIcon class="w-1/2 md:w-44" />
+                </div>
 
-                <Button label="Apply" icon="pi pi-filter" class="p-button-outlined" @click="applyFilter" />
-                <Button label="Reset" icon="pi pi-refresh" class="p-button-text" @click="resetFilter" />
+                <div class="flex flex-wrap gap-3 items-center pt-2 border-t border-slate-100">
+                    <Dropdown v-model="categoryId" :options="categories" optionLabel="name" optionValue="id"
+                        placeholder="All Categories" class="w-1/2 md:w-56" showClear />
+                    <Dropdown v-model="brandId" :options="brands" optionLabel="name" optionValue="id"
+                        placeholder="All Brands" class="w-1/2 md:w-56" showClear />
+                    <Dropdown v-model="productId" :options="available_products" optionLabel="name" optionValue="id"
+                        placeholder="Filter by Product" class="w-full md:w-72" filter showClear />
+
+                    <div class="flex gap-2 ml-auto">
+                        <Button label="Apply" icon="pi pi-filter" class="p-button-outlined" @click="applyFilter" />
+                        <Button label="Reset" icon="pi pi-refresh" class="p-button-text" @click="resetFilter" />
+
+                        <Divider layout="vertical" class="hidden md:block" />
+
+                        <Button icon="pi pi-file-pdf" class="p-button-outlined p-button-danger"
+                            v-tooltip.top="'Export PDF'" @click="exportReport('pdf')" />
+                        <Button icon="pi pi-file-excel" class="p-button-outlined p-button-success"
+                            v-tooltip.top="'Export Excel'" @click="exportReport('excel')" />
+                    </div>
+                </div>
             </div>
 
             <!-- TABLE -->
@@ -468,10 +590,10 @@ function editDraft(order) {
                             <div class="flex flex-col">
                                 <span class="font-semibold text-slate-800">{{
                                     invoiceLabel(data)
-                                    }}</span>
+                                }}</span>
                                 <span class="text-xs text-slate-500">{{
                                     new Date(data.created_at).toLocaleString()
-                                    }}</span>
+                                }}</span>
                             </div>
                         </template>
                     </Column>
@@ -479,20 +601,20 @@ function editDraft(order) {
                     <Column header="Customer">
                         <template #body="{ data }">{{
                             data.customer?.name || "Walk-in"
-                            }}</template>
+                        }}</template>
                     </Column>
 
                     <Column header="Cashier">
                         <template #body="{ data }">{{
                             data.user?.name || "-"
-                            }}</template>
+                        }}</template>
                     </Column>
 
                     <Column header="Total">
                         <template #body="{ data }">
                             <span class="font-semibold text-emerald-600">{{
                                 Number(data.total_amount || 0).toFixed(2)
-                                }}</span>
+                            }}</span>
                         </template>
                     </Column>
 
