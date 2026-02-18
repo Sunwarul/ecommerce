@@ -1,7 +1,7 @@
 <script setup>
 import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
@@ -34,6 +34,17 @@ const openForm = ref({
 const closeForm = ref({
     closing_cash: 0,
     note: "",
+});
+
+watch(openDialog, (newVal) => {
+    if (newVal) {
+        if (props.branches && props.branches.length > 0 && !openForm.value.branch_id) {
+            openForm.value.branch_id = props.branches[0].id;
+        }
+        if (props.warehouses && props.warehouses.length > 0 && !openForm.value.warehouse_id) {
+            openForm.value.warehouse_id = props.warehouses[0].id;
+        }
+    }
 });
 
 function openSession() {

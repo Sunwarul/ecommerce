@@ -36,6 +36,7 @@ class PosOrder extends BaseModel
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
+        'created_at' => 'datetime:Y-m-d h:i A T'
     ];
 
     public function session()

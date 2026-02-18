@@ -378,7 +378,7 @@ class ProductController extends Controller
                 'code' => $productData['code'] ?? null,
 
                 'base_price' => $productData['base_price'],
-                'base_discount_price' => $productData['base_discount_price'] ?? null,
+                'base_discount_price' => array_key_exists('base_discount_price', $productData) ? $productData['base_discount_price'] : $product->base_discount_price,
 
                 'type' => $productData['type'],
 
