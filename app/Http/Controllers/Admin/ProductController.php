@@ -78,7 +78,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10);
+        $perPage = $request->input('per_page', 50);
         $search = $request->input('search');
         $category_id = $request->input('category_id');
         $brand_id = $request->input('brand_id');
