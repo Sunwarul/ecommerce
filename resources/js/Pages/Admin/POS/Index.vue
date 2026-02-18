@@ -698,9 +698,10 @@ function handleSuccess(page) {
 
                             <div class="flex items-center gap-3">
                                 <InputGroup class="w-full max-w-4xl">
+                                    <InputText type="search" v-model="search"
+                                        placeholder="Search by product name, SKU, barcode, etc"
+                                        class="w-full !w-[400px]" />
                                     <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
-                                    <InputText v-model="search" placeholder="Search product, SKU, barcode"
-                                        class="w-full text-sm" />
                                 </InputGroup>
                             </div>
                         </div>
@@ -833,7 +834,7 @@ function handleSuccess(page) {
                                         <div class="flex flex-col">
                                             <span class="font-medium">{{ slotProps.option.name }}</span>
                                             <span class="text-xs text-gray-500">{{ slotProps.option.phone || 'No phone'
-                                            }}</span>
+                                                }}</span>
                                         </div>
                                     </template>
                                 </AutoComplete>
@@ -948,7 +949,7 @@ function handleSuccess(page) {
                                     <span>Subtotal</span>
                                     <span class="font-medium text-slate-700">{{
                                         subtotal.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500">
@@ -960,7 +961,7 @@ function handleSuccess(page) {
                                     <span>Tax</span>
                                     <span class="font-medium text-slate-700">{{
                                         taxTotal.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-sm mt-2">
@@ -986,7 +987,7 @@ function handleSuccess(page) {
                                                 class="flex-1 text-xs" />
                                             <InputNumber v-model="row.amount" :min="0" class="w-28"
                                                 inputClass="!text-xs" />
-                                            <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
+                                            <Button icon="pi pi-times" class="p-button-text p-button-danger p-button-sm"
                                                 @click="removePaymentRow(index)" type="button" />
                                         </div>
 
@@ -1046,7 +1047,7 @@ function handleSuccess(page) {
                                     <span>Due</span>
                                     <span class="font-semibold text-rose-600">{{
                                         due.toFixed(2)
-                                    }}</span>
+                                        }}</span>
                                 </div>
                             </div>
 
