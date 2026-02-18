@@ -30,7 +30,8 @@ class DatabaseSeeder extends Seeder
             ProductAttributeSeeder::class,
             SupplierSeeder::class,
             TaxSeeder::class,
-            ProductSeeder::class
+            ProductSeeder::class,
+            ProductSeeder2::class
         ]);
 
         // $this->call(CategoryTableSeeder::class);

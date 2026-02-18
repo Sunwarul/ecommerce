@@ -50,7 +50,8 @@
                 <div class="text-right">
                     <p class="text-[10px]">
                         <span class="font-semibold">Date:</span>
-                        {{ formatDate(order?.created_at) }}
+                        <!-- {{ formatDate(order?.created_at) }} -->
+                        {{ order?.created_at }}
                     </p>
                     <p class="text-[10px]">
                         <span class="font-semibold">Invoice No.:</span>

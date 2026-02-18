@@ -57,7 +57,7 @@ class UpdateProductRequest extends FormRequest
 
             // Pricing
             'base_price' => ['required', 'numeric', 'min:0'],
-            'base_discount_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
+            'base_discount_price' => ['nullable', 'numeric', 'min:0'],
 
             // Product type
             'type' => ['required', 'in:simple,variable'],

@@ -697,7 +697,7 @@ function handleSuccess(page) {
                             </div>
 
                             <div class="flex items-center gap-3">
-                                <InputGroup class="w-full max-w-md">
+                                <InputGroup class="w-full max-w-4xl">
                                     <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
                                     <InputText v-model="search" placeholder="Search product, SKU, barcode"
                                         class="w-full text-sm" />
