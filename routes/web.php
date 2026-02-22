@@ -134,6 +134,18 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/pos/orders/{order}/payments', [PosOrderController::class, 'addPayment'])
         ->name('pos.orders.payments.store');
 
+    Route::delete('/pos/orders/{id}', [PosOrderController::class, 'destroy'])
+        ->name('pos.orders.destroy');
+    Route::post('/pos/orders/{id}/restore', [PosOrderController::class, 'restore'])
+        ->name('pos.orders.restore');
+    Route::delete('/pos/orders/{id}/force', [PosOrderController::class, 'forceDelete'])
+        ->name('pos.orders.force-delete');
+    Route::post('/pos/orders/bulk-action', [PosOrderController::class, 'bulkAction'])
+        ->name('pos.orders.bulk-action');
+
+    Route::post('/pos/stock/adjust', [\App\Http\Controllers\Admin\PosStockController::class, 'adjust'])
+        ->name('pos.stock.adjust');
+
 
 
 

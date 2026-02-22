@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { router } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import Button from "primevue/button";
 import Calendar from "primevue/calendar";
@@ -14,6 +14,8 @@ import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Tag from "primevue/tag";
 import Tooltip from 'primevue/tooltip';
+import TabMenu from 'primevue/tabmenu';
+import SplitButton from 'primevue/splitbutton';
 import { useToast } from "primevue/usetoast";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,6 +43,7 @@ const dateFrom = ref(
 const dateTo = ref(
     props.filters?.date_to ? new Date(props.filters.date_to) : null
 );
+const trashed = ref(props.filters?.trashed || false);
 
 // Advanced Filters
 const categoryId = ref(props.filters?.category_id || null);
@@ -63,6 +66,17 @@ const paymentStatusOptions = [
     { label: "Unpaid", value: "unpaid" },
 ];
 
+const activeTab = ref(props.filters?.trashed ? 1 : 0);
+const tabItems = [
+    { label: 'Active Orders', icon: 'pi pi-receipt' },
+    { label: 'Trash', icon: 'pi pi-trash' }
+];
+
+watch(activeTab, (val) => {
+    trashed.value = (val === 1);
+    applyFilter();
+});
+
 function fmtDate(d) {
     if (!d) return undefined;
     const yyyy = d.getFullYear();
@@ -83,6 +97,7 @@ function applyFilter() {
             category_id: categoryId.value || undefined,
             brand_id: brandId.value || undefined,
             product_id: productId.value || undefined,
+            trashed: trashed.value ? 1 : undefined,
         },
         { preserveState: true, replace: true }
     );
@@ -97,19 +112,14 @@ function resetFilter() {
     categoryId.value = null;
     brandId.value = null;
     productId.value = null;
+    trashed.value = false;
+    activeTab.value = 0;
     router.get(route("pos.orders.index"), {}, { replace: true });
 }
 
 function exportReport(format) {
     const params = {
-        search: search.value || undefined,
-        status: status.value || undefined,
-        payment_status: paymentStatus.value || undefined,
-        date_from: dateFrom.value ? fmtDate(dateFrom.value) : undefined,
-        date_to: dateTo.value ? fmtDate(dateTo.value) : undefined,
-        category_id: categoryId.value || undefined,
-        brand_id: brandId.value || undefined,
-        product_id: productId.value || undefined,
+        ...props.filters,
         export: format
     };
 
@@ -148,6 +158,14 @@ function printInvoice(order) {
 }
 
 /* ---------------- Tag helpers ---------------- */
+function getOrderCategories(order) {
+    if (!order.items) return "-";
+    const cats = order.items
+        .map((it) => it.product?.category?.name)
+        .filter((c, i, a) => c && a.indexOf(c) === i);
+    return cats.length ? cats.join(", ") : "-";
+}
+
 function paymentSeverity(v) {
     if (v === "paid") return "success";
     if (v === "partial") return "warn";
@@ -245,6 +263,77 @@ function voidOrder() {
             onFinish: () => (voidLoading.value = false),
         }
     );
+}
+
+/* ---------------- Trash / Restore / Force Delete ---------------- */
+function trashOrder(order) {
+    if (!confirm("Move this order to trash?")) return;
+    router.delete(route("pos.orders.destroy", order.id), {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ severity: 'success', summary: 'Trashed', detail: 'Order moved to trash', life: 2000 })
+    });
+}
+
+function restoreOrder(order) {
+    if (!confirm("Restore this order?")) return;
+    router.post(route("pos.orders.restore", order.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ severity: 'success', summary: 'Restored', detail: 'Order restored successfully', life: 2000 })
+    });
+}
+
+function forceDeleteOrder(order) {
+    if (!confirm("PERMANENTLY delete this order? THIS CANNOT BE UNDONE.")) return;
+    router.delete(route("pos.orders.force-delete", order.id), {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ severity: 'success', summary: 'Deleted', detail: 'Order permanently deleted', life: 2000 })
+    });
+}
+
+/* ---------------- Bulk Actions ---------------- */
+const selectedOrders = ref([]);
+
+const bulkActions = computed(() => {
+    const actions = [];
+    if (trashed.value) {
+        actions.push({
+            label: "Restore Selected",
+            icon: "pi pi-refresh",
+            command: () => bulkSubmit('restore'),
+        });
+        actions.push({
+            label: "Force Delete Selected",
+            icon: "pi pi-times",
+            class: "p-button-danger",
+            command: () => bulkSubmit('force_delete'),
+        });
+    } else {
+        actions.push({
+            label: "Trash Selected",
+            icon: "pi pi-trash",
+            command: () => bulkSubmit('trash'),
+        });
+    }
+    return actions;
+});
+
+function bulkSubmit(action) {
+    if (!selectedOrders.value.length) return;
+
+    let msg = `Are you sure you want to ${action.replace('_', ' ')} ${selectedOrders.value.length} orders?`;
+    if (action === 'force_delete') msg += " THIS CANNOT BE UNDONE.";
+
+    if (!confirm(msg)) return;
+
+    router.post(route("pos.orders.bulk-action"), {
+        action: action,
+        ids: selectedOrders.value.map(o => o.id)
+    }, {
+        onSuccess: () => {
+            selectedOrders.value = [];
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Bulk action completed', life: 2000 });
+        }
+    });
 }
 
 /* ---------------- Complete Draft Modal ---------------- */
@@ -477,6 +566,13 @@ function editDraft(order) {
                         :icon="showInsights ? 'pi pi-chart-bar' : 'pi pi-chart-line'" class="p-button-text p-button-sm"
                         @click="showInsights = !showInsights" />
 
+                    <div v-if="selectedOrders.length" class="flex items-center gap-2">
+                        <SplitButton :label="selectedOrders.length + ' Selected'" :model="bulkActions" severity="danger"
+                            size="small"></SplitButton>
+                    </div>
+
+                    <TabMenu :model="tabItems" v-model:activeIndex="activeTab" class="ml-2" />
+
                     <div
                         class="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold border border-emerald-100">
                         Page Total: {{ pageTotal.toFixed(2) }}
@@ -503,7 +599,7 @@ function editDraft(order) {
                             </div>
                             <div class="text-right">
                                 <div class="text-sm font-bold text-emerald-600">{{ Number(item.total_amount).toFixed(2)
-                                }}</div>
+                                    }}</div>
                             </div>
                         </div>
                         <div v-if="!insights.top_products?.length"
@@ -530,7 +626,7 @@ function editDraft(order) {
                             </div>
                             <div class="text-right">
                                 <div class="text-sm font-bold text-emerald-600">{{ Number(item.total_amount).toFixed(2)
-                                }}</div>
+                                    }}</div>
                             </div>
                         </div>
                         <div v-if="!insights.brand_sales?.length"
@@ -562,7 +658,7 @@ function editDraft(order) {
 
                 <div class="flex flex-wrap gap-3 items-center pt-2 border-t border-slate-100">
                     <Dropdown v-model="categoryId" :options="categories" optionLabel="name" optionValue="id"
-                        placeholder="All Categories" class="w-1/2 md:w-56" showClear />
+                        placeholder="All Categories" class="w-1/2 md:w-56" showClear filter />
                     <Dropdown v-model="brandId" :options="brands" optionLabel="name" optionValue="id"
                         placeholder="All Brands" class="w-1/2 md:w-56" showClear />
                     <Dropdown v-model="productId" :options="available_products" optionLabel="name" optionValue="id"
@@ -584,16 +680,18 @@ function editDraft(order) {
 
             <!-- TABLE -->
             <div class="card">
-                <DataTable :value="rows" responsiveLayout="scroll" size="small" showGridlines>
+                <DataTable :value="rows" v-model:selection="selectedOrders" dataKey="id" responsiveLayout="scroll"
+                    size="small" showGridlines>
+                    <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
                     <Column header="Invoice">
                         <template #body="{ data }">
                             <div class="flex flex-col">
                                 <span class="font-semibold text-slate-800">{{
                                     invoiceLabel(data)
-                                }}</span>
+                                    }}</span>
                                 <span class="text-xs text-slate-500">{{
                                     new Date(data.created_at).toLocaleString()
-                                }}</span>
+                                    }}</span>
                             </div>
                         </template>
                     </Column>
@@ -601,20 +699,26 @@ function editDraft(order) {
                     <Column header="Customer">
                         <template #body="{ data }">{{
                             data.customer?.name || "Walk-in"
-                        }}</template>
+                            }}</template>
+                    </Column>
+
+                    <Column header="Categories">
+                        <template #body="{ data }">
+                            <span class="text-xs text-slate-600">{{ getOrderCategories(data) }}</span>
+                        </template>
                     </Column>
 
                     <Column header="Cashier">
                         <template #body="{ data }">{{
                             data.user?.name || "-"
-                        }}</template>
+                            }}</template>
                     </Column>
 
                     <Column header="Total">
                         <template #body="{ data }">
                             <span class="font-semibold text-emerald-600">{{
                                 Number(data.total_amount || 0).toFixed(2)
-                            }}</span>
+                                }}</span>
                         </template>
                     </Column>
 
@@ -634,29 +738,47 @@ function editDraft(order) {
                         <template #body="{ data }">
                             <div class="flex gap-1 flex-wrap">
                                 <Button icon="pi pi-eye" class="p-button-text p-button-sm"
-                                    @click="openInvoiceModal(data)" />
-                                <Button icon="pi pi-external-link" class="p-button-text p-button-sm"
-                                    @click="openInvoicePage(data)" />
+                                    @click="openInvoiceModal(data)" v-tooltip.top="'View'" />
 
-                                <Button v-if="data.status !== 'void'" icon="pi pi-print"
-                                    class="p-button-text p-button-sm" @click="printInvoice(data)" />
+                                <template v-if="!data.deleted_at">
+                                    <Button icon="pi pi-external-link" class="p-button-text p-button-sm"
+                                        @click="openInvoicePage(data)" v-tooltip.top="'Open'" />
 
-                                <!-- ✅ Completed but Partial/Unpaid => Pay Due -->
-                                <Button v-if="canPayDue(data)" icon="pi pi-wallet"
-                                    class="p-button-text p-button-sm p-button-warning" @click="openPayDueModal(data)" />
+                                    <Button v-if="data.status !== 'void'" icon="pi pi-print"
+                                        class="p-button-text p-button-sm" @click="printInvoice(data)"
+                                        v-tooltip.top="'Print'" />
 
-                                <!-- ✅ Draft => Complete Draft -->
-                                <Button v-if="canCompleteDraft(data)" icon="pi pi-check"
-                                    class="p-button-text p-button-sm p-button-success"
-                                    @click="openCompleteModal(data)" />
+                                    <!-- ✅ Completed but Partial/Unpaid => Pay Due -->
+                                    <Button v-if="canPayDue(data)" icon="pi pi-wallet"
+                                        class="p-button-text p-button-sm p-button-warning"
+                                        @click="openPayDueModal(data)" v-tooltip.top="'Pay Due'" />
 
-                                <!-- ✅ Draft => Edit (New) -->
-                                <Button v-if="data.status === 'draft'" icon="pi pi-file-edit"
-                                    class="p-button-text p-button-sm p-button-info" @click="editDraft(data)" />
+                                    <!-- ✅ Draft => Complete Draft -->
+                                    <Button v-if="canCompleteDraft(data)" icon="pi pi-check"
+                                        class="p-button-text p-button-sm p-button-success"
+                                        @click="openCompleteModal(data)" v-tooltip.top="'Complete'" />
 
-                                <!-- ✅ Void (draft or completed, not void) -->
-                                <Button v-if="canVoid(data)" icon="pi pi-ban"
-                                    class="p-button-text p-button-sm p-button-danger" @click="openVoidModal(data)" />
+                                    <!-- ✅ Draft => Edit (New) -->
+                                    <Button v-if="data.status === 'draft'" icon="pi pi-file-edit"
+                                        class="p-button-text p-button-sm p-button-info" @click="editDraft(data)"
+                                        v-tooltip.top="'Edit'" />
+
+                                    <!-- ✅ Void (draft or completed, not void) -->
+                                    <Button v-if="canVoid(data)" icon="pi pi-ban"
+                                        class="p-button-text p-button-sm p-button-danger" @click="openVoidModal(data)"
+                                        v-tooltip.top="'Void'" />
+
+                                    <!-- ✅ Trash -->
+                                    <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                                        @click="trashOrder(data)" v-tooltip.top="'Move to Trash'" />
+                                </template>
+
+                                <template v-else>
+                                    <Button icon="pi pi-refresh" class="p-button-text p-button-sm p-button-success"
+                                        @click="restoreOrder(data)" v-tooltip.top="'Restore'" />
+                                    <Button icon="pi pi-times" class="p-button-text p-button-sm p-button-danger"
+                                        @click="forceDeleteOrder(data)" v-tooltip.top="'Force Delete'" />
+                                </template>
                             </div>
                         </template>
                     </Column>

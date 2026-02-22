@@ -89,6 +89,7 @@ class ProductController extends Controller
             ->with([
                 'category:id,name',
                 'brand:id,name',
+                'stocks.warehouse:id,name'
             ])
             ->withSum('stocks as total_stock', 'quantity');
 

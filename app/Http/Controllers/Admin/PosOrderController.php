@@ -32,7 +32,11 @@ class PosOrderController extends Controller
     {
         $products = Product::where('is_active', true)
             ->select('id', 'name', 'sku', 'barcode', 'base_price', 'base_discount_price', 'thumbnail', 'type')
-            ->with(['variations:id,product_id,sku,price,discount_price'])
+            ->with([
+                'variations:id,product_id,sku,price,discount_price',
+                'stocks:id,product_id,variation_id,warehouse_id,branch_id,quantity',
+                'stocks.warehouse:id,name'
+            ])
             ->orderBy('name')
             ->get();
 
@@ -332,8 +336,11 @@ class PosOrderController extends Controller
         });
     }
 
-    public function invoice(PosOrder $order, Request $request)
+    public function invoice($orderId, Request $request)
     {
+        $order = PosOrder::withoutGlobalScope('branch')
+            ->findOrFail($orderId);
+
         $order->load([
             'items',
             'payments.paymentMethod',
@@ -366,6 +373,7 @@ class PosOrderController extends Controller
         $paymentStatus = trim($request->string('payment_status'));
         $dateFrom = $request->date('date_from');
         $dateTo = $request->date('date_to');
+        $trashed = $request->boolean('trashed');
 
         // Advanced Filters
         $category_id = $request->get('category_id');
@@ -373,6 +381,7 @@ class PosOrderController extends Controller
         $product_id = $request->get('product_id');
 
         $query = PosOrder::with(['customer', 'user', 'session', 'items.product.category', 'items.product.brand'])
+            ->when($trashed, fn($q) => $q->onlyTrashed())
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('invoice_no', 'like', "%{$search}%")
@@ -415,14 +424,18 @@ class PosOrderController extends Controller
         $orders = $query->paginate(15)->withQueryString();
 
         // Insights (Top Selling Products)
-        $topProducts = PosOrderItem::select('product_id', 'name', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(line_total) as total_amount'))
-            ->groupBy('product_id', 'name')
+        $topProducts = PosOrderItem::join('pos_orders', 'pos_order_items.order_id', '=', 'pos_orders.id')
+            ->whereNull('pos_orders.deleted_at')
+            ->select('pos_order_items.product_id', 'pos_order_items.name', DB::raw('SUM(pos_order_items.quantity) as total_qty'), DB::raw('SUM(pos_order_items.line_total) as total_amount'))
+            ->groupBy('pos_order_items.product_id', 'pos_order_items.name')
             ->orderByDesc('total_qty')
             ->limit(5)
             ->get();
 
         // Insights (Sales by Brand)
-        $brandSales = PosOrderItem::join('products', 'pos_order_items.product_id', '=', 'products.id')
+        $brandSales = PosOrderItem::join('pos_orders', 'pos_order_items.order_id', '=', 'pos_orders.id')
+            ->whereNull('pos_orders.deleted_at')
+            ->join('products', 'pos_order_items.product_id', '=', 'products.id')
             ->join('brands', 'products.brand_id', '=', 'brands.id')
             ->select('brands.name', DB::raw('SUM(pos_order_items.quantity) as total_qty'), DB::raw('SUM(pos_order_items.line_total) as total_amount'))
             ->groupBy('brands.name')
@@ -440,6 +453,7 @@ class PosOrderController extends Controller
                 'category_id' => $category_id,
                 'brand_id' => $brand_id,
                 'product_id' => $product_id,
+                'trashed' => $trashed,
             ],
             'categories' => Category::select('id', 'name')->orderBy('name')->get(),
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
@@ -472,8 +486,10 @@ class PosOrderController extends Controller
     }
 
 
-    public function void(PosOrder $order, StockService $stockService)
+    public function void($orderId, StockService $stockService)
     {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+
         if ($order->status === 'void') {
             return back()->with('success', 'Already voided');
         }
@@ -508,8 +524,10 @@ class PosOrderController extends Controller
         return back()->with('success', 'Order voided');
     }
 
-    public function completeDraft(Request $request, PosOrder $order, StockService $stockService)
+    public function completeDraft(Request $request, $orderId, StockService $stockService)
     {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+
         if ($order->status !== 'draft') {
             return back()->with('success', 'Order already completed/void.');
         }
@@ -587,8 +605,10 @@ class PosOrderController extends Controller
     }
 
 
-    public function addPayment(Request $request, PosOrder $order)
+    public function addPayment(Request $request, $orderId)
     {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+
         if ($order->status === 'void') {
             return back()->with('error', 'Cannot take payment for void order.');
         }
@@ -683,20 +703,33 @@ class PosOrderController extends Controller
     }
 
 
-    public function edit(PosOrder $order)
+    public function edit($orderId)
     {
+        $order = PosOrder::withoutGlobalScope('branch')
+            ->findOrFail($orderId);
+
         if ($order->status !== 'draft') {
             return to_route('pos.index')->with('error', 'Only draft orders can be edited.');
         }
 
-        $order->load(['items.product.variations', 'customer']);
+        $order->load(['items.product.variations', 'items.product.stocks.warehouse', 'customer']);
 
         // share same data as index
         $products = Product::where('is_active', true)
             ->select('id', 'name', 'sku', 'barcode', 'base_price', 'base_discount_price', 'thumbnail', 'type')
-            ->with(['variations:id,product_id,sku,price,discount_price'])
+            ->with([
+                'variations:id,product_id,sku,price,discount_price',
+                'stocks:id,product_id,variation_id,warehouse_id,branch_id,quantity',
+                'stocks.warehouse:id,name'
+            ])
             ->orderBy('name')
             ->get();
+
+        // Last warranty info for pre-filling
+        $lastOrder = PosOrder::where('user_id', Auth::id())
+            ->whereNotNull('warranty_info')
+            ->latest('id')
+            ->first();
 
         return Inertia::render('Admin/POS/Index', [
             'products' => $products,
@@ -705,12 +738,15 @@ class PosOrderController extends Controller
             'currentSession' => PosSession::where('user_id', Auth::id())->where('status', 'open')->latest('id')->first(),
             'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
+            'lastWarrantyInfo' => $lastOrder?->warranty_info ?? '',
             'order' => $order, // ✅ Pass order for editing
         ]);
     }
 
-    public function update(Request $request, PosOrder $order, StockService $stockService)
+    public function update(Request $request, $orderId, StockService $stockService)
     {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+
         if ($order->status !== 'draft') {
             return back()->with('error', 'Cannot update non-draft order.');
         }
@@ -891,5 +927,69 @@ class PosOrderController extends Controller
 
             return redirect()->route('pos.orders.invoice', $order->id);
         });
+    }
+
+    public function destroy($orderId)
+    {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+        $order->delete();
+
+        return back()->with('success', 'Order moved to trash.');
+    }
+
+    public function restore($orderId)
+    {
+        $order = PosOrder::onlyTrashed()->withoutGlobalScope('branch')->findOrFail($orderId);
+        $order->restore();
+
+        return back()->with('success', 'Order restored.');
+    }
+
+    public function forceDelete($orderId)
+    {
+        $order = PosOrder::onlyTrashed()->withoutGlobalScope('branch')->findOrFail($orderId);
+
+        DB::transaction(function () use ($order) {
+            $order->items()->delete();
+            $order->payments()->delete();
+            $order->forceDelete();
+        });
+
+        return back()->with('success', 'Order permanently deleted.');
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => ['required', 'in:trash,restore,force_delete'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $ids = $request->ids;
+        $action = $request->action;
+
+        if ($action === 'trash') {
+            PosOrder::withoutGlobalScope('branch')->whereIn('id', $ids)->delete();
+            return back()->with('success', count($ids) . ' orders moved to trash.');
+        }
+
+        if ($action === 'restore') {
+            PosOrder::onlyTrashed()->withoutGlobalScope('branch')->whereIn('id', $ids)->restore();
+            return back()->with('success', count($ids) . ' orders restored.');
+        }
+
+        if ($action === 'force_delete') {
+            DB::transaction(function () use ($ids) {
+                PosOrder::onlyTrashed()->withoutGlobalScope('branch')->whereIn('id', $ids)->each(function ($order) {
+                    $order->items()->delete();
+                    $order->payments()->delete();
+                    $order->forceDelete();
+                });
+            });
+            return back()->with('success', count($ids) . ' orders permanently deleted.');
+        }
+
+        return back();
     }
 }
