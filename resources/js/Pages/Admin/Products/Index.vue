@@ -210,6 +210,14 @@ const getTotalStock = (p) => {
     }
     return 0;
 };
+
+const getStockTooltip = (stocks) => {
+    if (!stocks || stocks.length === 0) return "No stock info";
+    return stocks.map(s => {
+        const whName = s.warehouse?.name || `Warehouse #${s.warehouse_id}`;
+        return `${whName}: ${Number(s.quantity).toFixed(0)}`;
+    }).join('\n');
+};
 </script>
 
 <template>
@@ -307,7 +315,8 @@ const getTotalStock = (p) => {
                     <!-- Stock -->
                     <Column header="Stock" sortable field="total_stock">
                         <template #body="{ data }">
-                            <span class="font-bold"
+                            <span class="font-bold cursor-help"
+                                :title="getStockTooltip(data.stocks)"
                                 :class="{ 'text-red-500': getTotalStock(data) <= 0, 'text-green-600': getTotalStock(data) > 0 }">
                                 {{ getTotalStock(data) }}
                             </span>

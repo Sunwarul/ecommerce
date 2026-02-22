@@ -31,8 +31,10 @@ class DashboardController extends Controller
         }
 
         // Top Selling Products
-        $topProducts = \App\Models\PosOrderItem::selectRaw('product_id, name, sum(quantity) as total_qty')
-            ->groupBy('product_id', 'name')
+        $topProducts = \App\Models\PosOrderItem::join('pos_orders', 'pos_order_items.order_id', '=', 'pos_orders.id')
+            ->whereNull('pos_orders.deleted_at')
+            ->selectRaw('pos_order_items.product_id, pos_order_items.name, sum(pos_order_items.quantity) as total_qty')
+            ->groupBy('pos_order_items.product_id', 'pos_order_items.name')
             ->orderByDesc('total_qty')
             ->limit(5)
             ->get();

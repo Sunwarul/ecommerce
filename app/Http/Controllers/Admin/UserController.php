@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\UserUpdateRequest;
 use App\Models\Branch;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
@@ -88,16 +89,26 @@ class UserController extends Controller
         ]);
 
         $user = Auth::user();
+        $branchId = $request->branch_id;
+
+        // Automatically close any open POS session for this user
+        \App\Models\PosSession::where('user_id', $user->id)
+            ->where('status', 'open')
+            ->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+                'note' => DB::raw("CONCAT(IFNULL(note, ''), ' [Auto-closed on branch switch]')"),
+            ]);
 
         // Optional: permission check
         // abort_if(!$user->branches()->where('id', $request->branch_id)->exists(), 403);
 
         $user->update([
-            'branch_id' => $request->branch_id,
+            'branch_id' => $branchId,
         ]);
 
         // Also store in session (useful for queries)
-        session(['current_branch_id' => $request->branch_id]);
+        session(['current_branch_id' => $branchId]);
 
         return back();
     }

@@ -27,6 +27,7 @@ const props = defineProps({
     warehouses: { type: Array, default: () => [] },
     branches: { type: Array, default: () => [] },
     order: { type: Object, default: null }, // ✅ Edit Draft Order
+    lastWarrantyInfo: { type: String, default: "" },
 });
 
 const toast = useToast();
@@ -50,7 +51,7 @@ onUnmounted(() => {
 // product search
 // product search
 const search = ref("");
-const warranty_info = ref("");
+const warranty_info = ref(props.order ? (props.order.warranty_info || "") : (props.lastWarrantyInfo || ""));
 
 
 // -----------------------------
@@ -140,6 +141,52 @@ const discountMode = ref("none"); // none | percent | fixed
 const discountValue = ref(0);
 
 // -----------------------------
+// Quick Stock Adjust
+// -----------------------------
+const showAdjustStockDialog = ref(false);
+const adjustSku = ref(null); // which product/variation is being adjusted
+const adjustProduct = ref(null);
+const adjustVariation = ref(null);
+const adjustmentForm = ref({}); // { warehouse_id: new_qty }
+
+function openAdjustStock(product, variation = null) {
+    adjustProduct.value = product;
+    adjustVariation.value = variation;
+    adjustSku.value = variation ? variation.sku : product.sku;
+
+    // reset form
+    const form = {};
+    props.warehouses.forEach(wh => {
+        const stockRecord = product.stocks?.find(s =>
+            s.warehouse_id === wh.id &&
+            s.variation_id === (variation ? variation.id : null)
+        );
+        form[wh.id] = stockRecord ? Number(stockRecord.quantity) : 0;
+    });
+    adjustmentForm.value = form;
+    showAdjustStockDialog.value = true;
+}
+
+function submitQuickAdjust(warehouseId) {
+    const qty = adjustmentForm.value[warehouseId];
+    router.post(route("pos.stock.adjust"), {
+        product_id: adjustProduct.value.id,
+        variation_id: adjustVariation.value?.id || null,
+        warehouse_id: warehouseId,
+        branch_id: posSession.value?.branch_id || props.branches[0]?.id || 1,
+        quantity: qty,
+        note: "Quick adjustment from POS catalog",
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // we don't close dialog, just show success
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Stock updated', life: 1500 });
+        }
+    });
+}
+
+
+// -----------------------------
 // Price helpers
 // -----------------------------
 const n = (v) => Number(v || 0);
@@ -172,6 +219,37 @@ const variationDiscountPercent = (v) => {
     const dp = getVariationDiscountPrice(v);
     if (!dp || up <= 0) return 0;
     return Math.round(((up - dp) / up) * 100);
+};
+
+// -----------------------------
+// Stock helpers
+// -----------------------------
+const getProductStockTotal = (p) => {
+    if (!p.stocks) return 0;
+    // For simple products, variation_id is null
+    return p.stocks.reduce((sum, s) => {
+        if (!s.variation_id) return sum + Number(s.quantity);
+        return sum;
+    }, 0);
+};
+
+const getVariationStockTotal = (v, p) => {
+    if (!p.stocks) return 0;
+    return p.stocks.reduce((sum, s) => {
+        if (s.variation_id === v.id) return sum + Number(s.quantity);
+        return sum;
+    }, 0);
+};
+
+const getStockTooltip = (stocks, variationId = null) => {
+    if (!stocks || stocks.length === 0) return "No stock info";
+    const filtered = stocks.filter(s => s.variation_id === variationId);
+    if (filtered.length === 0) return "Out of stock";
+
+    return filtered.map(s => {
+        const whName = s.warehouse?.name || `Warehouse #${s.warehouse_id}`;
+        return `${whName}: ${Number(s.quantity).toFixed(0)}`;
+    }).join('\n');
 };
 
 // -----------------------------
@@ -736,6 +814,19 @@ function handleSuccess(page) {
                                                 productDiscountPercent(product)
                                             }}%
                                         </div>
+
+                                        <!-- Stock Badge -->
+                                        <div class="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
+                                            <div :title="getStockTooltip(product.stocks, null)">
+                                                <Badge
+                                                    :value="product.type === 'variable' ? 'Multi' : getProductStockTotal(product)"
+                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')" />
+                                            </div>
+                                            <Button v-if="product.type !== 'variable'" icon="pi pi-pencil"
+                                                class="p-button-rounded p-button-xs p-button-secondary !h-6 !w-6"
+                                                @click.stop="openAdjustStock(product)"
+                                                v-tooltip.top="'Quick Adjust Stock'" type="button" />
+                                        </div>
                                     </div>
 
                                     <div class="flex-1 flex flex-col justify-between gap-2">
@@ -1081,7 +1172,21 @@ function handleSuccess(page) {
                 </div>
 
                 <Dropdown v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
-                    optionValue="value" placeholder="Select variation" class="w-full" showClear />
+                    optionValue="value" placeholder="Select variation" class="w-full" showClear>
+                    <template #option="slotProps">
+                        <div class="flex justify-between items-center w-full">
+                            <span>{{ slotProps.option.label }}</span>
+                            <div class="flex items-center gap-2">
+                                <Badge :value="getVariationStockTotal(slotProps.option.raw, dialogProduct)"
+                                    :severity="getVariationStockTotal(slotProps.option.raw, dialogProduct) > 0 ? 'success' : 'danger'" />
+                                <Button icon="pi pi-pencil"
+                                    class="p-button-text p-button-secondary p-button-xs !w-6 !h-6"
+                                    @click.stop="openAdjustStock(dialogProduct, slotProps.option.raw)"
+                                    v-tooltip.top="'Quick Adjust Stock'" type="button" />
+                            </div>
+                        </div>
+                    </template>
+                </Dropdown>
 
                 <div v-if="selectedVariation" class="p-3 rounded-xl border border-slate-200 bg-slate-50">
                     <div class="text-xs text-slate-500">Price</div>
@@ -1111,14 +1216,61 @@ function handleSuccess(page) {
                             -{{ variationDiscountPercent(selectedVariation) }}%
                         </div>
                     </div>
-                </div>
 
-                <div class="flex justify-end gap-2 pt-2">
-                    <Button label="Cancel" class="p-button-text" @click="showVariationDialog = false" />
-                    <Button label="Add to Cart" icon="pi pi-check" :disabled="!selectedVariationId"
-                        @click="confirmAddVariation" />
+                    <!-- Warehouse breakdown for variation -->
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Stock by
+                            Warehouse</div>
+                        <div class="grid grid-cols-2 gap-1">
+                            <div v-for="s in dialogProduct.stocks.filter(s => s.variation_id === selectedVariation.id)"
+                                :key="s.id"
+                                class="flex items-center justify-between bg-white p-1.5 rounded-lg border border-slate-100">
+                                <span class="text-[11px] text-slate-600 truncate">{{ s.warehouse?.name }}</span>
+                                <span class="text-xs font-bold text-slate-800">{{ Number(s.quantity).toFixed(0)
+                                }}</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
+            <template #footer>
+                <Button label="Close" icon="pi pi-times" @click="showVariationDialog = false" class="p-button-text" />
+                <Button label="Add to Cart" icon="pi pi-shopping-cart" @click="addSelectedVariation"
+                    :disabled="!selectedVariationId" />
+            </template>
+        </Dialog>
+
+        <!-- Quick Stock Adjust Dialog -->
+        <Dialog v-model:visible="showAdjustStockDialog" modal :header="'Quick Stock Adjust: ' + (adjustSku || '')"
+            :style="{ width: '400px' }" class="stock-adjust-dialog">
+            <div class="space-y-4">
+                <div class="text-xs text-slate-400 mb-2">
+                    {{ adjustProduct?.name }}
+                    <span v-if="adjustVariation" class="font-semibold text-slate-600">
+                        ({{ adjustVariation.sku }})
+                    </span>
+                </div>
+
+                <div v-for="wh in props.warehouses" :key="wh.id"
+                    class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="text-sm font-medium text-slate-700">{{ wh.name }}</span>
+                    <div class="flex items-center gap-2">
+                        <InputNumber v-model="adjustmentForm[wh.id]" :min="0" inputClass="!w-20 !text-sm text-center" />
+                        <Button icon="pi pi-save" class="p-button-sm p-button-success h-8 w-8"
+                            @click="submitQuickAdjust(wh.id)" />
+                    </div>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Done" icon="pi pi-check" @click="showAdjustStockDialog = false" />
+            </template>
         </Dialog>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.stock-adjust-dialog :deep(.p-dialog-content) {
+    padding-top: 0.5rem;
+}
+</style>
