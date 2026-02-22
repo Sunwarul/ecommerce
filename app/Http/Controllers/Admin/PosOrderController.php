@@ -49,6 +49,11 @@ class PosOrderController extends Controller
             // ✅ add these
             'branches' => Branch::select('id', 'name')->orderBy('id')->get(),
             'warehouses' => Warehouse::select('id', 'name')->orderBy('id')->get(),
+            'lastWarrantyInfo' => PosOrder::where('user_id', Auth::id())
+                ->where('warranty_info', '!=', '')
+                ->whereNotNull('warranty_info')
+                ->latest('id')
+                ->first()?->warranty_info ?? '',
         ]);
     }
 
@@ -727,6 +732,7 @@ class PosOrderController extends Controller
 
         // Last warranty info for pre-filling
         $lastOrder = PosOrder::where('user_id', Auth::id())
+            ->where('warranty_info', '!=', '')
             ->whereNotNull('warranty_info')
             ->latest('id')
             ->first();
