@@ -28,6 +28,7 @@ const props = defineProps({
     branches: { type: Array, default: () => [] },
     order: { type: Object, default: null }, // ✅ Edit Draft Order
     lastWarrantyInfo: { type: String, default: "" },
+    warrantyTemplates: { type: Array, default: () => [] },
 });
 
 const toast = useToast();
@@ -36,6 +37,40 @@ const page = usePage();
 // session + clock
 const posSession = ref(props.currentSession);
 const now = ref(new Date());
+const showWarrantyDialog = ref(false);
+
+const selectWarrantyTemplate = (template) => {
+    warranty_info.value = template.description;
+    showWarrantyDialog.value = false;
+    toast.add({ severity: 'info', summary: 'Template Applied', detail: template.name, life: 1500 });
+};
+
+const suggestedTemplates = computed(() => {
+    const templates = props.warrantyTemplates || [];
+    if (cartItems.value.length === 0) return templates;
+
+    // Get categories of items in cart
+    const cartCategoryIds = [...new Set(cartItems.value.map(item => {
+        const product = props.products.find(p => p.id === item.product_id);
+        return product?.category_id;
+    }).filter(Boolean))];
+
+    if (cartCategoryIds.length === 0) return templates;
+
+    // Sort: templates matching cart categories first, then those with null category, then others
+    return [...templates].sort((a, b) => {
+        const aMatch = cartCategoryIds.includes(a.category_id);
+        const bMatch = cartCategoryIds.includes(b.category_id);
+        
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        
+        if (a.category_id === null && b.category_id !== null) return -1;
+        if (a.category_id !== null && b.category_id === null) return 1;
+        
+        return 0;
+    });
+});
 let timer = null;
 
 onMounted(() => {
@@ -931,8 +966,13 @@ function handleSuccess(page) {
                                 </AutoComplete>
                                 <!-- warranty info -->
                                 <div class="mt-2">
-                                    <label class="text-xs text-slate-500">Warranty Info</label>
-                                    <Textarea v-model="warranty_info" rows="2" class="w-full text-sm mt-1"
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="text-xs text-slate-500">Warranty Info</label>
+                                        <Button label="Select Template" icon="pi pi-list"
+                                            class="p-button-text p-button-xs !py-0 !px-1 text-[10px]"
+                                            @click="showWarrantyDialog = true" type="button" />
+                                    </div>
+                                    <Textarea v-model="warranty_info" rows="2" class="w-full text-sm"
                                         placeholder="Warranty details..." />
                                 </div>
                             </div>
@@ -1264,6 +1304,28 @@ function handleSuccess(page) {
             </div>
             <template #footer>
                 <Button label="Done" icon="pi pi-check" @click="showAdjustStockDialog = false" />
+            </template>
+        </Dialog>
+
+        <!-- Warranty Selection Dialog -->
+        <Dialog v-model:visible="showWarrantyDialog" modal header="Select Warranty Template"
+            :style="{ width: '450px' }">
+            <div class="space-y-3">
+                <p class="text-xs text-slate-500 mb-2 italic">
+                    * Suggested templates based on your cart are shown first.
+                </p>
+                <div v-for="template in suggestedTemplates" :key="template.id"
+                    class="p-3 border rounded-xl hover:bg-slate-50 cursor-pointer transition flex flex-col gap-1"
+                    @click="selectWarrantyTemplate(template)">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-800">{{ template.name }}</span>
+                        <Badge v-if="template.category_id" value="Relevant" severity="info" class="!text-[10px]" />
+                    </div>
+                    <p class="text-xs text-slate-600">{{ template.description }}</p>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Cancel" icon="pi pi-times" @click="showWarrantyDialog = false" class="p-button-text" />
             </template>
         </Dialog>
     </AuthenticatedLayout>

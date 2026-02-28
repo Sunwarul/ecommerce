@@ -10,5 +10,10 @@ class WarrantyGuarantee extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'type', 'duration', 'description', 'is_active'];
+    protected $fillable = ['name', 'type', 'duration', 'description', 'is_active', 'category_id'];
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 }

@@ -225,6 +225,12 @@ const model = ref([
                         to: route("suppliers.index"),
                         permissions: [PERMISSIONS.SUPPLIER.INDEX],
                     },
+                    {
+                        label: "Warranty & Guarantees",
+                        icon: "pi pi-clone",
+                        to: route("warranty-guarantees.index"),
+                        permissions: [PERMISSIONS.SUPPLIER.INDEX],
+                    },
                 ],
             },
             {
