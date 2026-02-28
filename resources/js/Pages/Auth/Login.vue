@@ -62,9 +62,9 @@ const submit = () => {
             </div>
 
             <div class="mt-4 block flex justify-between items-center">
-                <Link :href="route('register')"
+                <Link href="/register"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                Create New Account
+                    Create New Account
                 </Link>
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
@@ -75,7 +75,7 @@ const submit = () => {
             <div class="mt-4 flex items-center justify-between">
                 <Link v-if="canResetPassword" :href="route('password.request')"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                Forgot your password?
+                    Forgot your password?
                 </Link>
 
                 <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">

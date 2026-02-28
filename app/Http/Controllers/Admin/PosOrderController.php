@@ -16,6 +16,7 @@ use App\Models\PosSession;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Warehouse;
+use App\Models\WarrantyGuarantee;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +55,7 @@ class PosOrderController extends Controller
                 ->whereNotNull('warranty_info')
                 ->latest('id')
                 ->first()?->warranty_info ?? '',
+            'warrantyTemplates' => WarrantyGuarantee::where('is_active', true)->select('id', 'name', 'description', 'category_id')->get(),
         ]);
     }
 
@@ -745,6 +747,7 @@ class PosOrderController extends Controller
             'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
             'lastWarrantyInfo' => $lastOrder?->warranty_info ?? '',
+            'warrantyTemplates' => WarrantyGuarantee::where('is_active', true)->select('id', 'name', 'description', 'category_id')->get(),
             'order' => $order, // ✅ Pass order for editing
         ]);
     }

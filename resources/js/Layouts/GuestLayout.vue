@@ -7,15 +7,13 @@ import FavIcons from '@/Layouts/Partials/FavIcons.vue';
 
 <template>
     <FavIcons />
-    <div
-        class="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0 ">
+    <div class="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0 ">
         <div class="uppercase text-blue-400">
             <Link href="/">
-            <ApplicationLogo />
+                <ApplicationLogo />
             </Link>
         </div>
-        <div
-            class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg ">
+        <div class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg ">
             <slot />
         </div>
     </div>

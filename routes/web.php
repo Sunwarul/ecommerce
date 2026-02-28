@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\PosOrderController;
 use App\Http\Controllers\Admin\PosSessionController;
 use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Admin\WarrantyGuaranteeController;
 use App\Http\Controllers\StockMovementController;
 
 require_once __DIR__ . '/auth.php';
@@ -73,6 +74,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::resource('permissions', PermissionController::class);
     CrudRouter::setFor('currencies', App\Http\Controllers\CurrencyController::class);
     CrudRouter::setFor('customers', App\Http\Controllers\CustomerController::class);
+    CrudRouter::setFor('warranty-guarantees', WarrantyGuaranteeController::class);
 
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');

@@ -25,7 +25,7 @@ const isActive = (name) => current.value.startsWith(name);
             </button>
 
             <Link href="/dashboard" class="layout-topbar-logo flex items-center gap-2">
-                <ApplicationLogo class="h-8 w-auto" />
+                <ApplicationLogo />
             </Link>
         </div>
 

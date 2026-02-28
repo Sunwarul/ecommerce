@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Route;
 // Route::post('login', [LoginController::class, 'login'])->name('login');
 // Route::post('register', [RegistrationController::class, 'register'])->name('register');
 
-Route::middleware(['auth:sanctum', 'verified'])->name('api.')->group(function () {
+Route::middleware(['auth:sanctum', 'verified', 'api'])->name('api.')->group(function () {
     CrudRouter::setApiFor('categories', CategoryController::class);
 
     Route::apiResources([
