@@ -30,7 +30,7 @@ class StockMovementController extends Controller
             'type' => ['required', 'in:in,out,transfer,adjust'],
             'product_id' => ['required', 'exists:products,id'],
             'variation_id' => ['nullable', 'exists:product_variations,id'],
-            'branch_id' => ['required', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
             'quantity' => ['required', 'numeric', 'gt:0'],
 
             'from_warehouse_id' => ['nullable', 'exists:warehouses,id'],
