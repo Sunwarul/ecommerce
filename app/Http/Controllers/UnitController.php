@@ -25,7 +25,6 @@ class UnitController extends Controller
             searchColumns: [],
             // exportClass: UnitExport::class,
             withRelations: [],
-            addProps: $this->addProps(),
         ));
     }
 

@@ -23,7 +23,6 @@ class RoleController extends Controller
             updateRequestClass: RoleUpdateRequest::class,
             componentPath: 'Admin/Roles/Index',
             searchColumns: ['name'],
-            addProps: $this->addProps(),
             withRelations: ['permissions:id,name']
         ));
     }

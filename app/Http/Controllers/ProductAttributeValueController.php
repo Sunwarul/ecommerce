@@ -26,7 +26,6 @@ class ProductAttributeValueController extends Controller
             searchColumns: [],
             // exportClass: ProductAttributeValueExport::class,
             withRelations: ['attribute'],
-            addProps: $this->addProps(),
         ));
     }
 

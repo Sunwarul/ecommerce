@@ -44,7 +44,6 @@ class ProductController extends Controller
             searchColumns: ['name', 'description'],
             exportClass: ProductExport::class,
             withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
-            addProps: $this->addProps(),
         ));
     }
 

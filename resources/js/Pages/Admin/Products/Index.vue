@@ -430,7 +430,7 @@ const resetFilters = () => {
                 </div>
 
                 <DataTable :value="products.data" v-model:selection="selectedProducts" dataKey="id" :paginator="false"
-                    class="w-full" stripedRows responsiveLayout="scroll">
+                    class="w-full mt-3 pt-3" stripedRows responsiveLayout="scroll">
                     <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
                     <!-- Thumbnail -->

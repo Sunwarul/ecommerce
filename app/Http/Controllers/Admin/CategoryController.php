@@ -27,7 +27,6 @@ class CategoryController extends Controller
             exportClass: CategoryExport::class,
             componentPath: 'Admin/Categories/Index',
             withRelations: ['parent'],
-            addProps: $this->addProps(),
         ));
     }
     protected function addProps(): array
