@@ -28,7 +28,6 @@ class UserController extends Controller
             updateRequestClass: UserUpdateRequest::class,
             componentPath: 'Admin/Users/Index',
             searchColumns: ['name', 'email'],
-            addProps: $this->addProps(),
             withRelations: ['roles:id,name'],
         ));
     }

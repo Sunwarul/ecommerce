@@ -28,7 +28,6 @@ class ExpenseController extends Controller
             searchColumns: [],
             // exportClass: ExpenseExport::class,
             withRelations: [],
-            addProps: $this->addProps(),
         ));
     }
     protected function addProps(): array

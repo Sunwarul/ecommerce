@@ -4,7 +4,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue";
 import Button from "primevue/button";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputText from "primevue/inputtext";
 import TabPanel from "primevue/tabpanel";
 import TabView from "primevue/tabview";
@@ -71,22 +71,22 @@ function save() {
                         </div>
                         <div>
                             <label>Language</label>
-                            <Dropdown class="w-full" :options="languages" optionLabel="label" optionValue="value"
+                            <Select class="w-full" :options="languages" optionLabel="label" optionValue="value"
                                 v-model="form.settings.general_language" />
                         </div>
                         <div>
                             <label>Timezone</label>
-                            <Dropdown class="w-full" filter :options="timezones" optionLabel="label" optionValue="value"
+                            <Select class="w-full" filter :options="timezones" optionLabel="label" optionValue="value"
                                 v-model="form.settings.general_timezone" />
                         </div>
                         <div>
                             <label>Date Format</label>
-                            <Dropdown class="w-full" :options="dateFormats" optionLabel="label" optionValue="value"
+                            <Select class="w-full" :options="dateFormats" optionLabel="label" optionValue="value"
                                 v-model="form.settings.general_date_format" />
                         </div>
                         <div>
                             <label>Time Format</label>
-                            <Dropdown class="w-full" :options="timeFormats" optionLabel="label" optionValue="value"
+                            <Select class="w-full" :options="timeFormats" optionLabel="label" optionValue="value"
                                 v-model="form.settings.general_time_format" />
                         </div>
                     </div>
@@ -113,7 +113,7 @@ function save() {
                         </div>
                         <div>
                             <label>Encryption</label>
-                            <Dropdown class="w-full" :options="[
+                            <Select class="w-full" :options="[
                                 { label: 'TLS', value: 'tls' },
                                 { label: 'SSL', value: 'ssl' },
                                 { label: 'None', value: 'null' },
@@ -134,7 +134,7 @@ function save() {
                     <div class="grid gap-4">
                         <div>
                             <label>Driver</label>
-                            <Dropdown class="w-full" :options="drivers" optionLabel="label" optionValue="value"
+                            <Select class="w-full" :options="drivers" optionLabel="label" optionValue="value"
                                 v-model="form.settings.sms_driver" />
                         </div>
 

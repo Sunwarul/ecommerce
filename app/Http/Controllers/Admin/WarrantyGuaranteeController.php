@@ -24,7 +24,6 @@ class WarrantyGuaranteeController extends Controller
             componentPath: 'Admin/WarrantyGuarantees/Index',
             searchColumns: ['name', 'description'],
             withRelations: ['category'],
-            addProps: $this->addProps(),
         ));
     }
 

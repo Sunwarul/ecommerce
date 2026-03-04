@@ -4,7 +4,7 @@ import { router } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Divider from "primevue/divider";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Tag from "primevue/tag";
@@ -279,12 +279,13 @@ function voidOrder() {
             :style="{ width: '520px' }"
         >
             <div class="space-y-3">
-                <Dropdown
+                <Select
                     v-model="payment.payment_method_id"
                     :options="paymentMethods"
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Payment method"
+                    filter
                     class="w-full"
                 />
 

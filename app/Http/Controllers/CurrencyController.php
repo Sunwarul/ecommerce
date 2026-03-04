@@ -60,14 +60,16 @@ class CurrencyController extends Controller
         $query = $this->modifyQuery($query);
         $items = $query->latest()->paginate($perPage);
 
+        $methodProps = method_exists($this, 'addProps') ? $this->addProps() : [];
+        $configProps = $this->addPropsConfig ?? [];
+        $mergedProps = array_merge($methodProps, $configProps);
+
         $dataArray = [
             'items' => $items,
             'filters' => ['search' => $search],
             'config' => $this->makeConfig(),
-            ...$this->addProps(),
+            ...$mergedProps,
         ];
-
-        // dd($dataArray);
 
         return Inertia::render($this->componentPath, $dataArray);
     }

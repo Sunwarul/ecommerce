@@ -7,37 +7,36 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
         $user = $request->user();
+        
+        $authData = [];
+        if ($user) {
+            // Use version-based cache to ensure fresh data when permissions change
+            $version = cache('auth_version', 1);
+            $cacheKey = "user_auth_data_{$user->id}_v{$version}";
+            $authData = cache()->remember($cacheKey, now()->addMinutes(5), function () use ($user) {
+                return [
+                    'roles' => $user->getRoleNames()->values(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+                ];
+            });
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
-                'roles' => $user ? $user->getRoleNames()->values() : [],
-                'permissions' => $user
-                    ? $user->getAllPermissions()->pluck('name')->values()
-                    : [],
+                'user' => $user,
+                'roles' => $authData['roles'] ?? [],
+                'permissions' => $authData['permissions'] ?? [],
             ],
             'configs' => [
                 'app_name' => config('app.name'),
