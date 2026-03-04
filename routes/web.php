@@ -49,6 +49,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         ->name('products.bulk-delete');
     Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])
         ->name('products.bulk-force-delete');
+    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])
+        ->name('products.update-stock');
 
 
     CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);

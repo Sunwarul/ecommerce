@@ -1,6 +1,7 @@
 <script setup>
 import { router } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
+import axios from "axios";
 import debounce from "lodash/debounce";
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
@@ -15,15 +16,19 @@ import Dropdown from "primevue/dropdown";
 import SplitButton from "primevue/splitbutton";
 import Toolbar from "primevue/toolbar";
 import TabMenu from "primevue/tabmenu";
+import InputNumber from "primevue/inputnumber";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
 
 // Local
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
 const props = defineProps({
-    products: { type: Object, required: true }, // paginator from controller
+    products: { type: Object, required: true },
     filters: { type: Object, default: () => ({}) },
     categories: { type: Array, default: () => [] },
     brands: { type: Array, default: () => [] },
+    warehouses: { type: Array, default: () => [] },
 });
 
 const products = computed(() => props.products || { data: [], links: [] });
@@ -38,11 +43,30 @@ const filterForm = ref({
     status: props.filters.status || null,
     trashed: props.filters.trashed || null,
     per_page: props.filters.per_page ? Number(props.filters.per_page) : 10,
+    type: props.filters.type || null,
+    warehouse_id: props.filters.warehouse_id ? Number(props.filters.warehouse_id) : null,
+    stock_min: props.filters.stock_min ?? null,
+    stock_max: props.filters.stock_max ?? null,
+    price_min: props.filters.price_min ?? null,
+    price_max: props.filters.price_max ?? null,
+    stock_status: props.filters.stock_status || null,
+    sort: props.filters.sort || 'id_desc',
 });
 
 const statusOptions = [
     { label: "Active", value: "active" },
     { label: "Inactive", value: "inactive" },
+];
+
+const typeOptions = [
+    { label: "Simple", value: "simple" },
+    { label: "Variable", value: "variable" },
+];
+
+const stockStatusOptions = [
+    { label: "In Stock", value: "in_stock" },
+    { label: "Low Stock", value: "low_stock" },
+    { label: "Out of Stock", value: "out_of_stock" },
 ];
 
 const trashOptions = [
@@ -55,6 +79,17 @@ const perPageOptions = [
     { label: "25", value: 25 },
     { label: "50", value: 50 },
     { label: "100", value: 100 },
+];
+
+const sortOptions = [
+    { label: "Newest First", value: "id_desc" },
+    { label: "Oldest First", value: "id_asc" },
+    { label: "Name A-Z", value: "name_asc" },
+    { label: "Name Z-A", value: "name_desc" },
+    { label: "Price Low-High", value: "base_price_asc" },
+    { label: "Price High-Low", value: "base_price_desc" },
+    { label: "Stock Low-High", value: "total_stock_asc" },
+    { label: "Stock High-Low", value: "total_stock_desc" },
 ];
 
 // Tabs for Trash view switching
@@ -71,7 +106,6 @@ watch(activeTab, (val) => {
         filterForm.value.trashed = 'only';
     }
 });
-
 
 // -----------------------------
 // WATCHERS & RELOAD
@@ -218,6 +252,53 @@ const getStockTooltip = (stocks) => {
         return `${whName}: ${Number(s.quantity).toFixed(0)}`;
     }).join('\n');
 };
+
+// -----------------------------
+// INLINE STOCK EDITING
+// -----------------------------
+const editingStock = ref(null);
+const editingStockValue = ref(0);
+const editingWarehouseId = ref(null);
+
+const startStockEdit = (product) => {
+    editingStock.value = product.id;
+    editingWarehouseId.value = product.stocks?.[0]?.warehouse_id || props.warehouses[0]?.id;
+    editingStockValue.value = getTotalStock(product);
+};
+
+const saveStockEdit = async (product) => {
+    if (editingStock.value === null) return;
+    
+    try {
+        const response = await axios.put(route('products.update-stock', product.id), {
+            warehouse_id: editingWarehouseId.value,
+            quantity: editingStockValue.value,
+        });
+        
+        editingStock.value = null;
+        editingWarehouseId.value = null;
+        
+        // Reload the page to refresh data
+        router.reload({ preserveState: true, preserveScroll: true });
+    } catch (error) {
+        console.error('Failed to update stock:', error);
+    }
+};
+
+const cancelStockEdit = () => {
+    editingStock.value = null;
+    editingWarehouseId.value = null;
+};
+
+const isLowStock = (product) => {
+    const total = getTotalStock(product);
+    const alertQty = product.stocks?.reduce((min, s) => Math.min(min, s.alert_quantity || 999999), 999999) || 10;
+    return total > 0 && total <= alertQty;
+};
+
+const isOutOfStock = (product) => {
+    return getTotalStock(product) <= 0;
+};
 </script>
 
 <template>
@@ -246,7 +327,7 @@ const getStockTooltip = (stocks) => {
                         <span class="p-input-icon-left w-full">
                             <IconField>
                                 <InputIcon class="pi pi-search" />
-                                <InputText type="search" v-model="filterForm.search" placeholder="Search..."
+                                <InputText type="search" v-model="filterForm.search" placeholder="Search name, sku, barcode..."
                                     class="w-full" />
                             </IconField>
                         </span>
@@ -262,11 +343,45 @@ const getStockTooltip = (stocks) => {
                             placeholder="Brand" showClear class="w-full" />
                     </div>
 
+                    <div class="col-span-1">
+                        <Dropdown v-model="filterForm.type" :options="typeOptions" optionLabel="label"
+                            optionValue="value" placeholder="Product Type" showClear class="w-full" />
+                    </div>
+
+                    <div class="col-span-1">
+                        <Dropdown v-model="filterForm.warehouse_id" :options="warehouses" optionLabel="name"
+                            optionValue="id" placeholder="Warehouse" showClear class="w-full" />
+                    </div>
+
+                    <div class="col-span-1">
+                        <Dropdown v-model="filterForm.stock_status" :options="stockStatusOptions" optionLabel="label"
+                            optionValue="value" placeholder="Stock Status" showClear class="w-full" />
+                    </div>
+
+                    <div class="col-span-1">
+                        <div class="flex gap-2">
+                            <InputNumber v-model="filterForm.stock_min" placeholder="Min Stock" showButtons :min="0" class="w-full" />
+                            <InputNumber v-model="filterForm.stock_max" placeholder="Max Stock" showButtons :min="0" class="w-full" />
+                        </div>
+                    </div>
+
+                    <div class="col-span-1">
+                        <div class="flex gap-2">
+                            <InputNumber v-model="filterForm.price_min" placeholder="Min Price" mode="currency" currency="USD" locale="en-US" class="w-full" />
+                            <InputNumber v-model="filterForm.price_max" placeholder="Max Price" mode="currency" currency="USD" locale="en-US" class="w-full" />
+                        </div>
+                    </div>
+
                     <div class="col-span-1 flex gap-2">
                         <Dropdown v-model="filterForm.status" :options="statusOptions" optionLabel="label"
                             optionValue="value" placeholder="Status" showClear class="w-full" />
+                        <Dropdown v-model="filterForm.sort" :options="sortOptions" optionLabel="label"
+                            optionValue="value" placeholder="Sort" class="w-full" />
+                    </div>
+
+                    <div class="col-span-1 flex gap-2">
                         <Dropdown v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
-                            optionValue="value" placeholder="Per Page" class="w-24" />
+                            optionValue="value" placeholder="Per Page" class="w-full" />
                     </div>
                 </div>
 
@@ -315,11 +430,27 @@ const getStockTooltip = (stocks) => {
                     <!-- Stock -->
                     <Column header="Stock" sortable field="total_stock">
                         <template #body="{ data }">
-                            <span class="font-bold cursor-help"
-                                :title="getStockTooltip(data.stocks)"
-                                :class="{ 'text-red-500': getTotalStock(data) <= 0, 'text-green-600': getTotalStock(data) > 0 }">
-                                {{ getTotalStock(data) }}
-                            </span>
+                            <div v-if="editingStock === data.id" class="flex items-center gap-2">
+                                <Dropdown v-model="editingWarehouseId" :options="warehouses" optionLabel="name"
+                                    optionValue="id" class="w-32" />
+                                <InputNumber v-model="editingStockValue" showButtons :min="0" class="w-20" />
+                                <Button icon="pi pi-check" class="p-button-text p-button-success p-button-sm" @click="saveStockEdit(data)" />
+                                <Button icon="pi pi-times" class="p-button-text p-button-danger p-button-sm" @click="cancelStockEdit" />
+                            </div>
+                            <div v-else class="flex items-center gap-2">
+                                <span class="font-bold cursor-pointer cursor-help"
+                                    :title="getStockTooltip(data.stocks) + '\n\nDouble-click to edit'"
+                                    :class="{ 
+                                        'text-red-500': isOutOfStock(data), 
+                                        'text-orange-500': isLowStock(data),
+                                        'text-green-600': !isOutOfStock(data) && !isLowStock(data)
+                                    }"
+                                    @dblclick="startStockEdit(data)">
+                                    {{ getTotalStock(data) }}
+                                </span>
+                                <Badge v-if="isOutOfStock(data)" severity="danger" value="Out" />
+                                <Badge v-else-if="isLowStock(data)" severity="warning" value="Low" />
+                            </div>
                         </template>
                     </Column>
 
