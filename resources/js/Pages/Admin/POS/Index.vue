@@ -61,13 +61,13 @@ const suggestedTemplates = computed(() => {
     return [...templates].sort((a, b) => {
         const aMatch = cartCategoryIds.includes(a.category_id);
         const bMatch = cartCategoryIds.includes(b.category_id);
-        
+
         if (aMatch && !bMatch) return -1;
         if (!aMatch && bMatch) return 1;
-        
+
         if (a.category_id === null && b.category_id !== null) return -1;
         if (a.category_id !== null && b.category_id === null) return 1;
-        
+
         return 0;
     });
 });
@@ -354,7 +354,7 @@ watch(() => props.order, (newOrder) => {
                 // if we strictly assume unit_price is what was sold
                 const sellPrice = unitPrice;
 
-                // discount_amount in table is total for the line? or per unit? 
+                // discount_amount in table is total for the line? or per unit?
                 // Usually line_total = (unit * qty) - discount + tax.
                 // But here let's assume discount_amount is TOTAL line discount
                 const lineDisc = Number(i.discount_amount) || 0;
@@ -859,7 +859,7 @@ function handleSuccess(page) {
                                             <div :title="getStockTooltip(product.stocks, null)">
                                                 <Badge
                                                     :value="product.type === 'variable' ? 'Multi' : getProductStockTotal(product)"
-                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')" 
+                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')"
                                                     class="!text-[10px] !px-2 !py-0" />
                                             </div>
                                             <Button v-if="product.type !== 'variable'" icon="pi pi-pencil"
@@ -877,7 +877,7 @@ function handleSuccess(page) {
                                             <div class="text-xs text-slate-400 mt-0.5 truncate">
                                                 {{ product.sku }}
                                             </div>
-                                            
+
                                             <!-- Warehouse Info -->
                                             <div v-if="getProductWarehouseNames(product.stocks, null).length" class="mt-2 flex flex-wrap gap-1">
                                                 <span v-for="whName in getProductWarehouseNames(product.stocks, null).slice(0, 3)" :key="whName"
@@ -1242,7 +1242,7 @@ function handleSuccess(page) {
                             </div>
                         </div>
                     </template>
-                </Dropdown>
+                </Select>
 
                 <div v-if="selectedVariation" class="p-3 rounded-xl border border-slate-200 bg-slate-50">
                     <div class="text-xs text-slate-500">Price</div>

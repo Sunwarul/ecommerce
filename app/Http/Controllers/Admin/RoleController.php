@@ -42,6 +42,7 @@ class RoleController extends Controller
             $permissions = Permission::whereKey($data['ids'])->get();
             $role->syncPermissions($permissions);
         }
+        $this->clearAuthCache();
     }
 
     public function update(RoleUpdateRequest $request, Role $role)
@@ -52,6 +53,7 @@ class RoleController extends Controller
             $permissions = Permission::whereKey($data['ids'])->get();
             $role->syncPermissions($permissions);
         }
+        $this->clearAuthCache();
     }
 
     public function destroy(Role $role)
@@ -61,11 +63,16 @@ class RoleController extends Controller
             $isNotSuperAdmin = (Role::count() > 1) && $role->id != $superAdminId;
             if ($isNotSuperAdmin) {
                 $role->delete();
-
+                $this->clearAuthCache();
                 return back();
             }
         }
 
         return \redirect()->back()->withErrors('Super Admin Can\'t be Deleted');
+    }
+
+    protected function clearAuthCache(): void
+    {
+        cache()->increment('auth_version', 1);
     }
 }

@@ -262,7 +262,8 @@ const editingWarehouseId = ref(null);
 
 const startStockEdit = (product) => {
     editingStock.value = product.id;
-    editingWarehouseId.value = product.stocks?.[0]?.warehouse_id || props.warehouses[0]?.id;
+    // Default to first warehouse if no existing stock
+    editingWarehouseId.value = props.warehouses[0]?.id || null;
     editingStockValue.value = getTotalStock(product);
 };
 
@@ -402,23 +403,13 @@ const resetFilters = () => {
                                 optionValue="value" placeholder="Sort By" class="w-full" />
                         </div>
 
-                        <div>
-                            <Select v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
-                                optionValue="value" placeholder="Per Page" class="w-full" />
-                        </div>
-
-                        <div>
-                            <Dropdown v-model="filterForm.sort" :options="sortOptions" optionLabel="label"
-                                optionValue="value" placeholder="Sort By" class="w-full" />
-                        </div>
-
                         <div class="grid grid-cols-2 gap-2">
                             <InputNumber v-model="filterForm.price_min" placeholder="Min $" mode="currency" currency="USD" locale="en-US" class="w-full" />
                             <InputNumber v-model="filterForm.price_max" placeholder="Max $" mode="currency" currency="USD" locale="en-US" class="w-full" />
                         </div>
 
                         <div>
-                            <Dropdown v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
+                            <Select v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
                                 optionValue="value" placeholder="Per Page" class="w-full" />
                         </div>
 
@@ -429,8 +420,17 @@ const resetFilters = () => {
                     </div>
                 </div>
 
-                <DataTable :value="products.data" v-model:selection="selectedProducts" dataKey="id" :paginator="false"
-                    class="w-full mt-3 pt-3" stripedRows responsiveLayout="scroll">
+                <DataTable 
+                    :value="products.data" 
+                    v-model:selection="selectedProducts" 
+                    dataKey="id" 
+                    :paginator="false"
+                    scrollable 
+                    scrollHeight="600px"
+                    class="w-full mt-3 pt-3" 
+                    stripedRows 
+                    responsiveLayout="scroll"
+                >
                     <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
                     <!-- Thumbnail -->

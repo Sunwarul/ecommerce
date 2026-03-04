@@ -50,34 +50,64 @@ class ProductController extends Controller
     protected function addProps(): array
     {
         return [
-            // CATEGORIES WITH CHILDREN
-            'categories' => Category::select('id', 'name', 'parent_id')
+            'categories' => $this->getCachedCategories(),
+            'brands' => $this->getCachedBrands(),
+            'tags' => Tag::select('id', 'name')->get(),
+            'taxes' => Tax::select('id', 'name', 'rate_value', 'rate_type')->get(),
+            'warehouses' => $this->getCachedWarehouses(),
+            'attributes' => $this->getCachedAttributes(),
+        ];
+    }
+
+    protected function getCachedCategories(): mixed
+    {
+        $version = cache('categories_version', 1);
+        return cache()->remember("product_categories_v{$version}", now()->addMinutes(10), function () {
+            return Category::select('id', 'name', 'parent_id')
                 ->with('children:id,name,parent_id')
                 ->whereNull('parent_id')
-                ->get(),
+                ->get();
+        });
+    }
 
-            // BRANDS
-            'brands' => Brand::select('id', 'name')->get(),
+    protected function getCachedBrands(): mixed
+    {
+        $version = cache('brands_version', 1);
+        return cache()->remember("product_brands_v{$version}", now()->addMinutes(10), function () {
+            return Brand::select('id', 'name')->get();
+        });
+    }
 
-            // TAGS
-            'tags' => Tag::select('id', 'name')->get(),
+    protected function getCachedWarehouses(): mixed
+    {
+        $version = cache('warehouses_version', 1);
+        return cache()->remember("product_warehouses_v{$version}", now()->addMinutes(10), function () {
+            return Warehouse::select('id', 'name')->get();
+        });
+    }
 
-            // TAXES
-            'taxes' => Tax::select('id', 'name', 'rate_value', 'rate_type')->get(),
-
-            // WAREHOUSES
-            'warehouses' => Warehouse::select('id', 'name')->get(),
-
-            // ATTRIBUTES
-            'attributes' => ProductAttribute::select('id', 'name', 'display_name', 'type')
+    protected function getCachedAttributes(): mixed
+    {
+        $version = cache('attributes_version', 1);
+        return cache()->remember("product_attributes_v{$version}", now()->addMinutes(10), function () {
+            return ProductAttribute::select('id', 'name', 'display_name', 'type')
                 ->with('values:id,attribute_id,value,display_value,color_code')
-                ->get(),
-        ];
+                ->get();
+        });
+    }
+
+    public static function clearProductCache(): void
+    {
+        // Increment version to invalidate cache - next request will fetch fresh data
+        cache()->increment('categories_version', 1);
+        cache()->increment('brands_version', 1);
+        cache()->increment('warehouses_version', 1);
+        cache()->increment('attributes_version', 1);
     }
 
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 50);
+        $perPage = $request->input('per_page', 15);
         $search = $request->input('search');
         $category_id = $request->input('category_id');
         $brand_id = $request->input('brand_id');
@@ -93,11 +123,7 @@ class ProductController extends Controller
         $sort = $request->input('sort', 'id_desc');
 
         $query = Product::query()
-            ->with([
-                'category:id,name',
-                'brand:id,name',
-                'stocks.warehouse:id,name'
-            ])
+            ->with(['category:id,name', 'brand:id,name'])
             ->withSum('stocks as total_stock', 'quantity');
 
         // Search
@@ -149,19 +175,13 @@ class ProductController extends Controller
             $query->having('total_stock', '<=', intval($stock_max));
         }
 
-        // Stock status filter
+        // Stock status filter - simplified for performance (using default threshold of 10)
         if ($stock_status === 'out_of_stock') {
             $query->having('total_stock', '<=', 0);
         } elseif ($stock_status === 'low_stock') {
-            $query->whereRaw('total_stock > 0 AND total_stock <= COALESCE(
-                (SELECT MIN(alert_quantity) FROM product_stocks WHERE product_id = products.id AND alert_quantity IS NOT NULL AND alert_quantity > 0),
-                10
-            )');
+            $query->having('total_stock', '>', 0)->having('total_stock', '<=', 10);
         } elseif ($stock_status === 'in_stock') {
-            $query->whereRaw('total_stock > COALESCE(
-                (SELECT MIN(alert_quantity) FROM product_stocks WHERE product_id = products.id AND alert_quantity IS NOT NULL AND alert_quantity > 0),
-                10
-            )');
+            $query->having('total_stock', '>', 10);
         }
 
         // Sorting
@@ -185,6 +205,9 @@ class ProductController extends Controller
 
         $products = $query->paginate($perPage)->withQueryString();
 
+        // Get props from addProps method (includes warehouses, categories, brands, etc.)
+        $props = $this->addProps();
+
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,
             'filters' => [
@@ -203,9 +226,12 @@ class ProductController extends Controller
                 'stock_status' => $stock_status,
                 'sort' => $sort,
             ],
-            'categories' => Category::select('id', 'name')->get(),
-            'brands' => Brand::select('id', 'name')->get(),
-            'warehouses' => Warehouse::select('id', 'name')->get(),
+            'categories' => $props['categories'] ?? [],
+            'brands' => $props['brands'] ?? [],
+            'warehouses' => $props['warehouses'] ?? [],
+            'tags' => $props['tags'] ?? [],
+            'taxes' => $props['taxes'] ?? [],
+            'attributes' => $props['attributes'] ?? [],
         ]);
     }
 
