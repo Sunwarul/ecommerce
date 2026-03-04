@@ -5,7 +5,7 @@ import { computed, onMounted, ref, watch } from "vue";
 
 // PrimeVue
 import Button from "primevue/button";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import Editor from "primevue/editor";
 import FileUpload from "primevue/fileupload";
 import InputNumber from "primevue/inputnumber";
@@ -520,7 +520,7 @@ const cancel = () => emit("cancel");
                 <!-- Product Type -->
                 <div class="field col-12 md:col-4 mb-4 pr-md-2">
                     <label for="type" class="block font-bold mb-2">Product Type *</label>
-                    <Dropdown id="type" v-model="form.type" :options="productTypes" optionLabel="label"
+                    <Select id="type" v-model="form.type" :options="productTypes" optionLabel="label"
                         optionValue="value" placeholder="Select Type" class="w-full"
                         :class="{ 'p-invalid': form.errors.type }" />
                     <small v-if="form.errors.type" class="p-error">{{
@@ -631,15 +631,15 @@ const cancel = () => emit("cancel");
                 <!-- Brand -->
                 <div class="field col-12 sm:col-6 mb-4 pr-md-2">
                     <label for="brand_id" class="block font-bold mb-2">Brand</label>
-                    <Dropdown id="brand_id" v-model="form.brand_id" :options="brands" optionLabel="name"
-                        optionValue="id" placeholder="Select Brand" class="w-full" />
+                    <Select id="brand_id" v-model="form.brand_id" :options="brands" optionLabel="name"
+                        optionValue="id" placeholder="Select Brand" filter showClear class="w-full" />
                 </div>
 
                 <!-- Tax -->
                 <div class="field col-12 sm:col-6 mb-4 pl-md-2">
                     <label for="tax_id" class="block font-bold mb-2">Tax</label>
-                    <Dropdown id="tax_id" v-model="form.tax_id" :options="taxes" optionLabel="name" optionValue="id"
-                        placeholder="Select Tax" class="w-full" />
+                    <Select id="tax_id" v-model="form.tax_id" :options="taxes" optionLabel="name" optionValue="id"
+                        placeholder="Select Tax" filter showClear class="w-full" />
                 </div>
 
                 <!-- Tags -->

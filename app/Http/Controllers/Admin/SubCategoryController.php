@@ -26,7 +26,6 @@ class SubCategoryController extends Controller
             exportClass: SubCategoryExport::class,
             componentPath: 'Admin/SubCategories/Index',
             withRelations: ['category'],
-            addProps: $this->addProps(),
         ));
     }
 

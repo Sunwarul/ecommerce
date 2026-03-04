@@ -28,7 +28,6 @@ class CustomerController extends Controller
             searchColumns: [],
             // exportClass: CustomerExport::class,
             // withRelations: [],
-            addProps: $this->addProps(),
         ));
     }
 

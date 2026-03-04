@@ -12,7 +12,7 @@ import AutoComplete from "primevue/autocomplete";
 import Badge from "primevue/badge";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputNumber from "primevue/inputnumber";
@@ -61,13 +61,13 @@ const suggestedTemplates = computed(() => {
     return [...templates].sort((a, b) => {
         const aMatch = cartCategoryIds.includes(a.category_id);
         const bMatch = cartCategoryIds.includes(b.category_id);
-        
+
         if (aMatch && !bMatch) return -1;
         if (!aMatch && bMatch) return 1;
-        
+
         if (a.category_id === null && b.category_id !== null) return -1;
         if (a.category_id !== null && b.category_id === null) return 1;
-        
+
         return 0;
     });
 });
@@ -354,7 +354,7 @@ watch(() => props.order, (newOrder) => {
                 // if we strictly assume unit_price is what was sold
                 const sellPrice = unitPrice;
 
-                // discount_amount in table is total for the line? or per unit? 
+                // discount_amount in table is total for the line? or per unit?
                 // Usually line_total = (unit * qty) - discount + tax.
                 // But here let's assume discount_amount is TOTAL line discount
                 const lineDisc = Number(i.discount_amount) || 0;
@@ -859,7 +859,7 @@ function handleSuccess(page) {
                                             <div :title="getStockTooltip(product.stocks, null)">
                                                 <Badge
                                                     :value="product.type === 'variable' ? 'Multi' : getProductStockTotal(product)"
-                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')" 
+                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')"
                                                     class="!text-[10px] !px-2 !py-0" />
                                             </div>
                                             <Button v-if="product.type !== 'variable'" icon="pi pi-pencil"
@@ -877,7 +877,7 @@ function handleSuccess(page) {
                                             <div class="text-xs text-slate-400 mt-0.5 truncate">
                                                 {{ product.sku }}
                                             </div>
-                                            
+
                                             <!-- Warehouse Info -->
                                             <div v-if="getProductWarehouseNames(product.stocks, null).length" class="mt-2 flex flex-wrap gap-1">
                                                 <span v-for="whName in getProductWarehouseNames(product.stocks, null).slice(0, 3)" :key="whName"
@@ -1074,7 +1074,7 @@ function handleSuccess(page) {
                                 </div>
 
                                 <div class="flex items-center gap-2 mb-1 min-w-0">
-                                    <Dropdown v-model="discountMode" :options="[
+                                    <Select v-model="discountMode" :options="[
                                         { label: 'None', value: 'none' },
                                         {
                                             label: 'Percent %',
@@ -1129,8 +1129,8 @@ function handleSuccess(page) {
                                     <div v-for="(row, index) in payments" :key="row.id"
                                         class="bg-white border border-slate-200 rounded-xl p-3">
                                         <div class="flex items-center gap-2">
-                                            <Dropdown v-model="row.payment_method_id" :options="paymentMethods"
-                                                optionLabel="name" optionValue="id" placeholder="Method"
+                                            <Select v-model="row.payment_method_id" :options="paymentMethods"
+                                                optionLabel="name" optionValue="id" placeholder="Method" filter
                                                 class="flex-1 text-xs" />
                                             <InputNumber v-model="row.amount" :min="0" class="w-28"
                                                 inputClass="!text-xs" />
@@ -1227,8 +1227,8 @@ function handleSuccess(page) {
                     Choose a variation to add to cart.
                 </div>
 
-                <Dropdown v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
-                    optionValue="value" placeholder="Select variation" class="w-full" showClear>
+                <Select v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
+                    optionValue="value" placeholder="Select variation" class="w-full" showClear filter>
                     <template #option="slotProps">
                         <div class="flex justify-between items-center w-full">
                             <span>{{ slotProps.option.label }}</span>
@@ -1242,7 +1242,7 @@ function handleSuccess(page) {
                             </div>
                         </div>
                     </template>
-                </Dropdown>
+                </Select>
 
                 <div v-if="selectedVariation" class="p-3 rounded-xl border border-slate-200 bg-slate-50">
                     <div class="text-xs text-slate-500">Price</div>

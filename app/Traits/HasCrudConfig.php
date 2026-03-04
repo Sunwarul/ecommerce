@@ -24,6 +24,8 @@ trait HasCrudConfig
 
     public array $withRelations = [];
 
+    public ?array $addPropsConfig = null;
+
     public function init(CrudConfig $config): void
     {
         $this->resource = $config->resource ?? $this->resource;
@@ -34,7 +36,7 @@ trait HasCrudConfig
         $this->exportClass = $config->exportClass ?? $this->exportClass;
         $this->componentPath = $config->componentPath ?? $this->componentPath;
         $this->withRelations = $config->withRelations ?? $this->withRelations;
-        $this->addProps = $config->addProps ?? $this->addProps();
+        $this->addPropsConfig = $config->addProps ?? null;
     }
 
     private function makeConfig()
