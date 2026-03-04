@@ -84,6 +84,14 @@ class ProductController extends Controller
         $brand_id = $request->input('brand_id');
         $status = $request->input('status'); // 'active', 'inactive'
         $trashed = $request->input('trashed'); // 'with', 'only'
+        $type = $request->input('type'); // 'simple', 'variable'
+        $warehouse_id = $request->input('warehouse_id');
+        $stock_min = $request->input('stock_min');
+        $stock_max = $request->input('stock_max');
+        $price_min = $request->input('price_min');
+        $price_max = $request->input('price_max');
+        $stock_status = $request->input('stock_status'); // 'in_stock', 'low_stock', 'out_of_stock'
+        $sort = $request->input('sort', 'id_desc');
 
         $query = Product::query()
             ->with([
@@ -98,7 +106,8 @@ class ProductController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%")
-                    ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('barcode', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -116,6 +125,57 @@ class ProductController extends Controller
                 $query->where('is_active', false);
             }
         }
+        if ($type) {
+            $query->where('type', $type);
+        }
+        if ($warehouse_id) {
+            $query->whereHas('stocks', function ($q) use ($warehouse_id) {
+                $q->where('warehouse_id', $warehouse_id);
+            });
+        }
+
+        // Price range
+        if ($price_min !== null && $price_min !== '') {
+            $query->where('base_price', '>=', floatval($price_min));
+        }
+        if ($price_max !== null && $price_max !== '') {
+            $query->where('base_price', '<=', floatval($price_max));
+        }
+
+        // Stock range (using having since it's an aggregate)
+        if ($stock_min !== null && $stock_min !== '') {
+            $query->having('total_stock', '>=', intval($stock_min));
+        }
+        if ($stock_max !== null && $stock_max !== '') {
+            $query->having('total_stock', '<=', intval($stock_max));
+        }
+
+        // Stock status filter
+        if ($stock_status === 'out_of_stock') {
+            $query->having('total_stock', '<=', 0);
+        } elseif ($stock_status === 'low_stock') {
+            $query->whereRaw('total_stock > 0 AND total_stock <= COALESCE(
+                (SELECT MIN(alert_quantity) FROM product_stocks WHERE product_id = products.id AND alert_quantity IS NOT NULL AND alert_quantity > 0),
+                10
+            )');
+        } elseif ($stock_status === 'in_stock') {
+            $query->whereRaw('total_stock > COALESCE(
+                (SELECT MIN(alert_quantity) FROM product_stocks WHERE product_id = products.id AND alert_quantity IS NOT NULL AND alert_quantity > 0),
+                10
+            )');
+        }
+
+        // Sorting
+        $sortParts = explode('_', $sort);
+        $sortField = $sortParts[0] ?? 'id';
+        $sortDir = $sortParts[1] ?? 'desc';
+        
+        $allowedSorts = ['id', 'name', 'base_price', 'total_stock', 'created_at', 'category_id', 'brand_id'];
+        if (in_array($sortField, $allowedSorts)) {
+            $query->orderBy($sortField, $sortDir === 'asc' ? 'asc' : 'desc');
+        } else {
+            $query->orderByDesc('id');
+        }
 
         // Trashed
         if ($trashed === 'only') {
@@ -124,9 +184,7 @@ class ProductController extends Controller
             $query->withTrashed();
         }
 
-        $products = $query->orderByDesc('id')
-            ->paginate($perPage)
-            ->withQueryString();
+        $products = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,
@@ -137,10 +195,18 @@ class ProductController extends Controller
                 'status' => $status,
                 'trashed' => $trashed,
                 'per_page' => $perPage,
+                'type' => $type,
+                'warehouse_id' => $warehouse_id,
+                'stock_min' => $stock_min,
+                'stock_max' => $stock_max,
+                'price_min' => $price_min,
+                'price_max' => $price_max,
+                'stock_status' => $stock_status,
+                'sort' => $sort,
             ],
-            // Pass filter options
             'categories' => Category::select('id', 'name')->get(),
             'brands' => Brand::select('id', 'name')->get(),
+            'warehouses' => Warehouse::select('id', 'name')->get(),
         ]);
     }
 
@@ -617,5 +683,32 @@ class ProductController extends Controller
     {
         $product->delete();
         return back()->with('success', 'Product moved to trash.');
+    }
+
+    public function updateStock(Request $request, Product $product)
+    {
+        $request->validate([
+            'warehouse_id' => ['required', 'exists:warehouses,id'],
+            'quantity' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $stock = ProductStock::where('product_id', $product->id)
+            ->where('warehouse_id', $request->warehouse_id)
+            ->whereNull('variation_id')
+            ->first();
+
+        if ($stock) {
+            $stock->update(['quantity' => $request->quantity]);
+        } else {
+            ProductStock::create([
+                'product_id' => $product->id,
+                'warehouse_id' => $request->warehouse_id,
+                'variation_id' => null,
+                'branch_id' => 1,
+                'quantity' => $request->quantity,
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Stock updated successfully']);
     }
 }
