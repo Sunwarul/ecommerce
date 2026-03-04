@@ -9,7 +9,7 @@ import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import Dialog from "primevue/dialog";
 import Divider from "primevue/divider";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Tag from "primevue/tag";
@@ -739,9 +739,9 @@ function updateOrderDate() {
                             @keyup.enter="applyFilter" />
                     </InputGroup>
 
-                    <Dropdown v-model="status" :options="statusOptions" optionLabel="label" optionValue="value"
+                    <Select v-model="status" :options="statusOptions" optionLabel="label" optionValue="value"
                         placeholder="Order Status" class="w-1/2 md:w-44" />
-                    <Dropdown v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
+                    <Select v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
                         optionValue="value" placeholder="Payment Status" class="w-1/2 md:w-44" />
 
                     <Calendar v-model="dateFrom" placeholder="From" dateFormat="yy-mm-dd" showIcon
@@ -750,11 +750,11 @@ function updateOrderDate() {
                 </div>
 
                 <div class="flex flex-wrap gap-3 items-center pt-2 border-t border-slate-100">
-                    <Dropdown v-model="categoryId" :options="categories" optionLabel="name" optionValue="id"
+                    <Select v-model="categoryId" :options="categories" optionLabel="name" optionValue="id"
                         placeholder="All Categories" class="w-1/2 md:w-56" showClear filter />
-                    <Dropdown v-model="brandId" :options="brands" optionLabel="name" optionValue="id"
-                        placeholder="All Brands" class="w-1/2 md:w-56" showClear />
-                    <Dropdown v-model="productId" :options="available_products" optionLabel="name" optionValue="id"
+                    <Select v-model="brandId" :options="brands" optionLabel="name" optionValue="id"
+                        placeholder="All Brands" class="w-1/2 md:w-56" showClear filter />
+                    <Select v-model="productId" :options="available_products" optionLabel="name" optionValue="id"
                         placeholder="Filter by Product" class="w-full md:w-72" filter showClear />
 
                     <div class="flex gap-2 ml-auto">
@@ -1048,8 +1048,8 @@ function updateOrderDate() {
                                 <div class="text-xs text-slate-500 mb-1">
                                     Method <span class="text-red-600">*</span>
                                 </div>
-                                <Dropdown v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
-                                    optionValue="id" placeholder="Select method" class="w-full" />
+                                <Select v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
+                                    optionValue="id" placeholder="Select method" filter class="w-full" />
                             </div>
 
                             <div>
@@ -1189,8 +1189,8 @@ function updateOrderDate() {
                                 <div class="text-xs text-slate-500 mb-1">
                                     Method <span class="text-red-600">*</span>
                                 </div>
-                                <Dropdown v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
-                                    optionValue="id" placeholder="Select method" class="w-full" />
+                                <Select v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name"
+                                    optionValue="id" placeholder="Select method" filter class="w-full" />
                             </div>
 
                             <div>
@@ -1291,8 +1291,8 @@ function updateOrderDate() {
 
                 <div>
                     <div class="text-sm font-semibold mb-2">Target Branch <span class="text-red-600">*</span></div>
-                    <Dropdown v-model="targetBranchId" :options="branches" optionLabel="name" optionValue="id"
-                        placeholder="Select branch" class="w-full" />
+                    <Select v-model="targetBranchId" :options="branches" optionLabel="name" optionValue="id"
+                        placeholder="Select branch" filter class="w-full" />
                 </div>
 
                 <div class="flex justify-end gap-2">

@@ -4,7 +4,7 @@ import { computed, watch } from "vue";
 
 import Button from "primevue/button";
 import Card from "primevue/card";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
@@ -156,7 +156,7 @@ const back = () => router.visit(route("products.show", props.product.id));
                             <label class="block font-medium mb-2"
                                 >Movement Type *</label
                             >
-                            <Dropdown
+                            <Select
                                 v-model="form.type"
                                 :options="typeOptions"
                                 optionLabel="label"
@@ -173,7 +173,7 @@ const back = () => router.visit(route("products.show", props.product.id));
                             <label class="block font-medium mb-2"
                                 >Variation (optional)</label
                             >
-                            <Dropdown
+                            <Select
                                 v-model="form.variation_id"
                                 :options="variationOptions"
                                 optionLabel="label"
@@ -220,12 +220,13 @@ const back = () => router.visit(route("products.show", props.product.id));
                             <label class="block font-medium mb-2"
                                 >Branch *</label
                             >
-                            <Dropdown
+                            <Select
                                 v-model="form.branch_id"
                                 :options="branches"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select branch"
+                                filter
                                 class="w-full"
                             />
                             <small v-if="form.errors.branch_id" class="p-error">
@@ -238,12 +239,13 @@ const back = () => router.visit(route("products.show", props.product.id));
                             <label class="block font-medium mb-2"
                                 >From Warehouse *</label
                             >
-                            <Dropdown
+                            <Select
                                 v-model="form.from_warehouse_id"
                                 :options="warehouses"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select warehouse"
+                                filter
                                 class="w-full"
                             />
                             <small
@@ -259,12 +261,13 @@ const back = () => router.visit(route("products.show", props.product.id));
                             <label class="block font-medium mb-2"
                                 >To Warehouse *</label
                             >
-                            <Dropdown
+                            <Select
                                 v-model="form.to_warehouse_id"
                                 :options="warehouses"
                                 optionLabel="name"
                                 optionValue="id"
                                 placeholder="Select warehouse"
+                                filter
                                 class="w-full"
                             />
                             <small

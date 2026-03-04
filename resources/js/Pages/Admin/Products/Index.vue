@@ -12,7 +12,7 @@ import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import InputText from "primevue/inputtext";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import SplitButton from "primevue/splitbutton";
 import Toolbar from "primevue/toolbar";
 import TabMenu from "primevue/tabmenu";
@@ -163,14 +163,14 @@ const bulkDelete = () => {
     });
 };
 
-// We don't have a bulk soft delete route in controller yet? 
-// Actually Controller has `bulkForceDelete`. For soft delete bulk, we'd need a route or loop. 
-// Let's implement bulk soft delete in controller or loop here. 
+// We don't have a bulk soft delete route in controller yet?
+// Actually Controller has `bulkForceDelete`. For soft delete bulk, we'd need a route or loop.
+// Let's implement bulk soft delete in controller or loop here.
 // For now, I'll assume we might need to add `bulkDestroy` to controller or just disable if not present.
-// WAIT, we passed `bulkForceDelete` in plan. 
-// Let's use loop for soft delete if route missing, or better add route. 
+// WAIT, we passed `bulkForceDelete` in plan.
+// Let's use loop for soft delete if route missing, or better add route.
 // I'll add `bulkDestroy` in next step if missed. For now assuming it exists or I'll add it.
-// Re-checking plan: "Bulk Operations". I added `bulkForceDelete` and `bulkRestore`. 
+// Re-checking plan: "Bulk Operations". I added `bulkForceDelete` and `bulkRestore`.
 // I missed `bulkSoftDelete`. I will add it to controller.
 
 const bulkRestore = () => {
@@ -268,16 +268,16 @@ const startStockEdit = (product) => {
 
 const saveStockEdit = async (product) => {
     if (editingStock.value === null) return;
-    
+
     try {
         const response = await axios.put(route('products.update-stock', product.id), {
             warehouse_id: editingWarehouseId.value,
             quantity: editingStockValue.value,
         });
-        
+
         editingStock.value = null;
         editingWarehouseId.value = null;
-        
+
         // Reload the page to refresh data
         router.reload({ preserveState: true, preserveScroll: true });
     } catch (error) {
@@ -298,6 +298,25 @@ const isLowStock = (product) => {
 
 const isOutOfStock = (product) => {
     return getTotalStock(product) <= 0;
+};
+
+const resetFilters = () => {
+    filterForm.value = {
+        search: "",
+        category_id: null,
+        brand_id: null,
+        status: null,
+        trashed: null,
+        per_page: 10,
+        type: null,
+        warehouse_id: null,
+        stock_min: null,
+        stock_max: null,
+        price_min: null,
+        price_max: null,
+        stock_status: null,
+        sort: 'id_desc',
+    };
 };
 </script>
 
@@ -322,66 +341,91 @@ const isOutOfStock = (product) => {
                 </Toolbar>
 
                 <!-- Filters -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div class="col-span-1">
-                        <span class="p-input-icon-left w-full">
-                            <IconField>
-                                <InputIcon class="pi pi-search" />
-                                <InputText type="search" v-model="filterForm.search" placeholder="Search name, sku, barcode..."
-                                    class="w-full" />
-                            </IconField>
-                        </span>
-                    </div>
+                <div class="space-y-3">
+                    <!-- Row 1: Main filters -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                            <span class="p-input-icon-left w-full">
+                                <IconField>
+                                    <InputIcon class="pi pi-search" />
+                                    <InputText type="search" v-model="filterForm.search" placeholder="Search name, sku, barcode..."
+                                        class="w-full" />
+                                </IconField>
+                            </span>
+                        </div>
 
-                    <div class="col-span-1">
-                        <Dropdown v-model="filterForm.category_id" :options="categories" optionLabel="name"
-                            optionValue="id" placeholder="Category" showClear class="w-full" />
-                    </div>
+                        <div>
+                            <Select v-model="filterForm.category_id" :options="categories" optionLabel="name"
+                                optionValue="id" placeholder="Category" filter showClear class="w-full" />
+                        </div>
 
-                    <div class="col-span-1">
-                        <Dropdown v-model="filterForm.brand_id" :options="brands" optionLabel="name" optionValue="id"
-                            placeholder="Brand" showClear class="w-full" />
-                    </div>
+                        <div>
+                            <Select v-model="filterForm.brand_id" :options="brands" optionLabel="name" optionValue="id"
+                                placeholder="Brand" filter showClear class="w-full" />
+                        </div>
 
-                    <div class="col-span-1">
-                        <Dropdown v-model="filterForm.type" :options="typeOptions" optionLabel="label"
-                            optionValue="value" placeholder="Product Type" showClear class="w-full" />
-                    </div>
-
-                    <div class="col-span-1">
-                        <Dropdown v-model="filterForm.warehouse_id" :options="warehouses" optionLabel="name"
-                            optionValue="id" placeholder="Warehouse" showClear class="w-full" />
-                    </div>
-
-                    <div class="col-span-1">
-                        <Dropdown v-model="filterForm.stock_status" :options="stockStatusOptions" optionLabel="label"
-                            optionValue="value" placeholder="Stock Status" showClear class="w-full" />
-                    </div>
-
-                    <div class="col-span-1">
-                        <div class="flex gap-2">
-                            <InputNumber v-model="filterForm.stock_min" placeholder="Min Stock" showButtons :min="0" class="w-full" />
-                            <InputNumber v-model="filterForm.stock_max" placeholder="Max Stock" showButtons :min="0" class="w-full" />
+                        <div>
+                            <Select v-model="filterForm.type" :options="typeOptions" optionLabel="label"
+                                optionValue="value" placeholder="Product Type" showClear class="w-full" />
                         </div>
                     </div>
 
-                    <div class="col-span-1">
-                        <div class="flex gap-2">
-                            <InputNumber v-model="filterForm.price_min" placeholder="Min Price" mode="currency" currency="USD" locale="en-US" class="w-full" />
-                            <InputNumber v-model="filterForm.price_max" placeholder="Max Price" mode="currency" currency="USD" locale="en-US" class="w-full" />
+                    <!-- Row 2: Stock & Warehouse filters -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                            <Select v-model="filterForm.warehouse_id" :options="warehouses" optionLabel="name"
+                                optionValue="id" placeholder="Warehouse" filter showClear class="w-full" />
+                        </div>
+
+                        <div>
+                            <Select v-model="filterForm.stock_status" :options="stockStatusOptions" optionLabel="label"
+                                optionValue="value" placeholder="Stock Status" showClear class="w-full" />
+                        </div>
+
+                        <div class="sm:col-span-2 lg:col-span-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <InputNumber v-model="filterForm.stock_min" placeholder="Min Stock" showButtons :min="0" class="w-full" />
+                                <InputNumber v-model="filterForm.stock_max" placeholder="Max Stock" showButtons :min="0" class="w-full" />
+                            </div>
                         </div>
                     </div>
 
-                    <div class="col-span-1 flex gap-2">
-                        <Dropdown v-model="filterForm.status" :options="statusOptions" optionLabel="label"
-                            optionValue="value" placeholder="Status" showClear class="w-full" />
-                        <Dropdown v-model="filterForm.sort" :options="sortOptions" optionLabel="label"
-                            optionValue="value" placeholder="Sort" class="w-full" />
-                    </div>
+                    <!-- Row 3: Status, Sort, Price, Actions -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                        <div>
+                            <Select v-model="filterForm.status" :options="statusOptions" optionLabel="label"
+                                optionValue="value" placeholder="Status" showClear class="w-full" />
+                        </div>
 
-                    <div class="col-span-1 flex gap-2">
-                        <Dropdown v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
-                            optionValue="value" placeholder="Per Page" class="w-full" />
+                        <div>
+                            <Select v-model="filterForm.sort" :options="sortOptions" optionLabel="label"
+                                optionValue="value" placeholder="Sort By" class="w-full" />
+                        </div>
+
+                        <div>
+                            <Select v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
+                                optionValue="value" placeholder="Per Page" class="w-full" />
+                        </div>
+
+                        <div>
+                            <Dropdown v-model="filterForm.sort" :options="sortOptions" optionLabel="label"
+                                optionValue="value" placeholder="Sort By" class="w-full" />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <InputNumber v-model="filterForm.price_min" placeholder="Min $" mode="currency" currency="USD" locale="en-US" class="w-full" />
+                            <InputNumber v-model="filterForm.price_max" placeholder="Max $" mode="currency" currency="USD" locale="en-US" class="w-full" />
+                        </div>
+
+                        <div>
+                            <Dropdown v-model="filterForm.per_page" :options="perPageOptions" optionLabel="label"
+                                optionValue="value" placeholder="Per Page" class="w-full" />
+                        </div>
+
+                        <div class="flex items-center">
+                            <Button label="Clear" icon="pi pi-filter-slash" severity="secondary"
+                                class="w-full" @click="resetFilters" />
+                        </div>
                     </div>
                 </div>
 
@@ -431,35 +475,36 @@ const isOutOfStock = (product) => {
                     <Column header="Stock" sortable field="total_stock">
                         <template #body="{ data }">
                             <div v-if="editingStock === data.id" class="flex items-center gap-2">
-                                <Dropdown v-model="editingWarehouseId" :options="warehouses" optionLabel="name"
-                                    optionValue="id" class="w-32" />
+                                <Select v-model="editingWarehouseId" :options="warehouses" optionLabel="name"
+                                    optionValue="id" filter class="w-32" />
                                 <InputNumber v-model="editingStockValue" showButtons :min="0" class="w-20" />
                                 <Button icon="pi pi-check" class="p-button-text p-button-success p-button-sm" @click="saveStockEdit(data)" />
                                 <Button icon="pi pi-times" class="p-button-text p-button-danger p-button-sm" @click="cancelStockEdit" />
                             </div>
-                            <div v-else class="flex items-center gap-2">
+                            <div v-else>
                                 <span class="font-bold cursor-pointer cursor-help"
                                     :title="getStockTooltip(data.stocks) + '\n\nDouble-click to edit'"
-                                    :class="{ 
-                                        'text-red-500': isOutOfStock(data), 
+                                    :class="{
+                                        'text-red-500': isOutOfStock(data),
                                         'text-orange-500': isLowStock(data),
                                         'text-green-600': !isOutOfStock(data) && !isLowStock(data)
                                     }"
                                     @dblclick="startStockEdit(data)">
                                     {{ getTotalStock(data) }}
                                 </span>
-                                <Badge v-if="isOutOfStock(data)" severity="danger" value="Out" />
-                                <Badge v-else-if="isLowStock(data)" severity="warning" value="Low" />
                             </div>
                         </template>
                     </Column>
 
-                    <!-- Status -->
-                    <Column header="Status">
+                    <!-- Stock Status -->
+                    <Column header="Stock Status">
                         <template #body="{ data }">
-                            <Badge :severity="data.is_active ? 'success' : 'danger'">
-                                {{ data.is_active ? "Active" : "Inactive" }}
-                            </Badge>
+                            <div class="flex flex-col gap-1 justify-between items-center">
+                                <Badge v-if="isOutOfStock(data)" severity="danger" value="Out of Stock" />
+                                <Badge v-else-if="isLowStock(data)" severity="warning" value="Low Stock" />
+                                <Badge v-else severity="success" value="In Stock" />
+                                <span class="text-xs text-gray-400">Active: {{ data.is_active ? 'Yes' : 'No' }}</span>
+                            </div>
                         </template>
                     </Column>
 

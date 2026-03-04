@@ -389,7 +389,8 @@ class PosOrderController extends Controller
 
         // Branch filtering - filter by current branch unless admin requests all
         $currentBranchId = session('current_branch_id');
-        $isAdmin = Auth::user()->hasRole('admin');
+        $user = Auth::user();
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('Super Admin') || $user->hasRole('manager');
         $showAllBranches = $request->boolean('all_branches') && $isAdmin;
 
         $query = PosOrder::with(['customer', 'user', 'branch', 'session', 'items.product.category', 'items.product.brand'])
@@ -1057,7 +1058,8 @@ class PosOrderController extends Controller
     {
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
 
-        $isAdmin = $request->user()->hasRole('admin');
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->hasRole('Super Admin') || $user->hasRole('manager');
 
         if (!$isAdmin) {
             return back()->with('error', 'Only admins can edit order date.');

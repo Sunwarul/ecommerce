@@ -12,7 +12,7 @@ import AutoComplete from "primevue/autocomplete";
 import Badge from "primevue/badge";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputNumber from "primevue/inputnumber";
@@ -1074,7 +1074,7 @@ function handleSuccess(page) {
                                 </div>
 
                                 <div class="flex items-center gap-2 mb-1 min-w-0">
-                                    <Dropdown v-model="discountMode" :options="[
+                                    <Select v-model="discountMode" :options="[
                                         { label: 'None', value: 'none' },
                                         {
                                             label: 'Percent %',
@@ -1129,8 +1129,8 @@ function handleSuccess(page) {
                                     <div v-for="(row, index) in payments" :key="row.id"
                                         class="bg-white border border-slate-200 rounded-xl p-3">
                                         <div class="flex items-center gap-2">
-                                            <Dropdown v-model="row.payment_method_id" :options="paymentMethods"
-                                                optionLabel="name" optionValue="id" placeholder="Method"
+                                            <Select v-model="row.payment_method_id" :options="paymentMethods"
+                                                optionLabel="name" optionValue="id" placeholder="Method" filter
                                                 class="flex-1 text-xs" />
                                             <InputNumber v-model="row.amount" :min="0" class="w-28"
                                                 inputClass="!text-xs" />
@@ -1227,8 +1227,8 @@ function handleSuccess(page) {
                     Choose a variation to add to cart.
                 </div>
 
-                <Dropdown v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
-                    optionValue="value" placeholder="Select variation" class="w-full" showClear>
+                <Select v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
+                    optionValue="value" placeholder="Select variation" class="w-full" showClear filter>
                     <template #option="slotProps">
                         <div class="flex justify-between items-center w-full">
                             <span>{{ slotProps.option.label }}</span>
