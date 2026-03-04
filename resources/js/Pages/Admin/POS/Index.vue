@@ -287,6 +287,12 @@ const getStockTooltip = (stocks, variationId = null) => {
     }).join('\n');
 };
 
+const getProductWarehouseNames = (stocks, variationId = null) => {
+    if (!stocks || stocks.length === 0) return [];
+    const filtered = stocks.filter(s => s.variation_id === variationId && Number(s.quantity) > 0);
+    return filtered.map(s => s.warehouse?.name || `WH#${s.warehouse_id}`);
+};
+
 // -----------------------------
 // filtered products
 // -----------------------------
@@ -764,31 +770,30 @@ function handleSuccess(page) {
     <AuthenticatedLayout>
         <div class="h-[95vh] flex overflow-y-auto">
             <main
-                class="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                class="flex-1 flex flex-col overflow-hidden bg-white rounded-xl shadow-sm border border-slate-200">
                 <!-- Header -->
-                <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
-                    <div>
-                        <h1 class="text-lg font-semibold text-slate-800">
-                            Point of Sale
-                        </h1>
-                        <p class="text-xs text-slate-400">
-                            {{
-                                posSession
-                                    ? `Active Session #${posSession.id}`
-                                    : "No active session"
-                            }}
-                        </p>
+                <header class="h-14 bg-white border-b border-slate-100 flex items-center justify-between px-5">
+                    <div class="flex items-center gap-6">
+                        <div>
+                            <h1 class="text-base font-semibold text-slate-800">
+                                Point of Sale
+                            </h1>
+                            <p class="text-xs text-slate-400">
+                                {{
+                                    posSession
+                                        ? `Active Session #${posSession.id}`
+                                        : "No active session"
+                                }}
+                            </p>
+                        </div>
+                        <SessionBar :currentSession="props.currentSession" :branches="props.branches"
+                                :warehouses="props.warehouses" />
                     </div>
 
                     <div class="flex items-center gap-3 text-xs text-slate-500">
-                        <div class="flex items-center justify-between mb-3">
-                            <SessionBar :currentSession="props.currentSession" :branches="props.branches"
-                                :warehouses="props.warehouses" />
-                        </div>
-
                         <span
-                            class="px-3 py-1 rounded-full text-lg mb-3 bg-emerald-50 text-emerald-600 flex items-center gap-2">
-                            <i class="pi pi-clock text-4xl" />
+                            class="px-3 py-1.5 rounded-lg text-sm bg-emerald-50 text-emerald-600 flex items-center gap-2 font-medium">
+                            <i class="pi pi-clock text-sm" />
                             {{ now.toLocaleTimeString() }}
                         </span>
                     </div>
@@ -797,35 +802,34 @@ function handleSuccess(page) {
                 <!-- BODY -->
                 <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
                     <!-- PRODUCTS -->
-                    <section class="flex-1 p-5 overflow-y-auto">
+                    <section class="flex-1 p-4 overflow-y-auto">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                             <div>
-                                <h2 class="text-xl font-semibold text-slate-800">
+                                <h2 class="text-lg font-semibold text-slate-800">
                                     Product Catalog
                                 </h2>
                                 <p class="text-xs text-slate-400">
-                                    Click a product card to add it. Variable
-                                    products will ask for variation.
+                                    Click a product card to add it. Variable products will ask for variation.
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-3">
-                                <InputGroup class="w-full max-w-4xl">
+                                <InputGroup class="w-full max-w-md">
                                     <InputText type="search" v-model="search"
-                                        placeholder="Search by product name, SKU, barcode, etc"
-                                        class="w-full !w-[400px]" />
+                                        placeholder="Search products, SKU, barcode..."
+                                        class="w-full !w-[320px]" />
                                     <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
                                 </InputGroup>
                             </div>
                         </div>
 
-                        <div class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                        <div class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                             <div v-for="product in filteredProducts" :key="product.id"
                                 class="col-12 sm:col-6 md:col-4 xl:col-3">
-                                <div class="rounded-2xl shadow-sm border border-slate-300 bg-slate-100 p-3 flex flex-col h-full cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition"
+                                <div class="rounded-xl shadow-sm border border-slate-200 bg-white p-4 flex flex-col h-full cursor-pointer hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 transition-all"
                                     @click="addProduct(product)">
                                     <div
-                                        class="relative rounded-xl bg-white mb-3 h-28 flex items-center justify-center overflow-hidden">
+                                        class="relative rounded-lg bg-slate-50 mb-3 h-24 flex items-center justify-center overflow-hidden">
                                         <span v-if="!product.thumbnail"
                                             class="text-slate-300 text-xs uppercase tracking-wide">Image</span>
 
@@ -838,13 +842,13 @@ function handleSuccess(page) {
                                             <Badge :severity="product.type === 'variable'
                                                 ? 'info'
                                                 : 'secondary'
-                                                " :value="product.type" />
+                                                " :value="product.type" class="!text-[10px] !px-2 !py-0" />
                                         </div>
 
                                         <div v-if="
                                             getProductDiscountPrice(product)
                                         "
-                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[11px] font-semibold px-2 py-1 rounded-full">
+                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                             -{{
                                                 productDiscountPercent(product)
                                             }}%
@@ -855,10 +859,11 @@ function handleSuccess(page) {
                                             <div :title="getStockTooltip(product.stocks, null)">
                                                 <Badge
                                                     :value="product.type === 'variable' ? 'Multi' : getProductStockTotal(product)"
-                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')" />
+                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')" 
+                                                    class="!text-[10px] !px-2 !py-0" />
                                             </div>
                                             <Button v-if="product.type !== 'variable'" icon="pi pi-pencil"
-                                                class="p-button-rounded p-button-xs p-button-secondary !h-6 !w-6"
+                                                class="p-button-rounded p-button-xs p-button-secondary !h-5 !w-5"
                                                 @click.stop="openAdjustStock(product)"
                                                 v-tooltip.top="'Quick Adjust Stock'" type="button" />
                                         </div>
@@ -872,9 +877,21 @@ function handleSuccess(page) {
                                             <div class="text-xs text-slate-400 mt-0.5 truncate">
                                                 {{ product.sku }}
                                             </div>
+                                            
+                                            <!-- Warehouse Info -->
+                                            <div v-if="getProductWarehouseNames(product.stocks, null).length" class="mt-2 flex flex-wrap gap-1">
+                                                <span v-for="whName in getProductWarehouseNames(product.stocks, null).slice(0, 3)" :key="whName"
+                                                    class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
+                                                    {{ whName }}
+                                                </span>
+                                                <span v-if="getProductWarehouseNames(product.stocks, null).length > 3"
+                                                    class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200">
+                                                    +{{ getProductWarehouseNames(product.stocks, null).length - 3 }}
+                                                </span>
+                                            </div>
                                         </div>
 
-                                        <div class="flex items-end justify-between mt-1 gap-2">
+                                        <div class="flex items-end justify-between mt-2 gap-2">
                                             <div class="min-w-0">
                                                 <div class="text-base font-bold text-emerald-600">
                                                     {{
@@ -893,13 +910,13 @@ function handleSuccess(page) {
                                                     getProductDiscountPrice(
                                                         product
                                                     )
-                                                " class="text-xs text-slate-400 flex items-center gap-2">
+                                                " class="text-xs text-slate-400 flex items-center gap-1">
                                                     <span class="line-through">{{
                                                         getProductUnitPrice(
                                                             product
                                                         ).toFixed(2)
                                                     }}</span>
-                                                    <span class="text-rose-600 font-semibold">Save
+                                                    <span class="text-rose-600 font-semibold">-
                                                         {{
                                                             productDiscountPercent(
                                                                 product
@@ -924,12 +941,12 @@ function handleSuccess(page) {
 
                     <!-- ORDER PANEL -->
                     <aside
-                        class="w-full lg:w-96 bg-slate-50 border-l border-slate-200 p-4 flex flex-col overflow-y-auto h-1/2 lg:h-auto border-t lg:border-t-0">
+                        class="w-full lg:w-[380px] bg-white border-l border-slate-200 p-4 flex flex-col overflow-y-auto h-1/2 lg:h-auto border-t lg:border-t-0">
                         <div class="flex flex-col flex-1">
                             <!-- header -->
                             <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
                                 <div>
-                                    <h3 class="text-base font-semibold text-slate-800">
+                                    <h3 class="text-sm font-semibold text-slate-800">
                                         Order Summary
                                     </h3>
                                     <p class="text-xs text-slate-400">
@@ -942,18 +959,18 @@ function handleSuccess(page) {
                                 </div>
 
                                 <span
-                                    class="px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-600 font-medium">
+                                    class="px-2 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-600 font-medium">
                                     {{ cartItems.length }} items
                                 </span>
                             </div>
 
                             <!-- ✅ customer remote search -->
-                            <div class="mb-4">
-                                <p class="text-xs text-slate-500 mb-1">
-                                    Customer Search
+                            <div class="mb-3">
+                                <p class="text-xs text-slate-500 mb-1.5">
+                                    Customer
                                 </p>
                                 <AutoComplete v-model="selectedCustomer" :suggestions="customerSuggestions"
-                                    :optionLabel="customerLabel" class="w-full" inputClass="w-full text-sm"
+                                    :optionLabel="customerLabel" class="w-full" inputClass="w-full text-xs"
                                     placeholder="Search by name or phone" :loading="customerLoading"
                                     @complete="onCustomerComplete">
                                     <template #option="slotProps">
@@ -965,7 +982,7 @@ function handleSuccess(page) {
                                     </template>
                                 </AutoComplete>
                                 <!-- warranty info -->
-                                <div class="mt-2">
+                                <div class="mt-3">
                                     <div class="flex items-center justify-between mb-1">
                                         <label class="text-xs text-slate-500">Warranty Info</label>
                                         <Button label="Select Template" icon="pi pi-list"
@@ -979,15 +996,15 @@ function handleSuccess(page) {
 
 
                             <!-- cart items -->
-                            <div class="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
+                            <div class="flex-1 overflow-y-auto space-y-2 pr-1 mb-3">
                                 <div v-for="(item, index) in cartItems" :key="`${item.product_id}-${item.variation_id || 'simple'
                                     }`"
-                                    class="flex items-start justify-between bg-white border-slate-300 border rounded-xl px-3 py-2">
+                                    class="flex items-start justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
                                     <div class="flex-1">
-                                        <div class="text-xs font-semibold text-slate-800">
+                                        <div class="text-xs font-semibold text-slate-800 truncate">
                                             {{ item.name }}
                                         </div>
-                                        <div class="text-[11px] text-slate-400 mb-1">
+                                        <div class="text-[10px] text-slate-400 mb-1.5">
                                             {{ item.sku }}
                                         </div>
 
@@ -997,9 +1014,8 @@ function handleSuccess(page) {
                                                     item.sell_price || 0
                                                 ).toFixed(2)
                                             }}</span>
-                                            <span v-if="item.discount_price" class="ml-2 text-rose-600">
-                                                (was
-                                                {{
+                                            <span v-if="item.discount_price" class="ml-1 text-rose-600">
+                                                ({{
                                                     Number(
                                                         item.unit_price || 0
                                                     ).toFixed(2)
@@ -1008,13 +1024,13 @@ function handleSuccess(page) {
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            <InputNumber v-model="item.quantity" :min="1" inputClass="!w-14 !text-xs"
+                                            <InputNumber v-model="item.quantity" :min="1" inputClass="!w-12 !text-xs"
                                                 showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus"
                                                 decrementButtonIcon="pi pi-minus"
                                                 incrementButtonClass="p-button-text p-button-sm"
                                                 decrementButtonClass="p-button-text p-button-sm" />
 
-                                            <span class="text-[11px] text-slate-400">
+                                            <span class="text-[10px] text-slate-400">
                                                 x
                                                 {{
                                                     Number(

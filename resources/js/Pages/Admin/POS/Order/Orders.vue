@@ -30,6 +30,9 @@ const props = defineProps({
     categories: { type: Array, default: () => [] },
     brands: { type: Array, default: () => [] },
     available_products: { type: Array, default: () => [] },
+    branches: { type: Array, default: () => [] },
+    currentBranchId: { type: Number, default: null },
+    isAdmin: { type: Boolean, default: false },
     insights: { type: Object, default: () => ({}) },
 });
 
@@ -98,6 +101,7 @@ function applyFilter() {
             brand_id: brandId.value || undefined,
             product_id: productId.value || undefined,
             trashed: trashed.value ? 1 : undefined,
+            all_branches: props.filters?.all_branches ? 1 : undefined,
         },
         { preserveState: true, replace: true }
     );
@@ -265,6 +269,39 @@ function voidOrder() {
     );
 }
 
+/* ---------------- Transfer Modal ---------------- */
+const showTransferModal = ref(false);
+const transferLoading = ref(false);
+const targetBranchId = ref(null);
+
+function openTransferModal() {
+    if (!selectedOrders.value.length) return;
+    targetBranchId.value = null;
+    showTransferModal.value = true;
+}
+
+function transferOrders() {
+    if (!targetBranchId.value || !selectedOrders.value.length) return;
+
+    transferLoading.value = true;
+    router.post(route("pos.orders.transfer"), {
+        ids: selectedOrders.value.map(o => o.id),
+        target_branch_id: targetBranchId.value
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedOrders.value = [];
+            showTransferModal.value = false;
+            targetBranchId.value = null;
+            toast.add({ severity: 'success', summary: 'Transferred', detail: 'Orders transferred to selected branch', life: 2000 });
+        },
+        onError: () => {
+            toast.add({ severity: 'error', summary: 'Failed', detail: 'Could not transfer orders', life: 2500 });
+        },
+        onFinish: () => (transferLoading.value = false),
+    });
+}
+
 /* ---------------- Trash / Restore / Force Delete ---------------- */
 function trashOrder(order) {
     if (!confirm("Move this order to trash?")) return;
@@ -308,6 +345,11 @@ const bulkActions = computed(() => {
             command: () => bulkSubmit('force_delete'),
         });
     } else {
+        actions.push({
+            label: "Transfer to Branch",
+            icon: "pi pi-directions",
+            command: () => openTransferModal(),
+        });
         actions.push({
             label: "Trash Selected",
             icon: "pi pi-trash",
@@ -544,6 +586,50 @@ function editDraft(order) {
     if (!order) return;
     router.visit(route("pos.orders.edit", order.id));
 }
+
+/* ---------------- Edit Date Modal (Admin Only) ---------------- */
+const showEditDateModal = ref(false);
+const editDateTarget = ref(null);
+const editDateLoading = ref(false);
+const newSaleDate = ref(null);
+
+function openEditDateModal(order) {
+    editDateTarget.value = order;
+    newSaleDate.value = order.created_at ? new Date(order.created_at) : new Date();
+    showEditDateModal.value = true;
+}
+
+function updateOrderDate() {
+    if (!editDateTarget.value || !newSaleDate.value) return;
+
+    editDateLoading.value = true;
+    const dateStr = newSaleDate.value.toISOString().slice(0, 19).replace('T', ' ');
+    
+    router.put(route("pos.orders.update-date", editDateTarget.value.id), {
+        sale_date: dateStr
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Updated",
+                detail: "Order date updated successfully",
+                life: 2200,
+            });
+            showEditDateModal.value = false;
+            editDateTarget.value = null;
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: "error",
+                summary: "Failed",
+                detail: errors.message || "Could not update order date",
+                life: 2500,
+            });
+        },
+        onFinish: () => (editDateLoading.value = false),
+    });
+}
 </script>
 
 <template>
@@ -565,6 +651,13 @@ function editDraft(order) {
                     <Button :label="showInsights ? 'Hide Insights' : 'Show Insights'"
                         :icon="showInsights ? 'pi pi-chart-bar' : 'pi pi-chart-line'" class="p-button-text p-button-sm"
                         @click="showInsights = !showInsights" />
+
+                    <Button v-if="isAdmin" :label="props.filters?.all_branches ? 'Current Branch' : 'All Branches'"
+                        :icon="props.filters?.all_branches ? 'pi pi-building' : 'pi pi-globe'" 
+                        :class="props.filters?.all_branches ? 'p-button-warning' : 'p-button-outlined'"
+                        class="p-button-sm"
+                        @click="router.get(route('pos.orders.index', { all_branches: !props.filters?.all_branches ? 1 : undefined }), {}, { preserveState: true })" 
+                    />
 
                     <div v-if="selectedOrders.length" class="flex items-center gap-2">
                         <SplitButton :label="selectedOrders.length + ' Selected'" :model="bulkActions" severity="danger"
@@ -714,6 +807,12 @@ function editDraft(order) {
                             }}</template>
                     </Column>
 
+                    <Column header="Branch">
+                        <template #body="{ data }">{{
+                            data.branch?.name || "-"
+                            }}</template>
+                    </Column>
+
                     <Column header="Total">
                         <template #body="{ data }">
                             <span class="font-semibold text-emerald-600">{{
@@ -739,6 +838,10 @@ function editDraft(order) {
                             <div class="flex gap-1 flex-wrap">
                                 <Button icon="pi pi-eye" class="p-button-text p-button-sm"
                                     @click="openInvoiceModal(data)" v-tooltip.top="'View'" />
+
+                                <Button v-if="isAdmin && data.status === 'completed'" icon="pi pi-calendar"
+                                    class="p-button-text p-button-sm p-button-help"
+                                    @click="openEditDateModal(data)" v-tooltip.top="'Edit Date'" />
 
                                 <template v-if="!data.deleted_at">
                                     <Button icon="pi pi-external-link" class="p-button-text p-button-sm"
@@ -1167,6 +1270,67 @@ function editDraft(order) {
                     <Button label="Cancel" class="p-button-text" @click="showPayDueModal = false" />
                     <Button label="Submit Payment" icon="pi pi-check" class="p-button-warning" :loading="payDueLoading"
                         @click="submitPayDue" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- TRANSFER MODAL -->
+        <Dialog v-model:visible="showTransferModal" modal header="Transfer Orders to Branch" :style="{ width: '520px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
+            <div class="space-y-4">
+                <div class="p-3 rounded-xl border bg-blue-50 border-blue-200 text-blue-800 text-sm">
+                    <div class="font-bold">Transfer completed orders to another branch</div>
+                    <div class="text-xs mt-1">
+                        Only completed orders will be transferred. Draft orders will be skipped.
+                    </div>
+                </div>
+
+                <div class="text-sm">
+                    <div><b>Selected Orders:</b> {{ selectedOrders.length }}</div>
+                </div>
+
+                <div>
+                    <div class="text-sm font-semibold mb-2">Target Branch <span class="text-red-600">*</span></div>
+                    <Dropdown v-model="targetBranchId" :options="branches" optionLabel="name" optionValue="id"
+                        placeholder="Select branch" class="w-full" />
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <Button label="Cancel" class="p-button-text" @click="showTransferModal = false" />
+                    <Button label="Transfer" icon="pi pi-directions" :loading="transferLoading"
+                        :disabled="!targetBranchId" @click="transferOrders" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- EDIT DATE MODAL (Admin Only) -->
+        <Dialog v-model:visible="showEditDateModal" modal header="Edit Order Date" :style="{ width: '520px' }"
+            :breakpoints="{ '960px': '75vw', '640px': '95vw' }">
+            <div class="space-y-4">
+                <div class="p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-800 text-sm">
+                    <div class="font-bold">Change the sale date for this order</div>
+                    <div class="text-xs mt-1">
+                        This will update when the sale appears to have been made. Admin only.
+                    </div>
+                </div>
+
+                <div class="text-sm">
+                    <div><b>Invoice:</b> {{ invoiceLabel(editDateTarget) }}</div>
+                    <div><b>Current Date:</b> {{
+                        editDateTarget?.created_at ? new Date(editDateTarget.created_at).toLocaleString() : '-'
+                        }}</div>
+                </div>
+
+                <div>
+                    <div class="text-sm font-semibold mb-2">New Sale Date <span class="text-red-600">*</span></div>
+                    <Calendar v-model="newSaleDate" showTime hourFormat="24" dateFormat="yy-mm-dd" showIcon
+                        class="w-full" />
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <Button label="Cancel" class="p-button-text" @click="showEditDateModal = false" />
+                    <Button label="Update Date" icon="pi pi-calendar" :loading="editDateLoading"
+                        @click="updateOrderDate" />
                 </div>
             </div>
         </Dialog>

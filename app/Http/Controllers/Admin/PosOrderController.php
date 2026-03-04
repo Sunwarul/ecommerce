@@ -21,6 +21,7 @@ use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -290,13 +291,12 @@ class PosOrderController extends Controller
                     'line_total' => $lineTotal,
                 ]);
 
-                // ✅ stock out only when completed
+                // ✅ stock out only when completed (warehouse-based, not branch-dependent)
                 if (!$isDraft) {
                     $stockService->stockOut([
                         'type' => 'out',
                         'product_id' => $product->id,
                         'variation_id' => $variation?->id,
-                        'branch_id' => $order?->branch_id ?? session('current_branch_id'),
                         'quantity' => $it['quantity'],
                         'from_warehouse_id' => $warehouseId,
                         'reference' => $order->invoice_no,
@@ -387,7 +387,13 @@ class PosOrderController extends Controller
         $brand_id = $request->get('brand_id');
         $product_id = $request->get('product_id');
 
-        $query = PosOrder::with(['customer', 'user', 'session', 'items.product.category', 'items.product.brand'])
+        // Branch filtering - filter by current branch unless admin requests all
+        $currentBranchId = session('current_branch_id');
+        $isAdmin = Auth::user()->hasRole('admin');
+        $showAllBranches = $request->boolean('all_branches') && $isAdmin;
+
+        $query = PosOrder::with(['customer', 'user', 'branch', 'session', 'items.product.category', 'items.product.brand'])
+            ->when(!$showAllBranches && $currentBranchId, fn($q) => $q->where('branch_id', $currentBranchId))
             ->when($trashed, fn($q) => $q->onlyTrashed())
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($qq) use ($search) {
@@ -461,11 +467,15 @@ class PosOrderController extends Controller
                 'brand_id' => $brand_id,
                 'product_id' => $product_id,
                 'trashed' => $trashed,
+                'all_branches' => $showAllBranches,
             ],
             'categories' => Category::select('id', 'name')->orderBy('name')->get(),
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'available_products' => Product::select('id', 'name')->orderBy('name')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', 1)->get(),
+            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
+            'currentBranchId' => $currentBranchId,
+            'isAdmin' => $isAdmin,
             'insights' => [
                 'top_products' => $topProducts,
                 'brand_sales' => $brandSales
@@ -580,14 +590,13 @@ class PosOrderController extends Controller
                 ]);
             }
 
-            // ✅ stockOut now (draft had no stockOut before)
+            // ✅ stockOut now (draft had no stockOut before) - warehouse-based, not branch-dependent
             $order->loadMissing('items');
             foreach ($order->items as $it) {
                 $stockService->stockOut([
                     'type' => 'out',
                     'product_id' => $it->product_id,
                     'variation_id' => $it->variation_id,
-                    'branch_id' => $order?->branch_id ?? session('current_branch_id') ?? 1,
                     'quantity' => $it->quantity,
                     'from_warehouse_id' => $order->warehouse_id,
                     'reference' => $invoiceNo,
@@ -904,7 +913,6 @@ class PosOrderController extends Controller
                         'type' => 'out',
                         'product_id' => $it['product']->id,
                         'variation_id' => $it['variation']?->id,
-                        'branch_id' => $order->branch_id ?? session('current_branch_id'),
                         'quantity' => $it['quantity'],
                         'from_warehouse_id' => $warehouseId,
                         'reference' => $order->invoice_no,
@@ -1000,5 +1008,81 @@ class PosOrderController extends Controller
         }
 
         return back();
+    }
+
+    public function transfer(Request $request)
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+            'target_branch_id' => ['required', 'exists:branches,id'],
+        ]);
+
+        $ids = $request->ids;
+        $targetBranchId = (int) $request->target_branch_id;
+
+        $orders = PosOrder::withoutGlobalScope('branch')
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return back()->with('error', 'No orders found.');
+        }
+
+        $completedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($orders as $order) {
+            if ($order->status === 'completed') {
+                DB::transaction(function () use ($order, $targetBranchId) {
+                    $order->update(['branch_id' => $targetBranchId]);
+
+                    $order->payments()->update(['branch_id' => $targetBranchId]);
+                });
+                $completedCount++;
+            } else {
+                $skippedCount++;
+            }
+        }
+
+        $message = "{$completedCount} order(s) transferred to selected branch.";
+        if ($skippedCount > 0) {
+            $message .= " {$skippedCount} order(s) skipped (not completed).";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function updateOrderDate(Request $request, $orderId)
+    {
+        $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
+
+        $isAdmin = $request->user()->hasRole('admin');
+
+        if (!$isAdmin) {
+            return back()->with('error', 'Only admins can edit order date.');
+        }
+
+        $data = $request->validate([
+            'sale_date' => ['required', 'date'],
+        ]);
+
+        $oldDate = $order->created_at->format('Y-m-d H:i:s');
+        $newDate = $data['sale_date'];
+
+        $order->update([
+            'created_at' => $newDate,
+        ]);
+
+        Log::channel('order-updates')->info('Order date updated', [
+            'order_id' => $order->id,
+            'invoice_no' => $order->invoice_no,
+            'old_date' => $oldDate,
+            'new_date' => $newDate,
+            'updated_by' => Auth::id(),
+            'user_name' => Auth::user()->name,
+        ]);
+
+        return back()->with('success', 'Order date updated successfully.');
     }
 }

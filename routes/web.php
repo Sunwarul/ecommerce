@@ -144,6 +144,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         ->name('pos.orders.force-delete');
     Route::post('/pos/orders/bulk-action', [PosOrderController::class, 'bulkAction'])
         ->name('pos.orders.bulk-action');
+    Route::post('/pos/orders/transfer', [PosOrderController::class, 'transfer'])
+        ->name('pos.orders.transfer');
+    Route::put('/pos/orders/{order}/date', [PosOrderController::class, 'updateOrderDate'])
+        ->name('pos.orders.update-date');
 
     Route::post('/pos/stock/adjust', [\App\Http\Controllers\Admin\PosStockController::class, 'adjust'])
         ->name('pos.stock.adjust');
