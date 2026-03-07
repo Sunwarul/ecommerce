@@ -5,13 +5,10 @@ import { Link } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import FavIcons from '@/Layouts/Partials/FavIcons.vue';
 import { useLocale } from '@/Composables/useLocale';
-import { onMounted } from 'vue';
 
 const { initLocale } = useLocale();
 
-onMounted(() => {
-    initLocale();
-});
+initLocale();
 </script>
 
 <template>

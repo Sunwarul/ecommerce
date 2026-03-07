@@ -1,13 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
-import { useI18n } from 'vue-i18n';
+import { useLocale } from '@/Composables/useLocale';
 
-const { locale } = useI18n();
 const page = usePage();
 const menu = ref();
+const { changeLocale, currentLocale, supportedLocales } = useLocale();
 
 const localeNames = {
     en: 'English',
@@ -16,14 +16,6 @@ const localeNames = {
     es: 'Español',
     hi: 'हिन्दी',
 };
-
-const currentLocale = computed(() => {
-    return page.props.locale?.current || 'en';
-});
-
-const supportedLocales = computed(() => {
-    return page.props.locale?.supported || ['en', 'bn'];
-});
 
 const menuItems = computed(() => 
     supportedLocales.value.map(loc => ({
@@ -35,14 +27,6 @@ const menuItems = computed(() =>
 
 const toggleMenu = (event) => {
     menu.value.toggle(event);
-};
-
-const changeLocale = (newLocale) => {
-    if (!supportedLocales.value.includes(newLocale) || newLocale === currentLocale.value) {
-        return;
-    }
-
-    window.location.href = route('locale.setFromUrl', { locale: newLocale });
 };
 </script>
 

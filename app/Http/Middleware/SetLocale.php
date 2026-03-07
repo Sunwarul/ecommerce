@@ -11,15 +11,6 @@ class SetLocale
     public function handle(Request $request, Closure $next): Response
     {
         $locale = $this->getLocale($request);
-        
-        \Illuminate\Support\Facades\Log::info('SetLocale middleware', [
-            'locale' => $locale,
-            'supported' => config('app.supported_locales'),
-            'session_has_locale' => $request->session()->has('locale'),
-            'cookie_locale' => $request->cookie('locale'),
-            'user_locale' => $request->user()?->locale,
-            'query_locale' => $request->get('locale'),
-        ]);
 
         if ($locale && in_array($locale, config('app.supported_locales', ['en', 'bn']))) {
             app()->setLocale($locale);

@@ -31,11 +31,6 @@ class HandleInertiaRequests extends Middleware
         }
 
         $currentLocale = app()->getLocale();
-        
-        \Illuminate\Support\Facades\Log::info('HandleInertiaRequests share', [
-            'locale' => $currentLocale,
-            'supported_locales' => config('app.supported_locales'),
-        ]);
 
         return array_merge(parent::share($request), [
             'auth' => [

@@ -15,21 +15,23 @@ import DialogService from "primevue/dialogservice";
 import ToastService from "primevue/toastservice";
 import AppState from "./Helpers/AppState";
 import { resolveImagePath } from "./Helpers/ResolveImage";
-import i18n, { setLocale } from "./Plugins/i18n";
+import i18n, { initI18n, setLocale } from "./Plugins/i18n";
+import { localeStore } from "./Stores/localeStore";
+
 const appName = import.meta.env.VITE_APP_NAME || "E-Commerce";
 
-function getLocaleFromCookie() {
-    const matches = document.cookie.match(/locale=([^;]+)/);
-    return matches ? matches[1] : null;
-}
-
-function getLocaleFromHtml() {
-    const html = document.documentElement;
-    return html.getAttribute('data-locale');
+function syncLocaleOnNavigation(visit) {
+    const storedLocale = localeStore.current;
+    if (storedLocale && storedLocale !== i18n.global.locale.value) {
+        setLocale(storedLocale);
+    }
 }
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
+    onNavigate: (visit) => {
+        syncLocaleOnNavigation(visit);
+    },
     resolve: (name) => {
         const [module, page] = name.split("::");
         if (page) {
@@ -62,23 +64,18 @@ createInertiaApp({
                 },
             });
 
-        const supportedLocales = ['en', 'bn', 'ar', 'es', 'hi'];
-
         const serverLocale = props.locale?.current;
-        const cookieLocale = getLocaleFromCookie();
-        const htmlLocale = getLocaleFromHtml();
-
-        console.log("Props Keys:", Object.keys(props || {}));
-        console.log("Server Locale (from props):", serverLocale);
-        console.log("Cookie Locale:", cookieLocale);
-        console.log("HTML Locale:", htmlLocale);
-
-        const finalLocale = serverLocale || cookieLocale || htmlLocale || 'en';
-
-        console.log("Final Locale:", finalLocale);
-
-        if (finalLocale && supportedLocales.includes(finalLocale)) {
-            i18n.global.locale.value = finalLocale;
+        
+        // Always initialize with server locale when available
+        // This ensures page reloads after language switch work correctly
+        if (!localeStore.initialized) {
+            initI18n(serverLocale);
+        } else {
+            // On subsequent navigations, sync with stored locale
+            const currentStored = localeStore.current;
+            if (currentStored && currentStored !== i18n.global.locale.value) {
+                setLocale(currentStored);
+            }
         }
 
         app.config.globalProperties.$resolveImagePath = resolveImagePath;
