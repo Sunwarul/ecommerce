@@ -2,44 +2,39 @@
     <div>
         <CrudComponent :form>
             <template #columns>
-                <Column field="photo" header="Photo">
+                <Column field="photo" :header="t('common.image')">
                     <template #body="{ data }">
                         <img
                             :src="$resolveImagePath(data.photo)"
-                            alt="Category Photo"
+                            :alt="t('categories.category')"
                             class="shadow-md rounded-xl w-16 h-16"
                             style="filter: grayscale(100%)"
                             @click="() => console.log('data', data)"
                         />
                     </template>
                 </Column>
-                <Column field="name" header="Name"></Column>
-                <Column field="parent" header="Parent">
+                <Column field="name" :header="t('common.name')"></Column>
+                <Column field="parent" :header="t('categories.parent_category')">
                     <template #body="{ data }">
                         {{ data.parent ? data.parent.name : "N/A" }}
                     </template>
                 </Column>
-                <Column field="slug" header="Slug"></Column>
-                <Column field="is_active" header="Status">
+                <Column field="slug" :header="t('categories.slug')"></Column>
+                <Column field="is_active" :header="t('common.status')">
                     <template #body="{ data }">
                         <Badge
                             :severity="data.is_active ? 'success' : 'danger'"
                         >
-                            {{ data.is_active ? "Active" : "Inactive" }}
+                            {{ data.is_active ? t('common.active') : t('common.inactive') }}
                         </Badge>
                     </template>
                 </Column>
 
                 <Column
                     field="created_at"
-                    header="Created At"
+                    :header="t('common.date')"
                     sortable
                 ></Column>
-                <!-- <Column
-                    field="updated_at"
-                    header="Updated At"
-                    sortable
-                ></Column> -->
             </template>
             <template
                 #form="{
@@ -53,7 +48,7 @@
                 <div class="flex flex-col gap-6">
                     <div>
                         <label for="name" class="block font-bold mb-2"
-                            >Name</label
+                            >{{ t('common.name') }}</label
                         >
                         <InputText
                             id="name"
@@ -66,21 +61,21 @@
                         <small
                             v-if="submitted && !form.name"
                             class="text-red-500"
-                            >Name is required.</small
+                            >{{ t('validation.required') }}</small
                         >
                     </div>
                 </div>
                 <div class="flex flex-col gap-6 mt-3 mb-4">
                     <div>
                         <label for="parent_id" class="block font-bold mb-2"
-                            >Parent Category</label
+                            >{{ t('categories.parent_category') }}</label
                         >
                         <Select
                             v-model="form.parent_id"
                             :options="parentCategories"
                             optionLabel="name"
                             optionValue="id"
-                            placeholder="Select a parent"
+                            :placeholder="t('common.select_option')"
                             class="w-full"
                         />
                     </div>
@@ -88,7 +83,7 @@
                 <div class="flex flex-col gap-6 mt-3">
                     <div>
                         <label for="photo" class="block font-bold mb-2"
-                            >Photo</label
+                            >{{ t('common.image') }}</label
                         >
                         <FileUpload
                             mode="basic"
@@ -97,7 +92,7 @@
                             @select="handlePhotoUpload"
                             :auto="true"
                             accept="image/*"
-                            chooseLabel="Choose Image"
+                            :chooseLabel="t('common.select')"
                             class="w-full"
                         />
                     </div>
@@ -105,7 +100,7 @@
                         <img
                             v-if="form.photo || photoPreview"
                             :src="photoPreview ?? resolveImagePath(form.photo)"
-                            alt="Image"
+                            :alt="t('common.image')"
                             class="shadow-md rounded-xl w-[200px]"
                             style="filter: grayscale(100%)"
                         />
@@ -114,14 +109,14 @@
                 <div class="flex flex-col gap-6 mt-3">
                     <div>
                         <label for="is_active" class="block font-bold mb-2"
-                            >Status</label
+                            >{{ t('common.status') }}</label
                         >
                         <Select
                             v-model="form.is_active"
                             :options="statuses"
                             optionLabel="label"
                             optionValue="value"
-                            placeholder="Select a status"
+                            :placeholder="t('common.select_option')"
                             class="w-full"
                             :required="true"
                         />
@@ -129,7 +124,7 @@
                             v-if="submitted && form.is_active == null"
                             class="text-red-500"
                         >
-                            Status is required.
+                            {{ t('validation.required') }}
                         </small>
                     </div>
                 </div>
@@ -140,6 +135,9 @@
 <script setup>
 import CrudComponent from "@/Components/CrudComponent.vue";
 import { useForm } from "@inertiajs/vue3";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const form = useForm({
     parent_id: null,
@@ -147,7 +145,6 @@ const form = useForm({
     photo: null,
     is_active: 1,
 });
-// define props
 const { categories, parentCategories } = defineProps({
     categories: Object,
     parentCategories: Object,

@@ -38,8 +38,9 @@ const closeForm = ref({
 
 watch(openDialog, (newVal) => {
     if (newVal) {
+        const currentBranchId = page.props.auth?.user?.branch_id;
         if (props.branches && props.branches.length > 0 && !openForm.value.branch_id) {
-            openForm.value.branch_id = props.branches[0].id;
+            openForm.value.branch_id = currentBranchId || props.branches[0].id;
         }
         if (props.warehouses && props.warehouses.length > 0 && !openForm.value.warehouse_id) {
             openForm.value.warehouse_id = props.warehouses[0].id;

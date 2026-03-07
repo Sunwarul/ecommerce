@@ -5,6 +5,9 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const form = useForm({
     name: '',
@@ -23,11 +26,11 @@ const submit = () => {
 <template>
     <GuestLayout>
 
-        <Head title="Register" />
+        <Head :title="t('auth.register')" />
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" :value="t('common.name')" />
 
                 <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" required autofocus
                     autocomplete="name" />
@@ -36,7 +39,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="t('auth.email')" />
 
                 <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email" required
                     autocomplete="username" />
@@ -45,7 +48,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="t('auth.password')" />
 
                 <TextInput id="password" type="password" class="mt-1 block w-full" v-model="form.password" required
                     autocomplete="new-password" />
@@ -54,7 +57,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" :value="t('auth.confirm_password')" />
 
                 <TextInput id="password_confirmation" type="password" class="mt-1 block w-full"
                     v-model="form.password_confirmation" required autocomplete="new-password" />
@@ -65,11 +68,11 @@ const submit = () => {
             <div class="mt-4 flex items-center justify-end">
                 <Link :href="route('login')"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    Already registered?
+                    {{ t('auth.already_registered') }}
                 </Link>
 
                 <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Register
+                    {{ t('auth.register') }}
                 </PrimaryButton>
             </div>
         </form>

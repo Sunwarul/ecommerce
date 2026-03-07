@@ -1,8 +1,14 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
 import { Link } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
 import FavIcons from '@/Layouts/Partials/FavIcons.vue';
+import { useLocale } from '@/Composables/useLocale';
+
+const { initLocale } = useLocale();
+
+initLocale();
 </script>
 
 <template>
@@ -12,6 +18,9 @@ import FavIcons from '@/Layouts/Partials/FavIcons.vue';
             <Link href="/">
                 <ApplicationLogo />
             </Link>
+        </div>
+        <div class="absolute top-4 right-4">
+            <LanguageSwitcher />
         </div>
         <div class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg ">
             <slot />

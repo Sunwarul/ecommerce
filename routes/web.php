@@ -25,8 +25,13 @@ use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\Admin\WarrantyGuaranteeController;
 use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\LocaleController;
 
 require_once __DIR__ . '/auth.php';
+
+Route::get('locale', [LocaleController::class, 'get'])->name('locale.get');
+Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
+Route::get('set-locale/{locale}', [LocaleController::class, 'setFromUrl'])->name('locale.setFromUrl')->where('locale', 'en|bn|ar|es|hi');
 
 Route::get('/', WelcomePageController::class)->name('welcome');
 
