@@ -18,13 +18,13 @@ class PosPayment extends BaseModel
         'paid_at',
         'transaction_ref',
         'notes',
-        'meta'
+        'meta',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
-        'meta' => 'array'
+        'meta' => 'array',
     ];
 
     public function order()

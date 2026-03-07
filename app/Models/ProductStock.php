@@ -16,7 +16,7 @@ class ProductStock extends Model
         'branch_id',
         'variation_id',
         'quantity',
-        'alert_quantity'
+        'alert_quantity',
     ];
 
     protected $casts = [
@@ -44,4 +44,3 @@ class ProductStock extends Model
         return $this->belongsTo(ProductVariation::class, 'variation_id');
     }
 }
-

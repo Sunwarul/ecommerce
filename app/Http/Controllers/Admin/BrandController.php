@@ -36,9 +36,9 @@ class BrandController extends Controller
         $model = new $this->modelClass;
         $model->fill($validatedData);
         $model->save();
-        
+
         cache()->increment('brands_version', 1);
-        
+
         return to_route('brands.index')->with('success', 'Created successfully');
     }
 
@@ -47,9 +47,9 @@ class BrandController extends Controller
         $validatedData = app($this->updateRequestClass)->validated();
         $model = $this->modelClass::findOrFail($id);
         $model->update($validatedData);
-        
+
         cache()->increment('brands_version', 1);
-        
+
         return to_route('brands.index')->with('success', 'Updated successfully');
     }
 
@@ -57,9 +57,9 @@ class BrandController extends Controller
     {
         $model = $this->modelClass::findOrFail($id);
         $model->delete();
-        
+
         cache()->increment('brands_version', 1);
-        
+
         return to_route('brands.index')->with('success', 'Deleted successfully');
     }
 }

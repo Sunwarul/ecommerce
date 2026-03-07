@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Branch;
-// use App\Exports\BranchExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\BranchStoreRequest;
+// use App\Exports\BranchExport;
 use App\Http\Requests\BranchUpdateRequest;
+use App\Models\Branch;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class BranchController extends Controller
 {

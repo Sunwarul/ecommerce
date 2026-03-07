@@ -64,6 +64,7 @@ class RoleController extends Controller
             if ($isNotSuperAdmin) {
                 $role->delete();
                 $this->clearAuthCache();
+
                 return back();
             }
         }

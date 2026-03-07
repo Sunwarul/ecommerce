@@ -33,6 +33,7 @@ class SetLocale
             $cookieLocale = $request->cookie('locale');
             if (in_array($cookieLocale, config('app.supported_locales', ['en', 'bn']))) {
                 $request->session()->put('locale', $cookieLocale);
+
                 return $cookieLocale;
             }
         }
@@ -41,6 +42,7 @@ class SetLocale
             $locale = $request->get('locale');
             if (in_array($locale, config('app.supported_locales', ['en', 'bn']))) {
                 $request->session()->put('locale', $locale);
+
                 return $locale;
             }
         }

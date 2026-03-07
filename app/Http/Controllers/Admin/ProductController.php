@@ -4,11 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\ProductExport;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ProductStoreRequest;
-use App\Http\Requests\Admin\ProductUpdateRequest;
-use App\Http\Requests\Admin\StoreProductRequest as AdminStoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
-use App\Http\Requests\StoreProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -16,35 +12,22 @@ use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
-use App\Models\StockMovement;
 use App\Models\Tag;
 use App\Models\Tax;
 use App\Models\Warehouse;
-use App\Traits\HasCrud;
-use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
-    use HasCrud;
-
     public function __construct()
     {
-        $this->init(new CrudConfig(
-            resource: 'products',
-            modelClass: Product::class,
-            storeRequestClass: ProductStoreRequest::class,
-            updateRequestClass: ProductUpdateRequest::class,
-            componentPath: 'Admin/Products/Index',
-            searchColumns: ['name', 'description'],
-            exportClass: ProductExport::class,
-            withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
-        ));
+        // No HasCrud trait - using explicit methods instead
     }
 
     protected function addProps(): array
@@ -62,6 +45,7 @@ class ProductController extends Controller
     protected function getCachedCategories(): mixed
     {
         $version = cache('categories_version', 1);
+
         return cache()->remember("product_categories_v{$version}", now()->addMinutes(10), function () {
             return Category::select('id', 'name', 'parent_id')
                 ->with('children:id,name,parent_id')
@@ -73,6 +57,7 @@ class ProductController extends Controller
     protected function getCachedBrands(): mixed
     {
         $version = cache('brands_version', 1);
+
         return cache()->remember("product_brands_v{$version}", now()->addMinutes(10), function () {
             return Brand::select('id', 'name')->get();
         });
@@ -81,6 +66,7 @@ class ProductController extends Controller
     protected function getCachedWarehouses(): mixed
     {
         $version = cache('warehouses_version', 1);
+
         return cache()->remember("product_warehouses_v{$version}", now()->addMinutes(10), function () {
             return Warehouse::select('id', 'name')->get();
         });
@@ -89,6 +75,7 @@ class ProductController extends Controller
     protected function getCachedAttributes(): mixed
     {
         $version = cache('attributes_version', 1);
+
         return cache()->remember("product_attributes_v{$version}", now()->addMinutes(10), function () {
             return ProductAttribute::select('id', 'name', 'display_name', 'type')
                 ->with('values:id,attribute_id,value,display_value,color_code')
@@ -188,7 +175,7 @@ class ProductController extends Controller
         $sortParts = explode('_', $sort);
         $sortField = $sortParts[0] ?? 'id';
         $sortDir = $sortParts[1] ?? 'desc';
-        
+
         $allowedSorts = ['id', 'name', 'base_price', 'total_stock', 'created_at', 'category_id', 'brand_id'];
         if (in_array($sortField, $allowedSorts)) {
             $query->orderBy($sortField, $sortDir === 'asc' ? 'asc' : 'desc');
@@ -235,7 +222,6 @@ class ProductController extends Controller
         ]);
     }
 
-
     public function create()
     {
         return Inertia::render('Admin/Products/FormPage', [
@@ -249,7 +235,6 @@ class ProductController extends Controller
             'warehouses' => Warehouse::all(),
         ]);
     }
-
 
     public function edit(Product $product)
     {
@@ -280,7 +265,6 @@ class ProductController extends Controller
         ]);
     }
 
-
     public function show(Product $product)
     {
         $product->load([
@@ -299,7 +283,6 @@ class ProductController extends Controller
             'product' => $product,
         ]);
     }
-
 
     public function store(\App\Http\Requests\Admin\StoreProductRequest $request)
     {
@@ -335,7 +318,7 @@ class ProductController extends Controller
             $product = Product::create($productData);
 
             // ✅ Tags
-            if (!empty($data['tag_ids'])) {
+            if (! empty($data['tag_ids'])) {
                 $product->tags()->sync($data['tag_ids']);
             }
 
@@ -401,8 +384,6 @@ class ProductController extends Controller
         });
     }
 
-
-
     public function editData(Product $product)
     {
         $product->load([
@@ -416,7 +397,6 @@ class ProductController extends Controller
 
         return response()->json($product);
     }
-
 
     public function update(UpdateProductRequest $request, Product $product)
     {
@@ -533,11 +513,11 @@ class ProductController extends Controller
 
             // Map existing variations by id
             $existingIds = $product->variations()->pluck('id')->toArray();
-            $incomingIds = collect($incoming)->pluck('id')->filter()->map(fn($v) => (int) $v)->values()->toArray();
+            $incomingIds = collect($incoming)->pluck('id')->filter()->map(fn ($v) => (int) $v)->values()->toArray();
 
             // Delete removed variations (and their pivot + stocks via cascade if set)
             $toDelete = array_diff($existingIds, $incomingIds);
-            if (!empty($toDelete)) {
+            if (! empty($toDelete)) {
                 $product->variations()
                     ->whereIn('id', $toDelete)
                     ->each(function ($variation) {
@@ -589,7 +569,7 @@ class ProductController extends Controller
                 $stocks = $variationInput['stocks'] ?? [];
 
                 // Remove old stocks for warehouses not present anymore
-                $incomingWarehouseIds = collect($stocks)->pluck('warehouse_id')->map(fn($x) => (int) $x)->values()->toArray();
+                $incomingWarehouseIds = collect($stocks)->pluck('warehouse_id')->map(fn ($x) => (int) $x)->values()->toArray();
                 ProductStock::where('variation_id', $variation->id)
                     ->whereNotIn('warehouse_id', $incomingWarehouseIds)
                     ->delete();
@@ -663,9 +643,6 @@ class ProductController extends Controller
         });
     }
 
-
-
-
     public function bulkDestroy(Request $request)
     {
         $request->validate([
@@ -701,12 +678,14 @@ class ProductController extends Controller
     {
         $product = Product::onlyTrashed()->findOrFail($id);
         $product->restore();
+
         return back()->with('success', 'Product restored successfully.');
     }
 
     public function destroy(Product $product)
     {
         $product->delete();
+
         return back()->with('success', 'Product moved to trash.');
     }
 
@@ -735,5 +714,13 @@ class ProductController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Stock updated successfully']);
+    }
+
+    public function export(Request $request)
+    {
+        $search = $request->input('search');
+        $filename = 'products-'.now()->format('Y-m-d-H-i-s').'.xlsx';
+
+        return Excel::download(new ProductExport($search), $filename);
     }
 }

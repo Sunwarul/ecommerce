@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 use App\Models\BaseUnit;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class BaseUnitFactory extends Factory
 {

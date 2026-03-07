@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ProductAttribute;
-// use App\Exports\ProductAttributeExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\ProductAttributeStoreRequest;
+// use App\Exports\ProductAttributeExport;
 use App\Http\Requests\ProductAttributeUpdateRequest;
+use App\Models\ProductAttribute;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class ProductAttributeController extends Controller
 {
@@ -27,6 +26,4 @@ class ProductAttributeController extends Controller
             withRelations: [],
         ));
     }
-
-    
 }

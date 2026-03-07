@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ExpenseCategory;
-// use App\Exports\ExpenseCategoryExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\ExpenseCategoryStoreRequest;
+// use App\Exports\ExpenseCategoryExport;
 use App\Http\Requests\ExpenseCategoryUpdateRequest;
+use App\Models\ExpenseCategory;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class ExpenseCategoryController extends Controller
 {
@@ -27,6 +26,4 @@ class ExpenseCategoryController extends Controller
             withRelations: [],
         ));
     }
-
-    
 }

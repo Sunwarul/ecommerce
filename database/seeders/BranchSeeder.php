@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Branch;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class BranchSeeder extends Seeder
@@ -14,7 +14,7 @@ class BranchSeeder extends Seeder
             [
                 'name' => 'Main Branch',
                 'address' => 'Station Road, Rangpur',
-                'code' => 'BR-' . Str::upper(Str::random(4)),
+                'code' => 'BR-'.Str::upper(Str::random(4)),
                 'phone' => '',
                 'is_active' => true,
             ],

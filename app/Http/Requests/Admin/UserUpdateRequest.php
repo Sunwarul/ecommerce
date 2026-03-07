@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class UserUpdateRequest extends FormRequest
 {
@@ -24,7 +24,7 @@ class UserUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'min:3', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $this->route('user')],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$this->route('user')],
             'branch_id' => ['nullable', 'exists:branches,id'],
             // 'password' => ['nullable'],
             'roles' => ['nullable', 'array', 'exists:roles,id'],

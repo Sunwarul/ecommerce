@@ -69,7 +69,7 @@ class PosSessionController extends Controller
                 ->latest('id')
                 ->first();
 
-            if (!$session) {
+            if (! $session) {
                 return back()->withErrors([
                     'session' => 'No open POS session found.',
                 ]);
