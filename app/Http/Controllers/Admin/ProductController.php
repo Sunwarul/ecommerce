@@ -20,31 +20,19 @@ use App\Models\StockMovement;
 use App\Models\Tag;
 use App\Models\Tax;
 use App\Models\Warehouse;
-use App\Traits\HasCrud;
-use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
-    use HasCrud;
-
     public function __construct()
     {
-        $this->init(new CrudConfig(
-            resource: 'products',
-            modelClass: Product::class,
-            storeRequestClass: ProductStoreRequest::class,
-            updateRequestClass: ProductUpdateRequest::class,
-            componentPath: 'Admin/Products/Index',
-            searchColumns: ['name', 'description'],
-            exportClass: ProductExport::class,
-            withRelations: ['category:id,name', 'brand:id,name', 'tags:id,name'],
-        ));
+        // No HasCrud trait - using explicit methods instead
     }
 
     protected function addProps(): array
@@ -735,5 +723,13 @@ class ProductController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Stock updated successfully']);
+    }
+
+    public function export(Request $request)
+    {
+        $search = $request->input('search');
+        $filename = 'products-' . now()->format('Y-m-d-H-i-s') . '.xlsx';
+
+        return Excel::download(new ProductExport($search), $filename);
     }
 }

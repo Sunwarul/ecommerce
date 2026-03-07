@@ -38,25 +38,25 @@ Route::get('/', WelcomePageController::class)->name('welcome');
 // AUTH & VERIFIED
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
-    CrudRouter::setFor('products', ProductController::class);
-    Route::get('/admin/products/{product}/edit-data', [ProductController::class, 'editData'])
-        ->name('products.edit-data');
-    Route::get('/products/create', [ProductController::class, 'create'])
-        ->name('products.create');
-
-    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])
-        ->name('products.edit');
-    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])
-        ->name('products.restore');
-    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])
-        ->name('products.bulk-restore');
-    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])
-        ->name('products.bulk-delete');
-    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])
-        ->name('products.bulk-force-delete');
-    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])
-        ->name('products.update-stock');
-
+    // =======================
+    // Products - Custom routes first (before CrudRouter)
+    // =======================
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+    
+    // Custom product routes
+    Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
+    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulk-restore');
+    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
+    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulk-force-delete');
+    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.update-stock');
+    Route::get('/products/action/export-excel', [ProductController::class, 'export'])->name('products.export');
 
     CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);
     CrudRouter::setFor('categories', CategoryController::class);
@@ -87,7 +87,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 
 
-    // stock 
+    // stock
     Route::get('admin/products/{product}/stock-move', [StockMovementController::class, 'create'])
         ->name('admin.stock.move.form');
 
