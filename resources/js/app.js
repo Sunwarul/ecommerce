@@ -15,11 +15,23 @@ import DialogService from "primevue/dialogservice";
 import ToastService from "primevue/toastservice";
 import AppState from "./Helpers/AppState";
 import { resolveImagePath } from "./Helpers/ResolveImage";
+import i18n, { initI18n, setLocale } from "./Plugins/i18n";
+import { localeStore } from "./Stores/localeStore";
 
 const appName = import.meta.env.VITE_APP_NAME || "E-Commerce";
 
+function syncLocaleOnNavigation(visit) {
+    const storedLocale = localeStore.current;
+    if (storedLocale && storedLocale !== i18n.global.locale.value) {
+        setLocale(storedLocale);
+    }
+}
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
+    onNavigate: (visit) => {
+        syncLocaleOnNavigation(visit);
+    },
     resolve: (name) => {
         const [module, page] = name.split("::");
         if (page) {
@@ -34,29 +46,11 @@ createInertiaApp({
             );
         }
     },
-    // setup({ el, App, props, plugin }) {
-    //     return createApp({ render: () => h(App, props) })
-    //         .use(plugin)
-    //         .use(ZiggyVue)
-    //         .use(ConfirmationService)
-    //         .use(ToastService)
-    //         .use(DialogService)
-    //         .use(AppState)
-    //         .use(PrimeVue, {
-    //             theme: {
-    //                 preset: Theme,
-    //                 options: {
-    //                     darkModeSelector: '.app-dark'
-    //                 }
-    //             }
-    //         })
-    //           .config.globalProperties.$resolveImagePath = resolveImagePath;
-    //         .mount(el);
-    // },
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
+            .use(i18n)
             .use(ConfirmationService)
             .use(ToastService)
             .use(DialogService)
@@ -70,10 +64,22 @@ createInertiaApp({
                 },
             });
 
-        // ✅ set global property before mounting
+        const serverLocale = props.locale?.current;
+        
+        // Always initialize with server locale when available
+        // This ensures page reloads after language switch work correctly
+        if (!localeStore.initialized) {
+            initI18n(serverLocale);
+        } else {
+            // On subsequent navigations, sync with stored locale
+            const currentStored = localeStore.current;
+            if (currentStored && currentStored !== i18n.global.locale.value) {
+                setLocale(currentStored);
+            }
+        }
+
         app.config.globalProperties.$resolveImagePath = resolveImagePath;
 
-        // ✅ return the mounted app
         return app.mount(el);
     },
 

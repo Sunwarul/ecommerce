@@ -3,8 +3,11 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from 'vue-i18n';
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
+
+const { t } = useI18n();
 
 // PrimeVue
 import SessionBar from "@/Components/POS/SessionBar.vue";
@@ -33,6 +36,13 @@ const props = defineProps({
 
 const toast = useToast();
 const page = usePage();
+
+const currentBranchId = computed(() => page.props.auth?.user?.branch_id);
+
+const branchMismatch = computed(() => {
+    if (!posSession.value) return false;
+    return posSession.value.branch_id !== currentBranchId.value;
+});
 
 // session + clock
 const posSession = ref(props.currentSession);
@@ -634,6 +644,16 @@ watch(
 function submitOrder(action = "complete") {
     if (!ensureSession()) return;
 
+    if (branchMismatch.value) {
+        toast.add({
+            severity: "error",
+            summary: "Branch Mismatch",
+            detail: "Your current branch has changed. Please close this session and open a new one.",
+            life: 4000,
+        });
+        return;
+    }
+
     if (!cartItems.value.length) {
         toast.add({
             severity: "warn",
@@ -675,7 +695,7 @@ function submitOrder(action = "complete") {
         action,
 
         pos_session_id: posSession.value.id,
-        branch_id: posSession.value.branch_id,
+        branch_id: currentBranchId.value,
         warehouse_id: posSession.value.warehouse_id,
 
         // ✅ allow order without customer
@@ -776,18 +796,23 @@ function handleSuccess(page) {
                     <div class="flex items-center gap-6">
                         <div>
                             <h1 class="text-base font-semibold text-slate-800">
-                                Point of Sale
+                                {{ t('menu.pos') }}
                             </h1>
                             <p class="text-xs text-slate-400">
                                 {{
                                     posSession
-                                        ? `Active Session #${posSession.id}`
-                                        : "No active session"
+                                        ? `${t('pos.current_session')} #${posSession.id}`
+                                        : t('pos.no_customer')
                                 }}
                             </p>
                         </div>
                         <SessionBar :currentSession="props.currentSession" :branches="props.branches"
                                 :warehouses="props.warehouses" />
+                        <div v-if="branchMismatch"
+                            class="px-3 py-1.5 rounded-lg text-sm bg-amber-50 text-amber-700 flex items-center gap-2 font-medium border border-amber-200">
+                            <i class="pi pi-exclamation-triangle text-sm" />
+                            Branch changed - close & reopen session
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-3 text-xs text-slate-500">
@@ -806,17 +831,17 @@ function handleSuccess(page) {
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                             <div>
                                 <h2 class="text-lg font-semibold text-slate-800">
-                                    Product Catalog
+                                    {{ t('menu.products') }}
                                 </h2>
                                 <p class="text-xs text-slate-400">
-                                    Click a product card to add it. Variable products will ask for variation.
+                                    {{ t('pos.search_product') }}
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-3">
                                 <InputGroup class="w-full max-w-md">
                                     <InputText type="search" v-model="search"
-                                        placeholder="Search products, SKU, barcode..."
+                                        :placeholder="t('pos.search_product')"
                                         class="w-full !w-[320px]" />
                                     <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
                                 </InputGroup>
@@ -947,27 +972,27 @@ function handleSuccess(page) {
                             <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
                                 <div>
                                     <h3 class="text-sm font-semibold text-slate-800">
-                                        Order Summary
+                                        {{ t('orders.order') }} {{ t('common.total') }}
                                     </h3>
                                     <p class="text-xs text-slate-400">
                                         {{
                                             selectedCustomer
                                                 ? selectedCustomer.name
-                                                : "Walk-in customer"
+                                                : t('pos.no_customer')
                                         }}
                                     </p>
                                 </div>
 
                                 <span
                                     class="px-2 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-600 font-medium">
-                                    {{ cartItems.length }} items
+                                    {{ cartItems.length }} {{ t('common.quantity') }}
                                 </span>
                             </div>
 
                             <!-- ✅ customer remote search -->
                             <div class="mb-3">
                                 <p class="text-xs text-slate-500 mb-1.5">
-                                    Customer
+                                    {{ t('pos.customer') }}
                                 </p>
                                 <AutoComplete v-model="selectedCustomer" :suggestions="customerSuggestions"
                                     :optionLabel="customerLabel" class="w-full" inputClass="w-full text-xs"
@@ -1093,26 +1118,26 @@ function handleSuccess(page) {
                             <!-- totals -->
                             <div class="border-t border-slate-200 pt-3 space-y-1">
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Subtotal</span>
+                                    <span>{{ t('orders.subtotal') }}</span>
                                     <span class="font-medium text-slate-700">{{
                                         subtotal.toFixed(2)
                                         }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Discount</span>
+                                    <span>{{ t('pos.discount') }}</span>
                                     <span class="font-medium text-rose-600">-{{ discountTotal.toFixed(2) }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Tax</span>
+                                    <span>{{ t('pos.tax') }}</span>
                                     <span class="font-medium text-slate-700">{{
                                         taxTotal.toFixed(2)
                                         }}</span>
                                 </div>
 
                                 <div class="flex items-center justify-between text-sm mt-2">
-                                    <span class="font-semibold text-slate-800">Total Payable</span>
+                                    <span class="font-semibold text-slate-800">{{ t('orders.grand_total') }}</span>
                                     <span class="text-lg font-bold text-emerald-600">{{ total.toFixed(2) }}</span>
                                 </div>
                             </div>
@@ -1120,8 +1145,8 @@ function handleSuccess(page) {
                             <!-- payments -->
                             <div class="mt-3 space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-slate-500">Payments</span>
-                                    <Button icon="pi pi-plus" class="p-button-text p-button-sm" label="Add"
+                                    <span class="text-xs text-slate-500">{{ t('pos.payment') }}</span>
+                                    <Button icon="pi pi-plus" class="p-button-text p-button-sm" :label="t('common.create')"
                                         @click="addPaymentRow" type="button" />
                                 </div>
 
@@ -1183,15 +1208,15 @@ function handleSuccess(page) {
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500 mt-1">
-                                    <span>Total Paid</span>
+                                    <span>{{ t('pos.payment') }} {{ t('common.total') }}</span>
                                     <span class="font-semibold text-slate-800">{{ totalPaid.toFixed(2) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Change</span>
+                                    <span>{{ t('pos.change') }}</span>
                                     <span class="font-semibold text-slate-800">{{ change.toFixed(2) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Due</span>
+                                    <span>{{ t('orders.order_total') }}</span>
                                     <span class="font-semibold text-rose-600">{{
                                         due.toFixed(2)
                                         }}</span>

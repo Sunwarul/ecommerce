@@ -1,18 +1,20 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import BranchSwitcher from "@/Components/BranchSwitcher.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import useAuth from "@/Composables/useAuth";
 import { Link, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import { useLayout } from "./LayoutComposable";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const { toggleMenu } = useLayout();
 const { user, roles, permissions, can } = useAuth();
 
-// detect active route
 const current = computed(() => route().current());
 
-// highlight helper
 const isActive = (name) => current.value.startsWith(name);
 </script>
 
@@ -31,6 +33,7 @@ const isActive = (name) => current.value.startsWith(name);
 
         <!-- RIGHT SIDE: ACTIONS -->
         <div class="flex items-center gap-4">
+            <LanguageSwitcher />
             <BranchSwitcher />
             <!-- POS BUTTON (TOPBAR BUTTON — NOT DROPDOWN) -->
             <button @click="router.visit(route('pos.index'))"
@@ -39,7 +42,7 @@ const isActive = (name) => current.value.startsWith(name);
                     : 'hover:bg-indigo-50 text-slate-700'
                     ">
                 <i class="pi pi-desktop text-lg"></i>
-                <span class="text-sm font-medium">POS</span>
+                <span class="text-sm font-medium">{{ t('menu.pos') }}</span>
             </button>
 
             <!-- ORDERS BUTTON -->
@@ -49,27 +52,18 @@ const isActive = (name) => current.value.startsWith(name);
                     : 'hover:bg-emerald-50 text-slate-700'
                     ">
                 <i class="pi pi-receipt text-lg"></i>
-                <span class="text-sm font-medium">Orders</span>
+                <span class="text-sm font-medium">{{ t('menu.orders') }}</span>
             </button>
-
-            <!-- MESSAGES BUTTON -->
-            <!-- <button
-                type="button"
-                class="layout-topbar-action flex items-center gap-2 hover:text-primary"
-            >
-                <i class="pi pi-inbox text-lg"></i>
-                <span class="hidden md:block text-sm">Messages</span>
-            </button> -->
 
             <!-- PROFILE DROPDOWN -->
             <Menu ref="menu" :popup="true" id="top_profile_menu" :model="[
                 {
-                    label: 'Settings',
+                    label: t('menu.settings'),
                     icon: 'pi pi-cog',
                     command: () => router.visit(route('profile.edit')),
                 },
                 {
-                    label: 'Logout',
+                    label: t('auth.logout'),
                     icon: 'pi pi-sign-out',
                     command: () => router.post(route('logout')),
                 },
