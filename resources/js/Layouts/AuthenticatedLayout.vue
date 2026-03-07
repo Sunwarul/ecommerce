@@ -1,12 +1,18 @@
 <script setup>
 import { useLayout } from '@/Layouts/Partials/LayoutComposable';
-import { computed, ref, watch } from 'vue';
+import { useLocale } from '@/Composables/useLocale';
+import { computed, ref, watch, onMounted } from 'vue';
 import AppFooter from '@/Layouts/Partials/AppFooter.vue';
 import AppSidebar from '@/Layouts/Partials/AppSidebar.vue';
 import AppTopbar from '@/Layouts/Partials/AppTopbar.vue';
 import FavIcons from '@/Layouts/Partials/FavIcons.vue';
 
 const { layoutConfig, layoutState, isSidebarActive } = useLayout();
+const { initLocale } = useLocale();
+
+onMounted(() => {
+    initLocale();
+});
 
 const outsideClickListener = ref(null);
 

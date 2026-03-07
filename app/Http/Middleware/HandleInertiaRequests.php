@@ -20,7 +20,6 @@ class HandleInertiaRequests extends Middleware
         
         $authData = [];
         if ($user) {
-            // Use version-based cache to ensure fresh data when permissions change
             $version = cache('auth_version', 1);
             $cacheKey = "user_auth_data_{$user->id}_v{$version}";
             $authData = cache()->remember($cacheKey, now()->addMinutes(5), function () use ($user) {
@@ -31,8 +30,14 @@ class HandleInertiaRequests extends Middleware
             });
         }
 
-        return [
-            ...parent::share($request),
+        $currentLocale = app()->getLocale();
+        
+        \Illuminate\Support\Facades\Log::info('HandleInertiaRequests share', [
+            'locale' => $currentLocale,
+            'supported_locales' => config('app.supported_locales'),
+        ]);
+
+        return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user,
                 'roles' => $authData['roles'] ?? [],
@@ -44,10 +49,16 @@ class HandleInertiaRequests extends Middleware
                 'currency' => config('app.currency'),
                 'currency_symbol' => config('app.currency_symbol'),
             ],
+            'locale' => [
+                'current' => $currentLocale,
+                'supported' => config('app.supported_locales'),
+                'user_locale' => $user?->locale,
+            ],
+            'csrf_token' => csrf_token(),
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
             ],
-        ];
+        ]);
     }
 }

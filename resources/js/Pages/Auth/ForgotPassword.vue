@@ -5,6 +5,9 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 defineProps({
     status: {
@@ -24,12 +27,10 @@ const submit = () => {
 <template>
     <GuestLayout>
 
-        <Head title="Forgot Password" />
+        <Head :title="t('auth.forgot_password')" />
 
         <div class="mb-4 text-sm text-gray-600">
-            Forgot your password? No problem. Just let us know your email
-            address and we will email you a password reset link that will allow
-            you to choose a new one.
+            {{ t('auth.check_email') }}
         </div>
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
@@ -38,7 +39,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="t('auth.email')" />
 
                 <TextInput id="email" type="email" class="mt-1 block w-full" v-model="form.email" required autofocus
                     autocomplete="username" />
@@ -49,10 +50,10 @@ const submit = () => {
             <div class="mt-4 flex items-center justify-between">
                 <Link href="/register"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                Back to Login Page
+                {{ t('common.back') }}
                 </Link>
                 <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Email Password Reset Link
+                    {{ t('auth.send_reset_link') }}
                 </PrimaryButton>
             </div>
         </form>

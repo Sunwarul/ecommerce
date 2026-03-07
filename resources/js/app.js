@@ -15,8 +15,18 @@ import DialogService from "primevue/dialogservice";
 import ToastService from "primevue/toastservice";
 import AppState from "./Helpers/AppState";
 import { resolveImagePath } from "./Helpers/ResolveImage";
-
+import i18n, { setLocale } from "./Plugins/i18n";
 const appName = import.meta.env.VITE_APP_NAME || "E-Commerce";
+
+function getLocaleFromCookie() {
+    const matches = document.cookie.match(/locale=([^;]+)/);
+    return matches ? matches[1] : null;
+}
+
+function getLocaleFromHtml() {
+    const html = document.documentElement;
+    return html.getAttribute('data-locale');
+}
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -34,29 +44,11 @@ createInertiaApp({
             );
         }
     },
-    // setup({ el, App, props, plugin }) {
-    //     return createApp({ render: () => h(App, props) })
-    //         .use(plugin)
-    //         .use(ZiggyVue)
-    //         .use(ConfirmationService)
-    //         .use(ToastService)
-    //         .use(DialogService)
-    //         .use(AppState)
-    //         .use(PrimeVue, {
-    //             theme: {
-    //                 preset: Theme,
-    //                 options: {
-    //                     darkModeSelector: '.app-dark'
-    //                 }
-    //             }
-    //         })
-    //           .config.globalProperties.$resolveImagePath = resolveImagePath;
-    //         .mount(el);
-    // },
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
+            .use(i18n)
             .use(ConfirmationService)
             .use(ToastService)
             .use(DialogService)
@@ -70,10 +62,27 @@ createInertiaApp({
                 },
             });
 
-        // ✅ set global property before mounting
+        const supportedLocales = ['en', 'bn', 'ar', 'es', 'hi'];
+
+        const serverLocale = props.locale?.current;
+        const cookieLocale = getLocaleFromCookie();
+        const htmlLocale = getLocaleFromHtml();
+
+        console.log("Props Keys:", Object.keys(props || {}));
+        console.log("Server Locale (from props):", serverLocale);
+        console.log("Cookie Locale:", cookieLocale);
+        console.log("HTML Locale:", htmlLocale);
+
+        const finalLocale = serverLocale || cookieLocale || htmlLocale || 'en';
+
+        console.log("Final Locale:", finalLocale);
+
+        if (finalLocale && supportedLocales.includes(finalLocale)) {
+            i18n.global.locale.value = finalLocale;
+        }
+
         app.config.globalProperties.$resolveImagePath = resolveImagePath;
 
-        // ✅ return the mounted app
         return app.mount(el);
     },
 

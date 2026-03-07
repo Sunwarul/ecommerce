@@ -2,13 +2,16 @@
 import useAuth from "@/Composables/useAuth";
 import { PERMISSIONS } from "@/constants/permissions";
 import { computed, ref } from "vue";
+import { useI18n } from 'vue-i18n';
 import AppMenuItem from "./AppMenuItem.vue";
+
+const { t } = useI18n();
 
 const model = ref([
 
     // ================= PRODUCTS =================
     {
-        label: "Products",
+        label: t('menu.products'),
         icon: "pi pi-box",
         permissionMode: "any",
         permissions: [
@@ -21,7 +24,7 @@ const model = ref([
         ],
         items: [
             {
-                label: "Catalog",
+                label: t('menu.categories'),
                 icon: "pi pi-list",
                 permissionMode: "any",
                 permissions: [
@@ -33,43 +36,43 @@ const model = ref([
                 ],
                 items: [
                     {
-                        label: "Product Attributes",
+                        label: t('menu.attributes'),
                         icon: "pi pi-id-card",
                         to: route("product-attributes.index"),
                         permissions: [PERMISSIONS.CATEGORY.INDEX],
                     },
                     {
-                        label: "Attributes Values",
+                        label: t('menu.attribute_values'),
                         icon: "pi pi-id-card",
                         to: route("product-attribute-values.index"),
                         permissions: [PERMISSIONS.CATEGORY.INDEX],
                     },
                     {
-                        label: "Category",
+                        label: t('menu.categories'),
                         icon: "pi pi-id-card",
                         to: route("categories.index"),
                         permissions: [PERMISSIONS.CATEGORY.INDEX],
                     },
                     {
-                        label: "Brand",
+                        label: t('menu.brands'),
                         icon: "pi pi-check-square",
                         to: route("brands.index"),
                         permissions: [PERMISSIONS.BRAND.INDEX],
                     },
                     {
-                        label: "Tag",
+                        label: t('menu.tags'),
                         icon: "pi pi-check-square",
                         to: route("tags.index"),
                         permissions: [PERMISSIONS.TAG.INDEX],
                     },
                     {
-                        label: "Tax",
+                        label: t('menu.taxes'),
                         icon: "pi pi-check-square",
                         to: route("taxes.index"),
                         permissions: [PERMISSIONS.TAX.INDEX],
                     },
                     {
-                        label: "Payment Method",
+                        label: t('menu.payment_methods'),
                         icon: "pi pi-credit-card",
                         to: route("payment-methods.index"),
                         permissions: [PERMISSIONS.PAYMENT_METHOD.INDEX],
@@ -77,7 +80,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Products",
+                label: t('menu.products'),
                 icon: "pi pi-shopping-bag",
                 to: route("products.index"),
                 permissions: [PERMISSIONS.PRODUCT.INDEX],
@@ -87,25 +90,25 @@ const model = ref([
 
     // ================= SALES =================
     {
-        label: "Sales",
+        label: t('pos.sales'),
         icon: "pi pi-shopping-cart",
         permissionMode: "any",
         permissions: [PERMISSIONS.POS.INDEX, PERMISSIONS.ORDER.INDEX],
         items: [
             {
-                label: "Point of Sale",
+                label: t('menu.pos'),
                 icon: "pi pi-desktop",
                 to: route("pos.index"),
                 permissions: [PERMISSIONS.POS.INDEX],
             },
             {
-                label: "Orders",
+                label: t('menu.orders'),
                 icon: "pi pi-receipt",
                 to: route("pos.orders.index"),
                 permissions: [PERMISSIONS.ORDER.INDEX],
             },
             {
-                label: "Customers",
+                label: t('menu.customers'),
                 icon: "pi pi-users",
                 to: route("customers.index"),
                 permissions: [PERMISSIONS.CUSTOMER.INDEX],
@@ -115,7 +118,7 @@ const model = ref([
 
     // ================= USER MANAGEMENT =================
     {
-        label: "User Management",
+        label: t('menu.users'),
         icon: "pi pi-users",
         permissionMode: "any",
         permissions: [
@@ -125,7 +128,7 @@ const model = ref([
         ],
         items: [
             {
-                label: "Access Control",
+                label: t('menu.permissions'),
                 icon: "pi pi-shield",
                 permissionMode: "any",
                 permissions: [
@@ -134,13 +137,13 @@ const model = ref([
                 ],
                 items: [
                     {
-                        label: "Role",
+                        label: t('menu.roles'),
                         icon: "pi pi-id-card",
                         to: route("roles.index"),
                         permissions: [PERMISSIONS.ROLE.INDEX],
                     },
                     {
-                        label: "Permission",
+                        label: t('menu.permissions'),
                         icon: "pi pi-lock",
                         to: route("permissions.index"),
                         permissions: [PERMISSIONS.PERMISSION.INDEX],
@@ -148,7 +151,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Users",
+                label: t('menu.users'),
                 icon: "pi pi-user",
                 to: route("users.index"),
                 permissions: [PERMISSIONS.USER.INDEX],
@@ -158,7 +161,7 @@ const model = ref([
 
     // ================= SETUP =================
     {
-        label: "Setup",
+        label: t('menu.settings'),
         icon: "pi pi-cog",
         permissionMode: "any",
         permissions: [
@@ -175,7 +178,7 @@ const model = ref([
         ],
         items: [
             {
-                label: "Organization",
+                label: t('branches.branches'),
                 icon: "pi pi-building",
                 permissionMode: "any",
                 permissions: [
@@ -184,13 +187,13 @@ const model = ref([
                 ],
                 items: [
                     {
-                        label: "Branches",
+                        label: t('menu.branches'),
                         icon: "pi pi-building",
                         to: route("branches.index"),
                         permissions: [PERMISSIONS.BRANCH.INDEX],
                     },
                     {
-                        label: "Warehouses",
+                        label: t('menu.warehouses'),
                         icon: "pi pi-warehouse",
                         to: route("warehouses.index"),
                         permissions: [PERMISSIONS.WAREHOUSE.INDEX],
@@ -198,7 +201,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Units & Inventory",
+                label: t('menu.units'),
                 icon: "pi pi-clone",
                 permissionMode: "any",
                 permissions: [
@@ -208,25 +211,25 @@ const model = ref([
                 ],
                 items: [
                     {
-                        label: "Base Units",
+                        label: t('menu.base_units'),
                         icon: "pi pi-clone",
                         to: route("base-units.index"),
                         permissions: [PERMISSIONS.BASE_UNIT.INDEX],
                     },
                     {
-                        label: "Units",
+                        label: t('menu.units'),
                         icon: "pi pi-clone",
                         to: route("units.index"),
                         permissions: [PERMISSIONS.UNIT.INDEX],
                     },
                     {
-                        label: "Suppliers",
+                        label: t('menu.suppliers'),
                         icon: "pi pi-truck",
                         to: route("suppliers.index"),
                         permissions: [PERMISSIONS.SUPPLIER.INDEX],
                     },
                     {
-                        label: "Warranty & Guarantees",
+                        label: t('menu.warranty_guarantees'),
                         icon: "pi pi-clone",
                         to: route("warranty-guarantees.index"),
                         permissions: [PERMISSIONS.SUPPLIER.INDEX],
@@ -234,7 +237,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Finance",
+                label: t('settings.settings'),
                 icon: "pi pi-wallet",
                 permissionMode: "any",
                 permissions: [
@@ -243,19 +246,19 @@ const model = ref([
                 ],
                 items: [
                     {
-                        label: "Expense Categories",
+                        label: t('menu.expense_categories'),
                         icon: "pi pi-list",
                         to: route("expense-categories.index"),
                         permissions: [PERMISSIONS.EXPENSE_CATEGORY.INDEX],
                     },
                     {
-                        label: "Expenses",
+                        label: t('menu.expenses'),
                         icon: "pi pi-wallet",
                         to: route("expenses.index"),
                         permissions: [PERMISSIONS.EXPENSE.INDEX],
                     },
                     {
-                        label: "Currencies",
+                        label: t('menu.currencies'),
                         icon: "pi pi-money-bill",
                         to: route("currencies.index"),
                         permissions: [PERMISSIONS.COUNTRY.INDEX],
@@ -263,7 +266,7 @@ const model = ref([
                 ],
             },
             {
-                label: "Settings",
+                label: t('menu.settings'),
                 icon: "pi pi-cog",
                 to: route("settings.general"),
                 permissions: [PERMISSIONS.SETTING.INDEX],

@@ -1,19 +1,19 @@
 <template>
 
-    <Head title="Dashboard" />
+    <Head :title="t('menu.dashboard')" />
 
     <AuthenticatedLayout>
         <div class="p-4">
             <!-- Header -->
             <div class="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
-                    <p class="text-gray-500">Overview of your business performance.</p>
+                    <h1 class="text-3xl font-bold text-gray-800">{{ t('menu.dashboard') }}</h1>
+                    <p class="text-gray-500">{{ t('dashboard.welcome') }}</p>
                 </div>
                 <div class="flex gap-2">
                     <a href="/admin/pos" target="_blank"
                         class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow transition flex items-center gap-2">
-                        <i class="pi pi-desktop"></i> Open POS
+                        <i class="pi pi-desktop"></i> {{ t('pos.open_session') }}
                     </a>
                 </div>
             </div>
@@ -24,7 +24,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500">Today's Sales</p>
+                            <p class="text-sm font-medium text-gray-500">{{ t('dashboard.total_sales') }}</p>
                             <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ formatCurrency(stats.daily_sales) }}
                             </h3>
                         </div>
@@ -33,7 +33,7 @@
                         </div>
                     </div>
                     <div class="mt-4 text-sm text-gray-600">
-                        <span class="font-medium text-gray-900">{{ stats.daily_orders }}</span> Orders today
+                        <span class="font-medium text-gray-900">{{ stats.daily_orders }}</span> {{ t('dashboard.total_orders') }}
                     </div>
                 </div>
 
@@ -41,7 +41,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500">This Week</p>
+                            <p class="text-sm font-medium text-gray-500">{{ t('dashboard.total_sales') }}</p>
                             <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ formatCurrency(stats.weekly_sales) }}
                             </h3>
                         </div>
@@ -50,7 +50,7 @@
                         </div>
                     </div>
                     <div class="mt-4 text-sm text-gray-600">
-                        <span class="font-medium text-gray-900">{{ stats.weekly_orders }}</span> Orders this week
+                        <span class="font-medium text-gray-900">{{ stats.weekly_orders }}</span> {{ t('dashboard.total_orders') }}
                     </div>
                 </div>
 
@@ -58,7 +58,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500">This Month</p>
+                            <p class="text-sm font-medium text-gray-500">{{ t('dashboard.total_sales') }}</p>
                             <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ formatCurrency(stats.monthly_sales) }}
                             </h3>
                         </div>
@@ -67,7 +67,7 @@
                         </div>
                     </div>
                     <div class="mt-4 text-sm text-gray-600">
-                        <span class="font-medium text-gray-900">{{ stats.monthly_orders }}</span> Orders this month
+                        <span class="font-medium text-gray-900">{{ stats.monthly_orders }}</span> {{ t('dashboard.total_orders') }}
                     </div>
                 </div>
 
@@ -75,7 +75,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium text-gray-500">Top Product</p>
+                            <p class="text-sm font-medium text-gray-500">{{ t('dashboard.top_products') }}</p>
                             <h3 class="text-lg font-bold text-gray-900 mt-1 truncate w-40"
                                 :title="top_products[0]?.name || 'N/A'">
                                 {{ top_products[0]?.name || 'N/A' }}
@@ -86,7 +86,7 @@
                         </div>
                     </div>
                     <div class="mt-4 text-sm text-gray-600">
-                        <span class="font-medium text-gray-900">{{ top_products[0]?.total_qty || 0 }}</span> Sold
+                        <span class="font-medium text-gray-900">{{ top_products[0]?.total_qty || 0 }}</span> {{ t('pos.sales') }}
                     </div>
                 </div>
             </div>
@@ -95,34 +95,34 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <!-- Sales Chart -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Sales Overview (Last 7 Days)</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('dashboard.sales_overview') }}</h3>
                     <Chart type="bar" :data="chartData" :options="chartOptions" class="h-[300px]" />
                 </div>
 
                 <!-- Quick Links -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('common.actions') }}</h3>
                     <div class="grid grid-cols-1 gap-3">
                         <a href="/admin/products/create" target="_blank"
                             class="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition flex items-center gap-3 group">
                             <div class="p-2 bg-blue-100 text-blue-600 rounded-md group-hover:bg-blue-200">
                                 <i class="pi pi-plus"></i>
                             </div>
-                            <span class="font-medium text-gray-700">Add New Product</span>
+                            <span class="font-medium text-gray-700">{{ t('products.add_product') }}</span>
                         </a>
                         <a href="/admin/pos/orders" target="_blank"
                             class="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition flex items-center gap-3 group">
                             <div class="p-2 bg-green-100 text-green-600 rounded-md group-hover:bg-green-200">
                                 <i class="pi pi-list"></i>
                             </div>
-                            <span class="font-medium text-gray-700">View Orders</span>
+                            <span class="font-medium text-gray-700">{{ t('menu.orders') }}</span>
                         </a>
                         <a href="/admin/customers/create" target="_blank"
                             class="p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition flex items-center gap-3 group">
                             <div class="p-2 bg-purple-100 text-purple-600 rounded-md group-hover:bg-purple-200">
                                 <i class="pi pi-user-plus"></i>
                             </div>
-                            <span class="font-medium text-gray-700">Add Customer</span>
+                            <span class="font-medium text-gray-700">{{ t('customers.add_customer') }}</span>
                         </a>
                     </div>
                 </div>
@@ -132,13 +132,13 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Top Products Table -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Selling Products</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('dashboard.top_products') }}</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3">Product Name</th>
-                                    <th class="px-4 py-3 text-right">Sold Qty</th>
+                                    <th class="px-4 py-3">{{ t('products.product_name') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ t('products.quantity') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -148,7 +148,7 @@
                                     <td class="px-4 py-3 text-right">{{ product.total_qty }}</td>
                                 </tr>
                                 <tr v-if="top_products.length === 0">
-                                    <td colspan="2" class="px-4 py-3 text-center text-gray-500">No sales yet</td>
+                                    <td colspan="2" class="px-4 py-3 text-center text-gray-500">{{ t('common.no_data') }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -161,16 +161,16 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-red-600 flex items-center gap-2">
-                                <i class="pi pi-exclamation-triangle"></i> Low Stock Alert
+                                <i class="pi pi-exclamation-triangle"></i> {{ t('products.stock') }}
                             </h3>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                     <tr>
-                                        <th class="px-4 py-3">Product</th>
-                                        <th class="px-4 py-3">Branch</th>
-                                        <th class="px-4 py-3 text-right">Qty</th>
+                                        <th class="px-4 py-3">{{ t('products.product') }}</th>
+                                        <th class="px-4 py-3">{{ t('branches.branch_name') }}</th>
+                                        <th class="px-4 py-3 text-right">{{ t('common.quantity') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -182,8 +182,7 @@
                                         </td>
                                     </tr>
                                     <tr v-if="low_stock.length === 0">
-                                        <td colspan="3" class="px-4 py-3 text-center text-green-600">All stock levels
-                                            normal</td>
+                                        <td colspan="3" class="px-4 py-3 text-center text-green-600">{{ t('common.no_data') }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -192,14 +191,14 @@
 
                     <!-- Recent Orders -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ t('dashboard.recent_orders') }}</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                     <tr>
-                                        <th class="px-4 py-3">Order #</th>
-                                        <th class="px-4 py-3 text-right">Amount</th>
-                                        <th class="px-4 py-3 text-center">Status</th>
+                                        <th class="px-4 py-3">{{ t('orders.order_number') }}</th>
+                                        <th class="px-4 py-3 text-right">{{ t('common.price') }}</th>
+                                        <th class="px-4 py-3 text-center">{{ t('common.status') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -222,7 +221,7 @@
                                         </td>
                                     </tr>
                                     <tr v-if="recent_orders.length === 0">
-                                        <td colspan="3" class="px-4 py-3 text-center text-gray-500">No recent orders
+                                        <td colspan="3" class="px-4 py-3 text-center text-gray-500">{{ t('common.no_data') }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -238,7 +237,10 @@
 <script setup>
 import { computed, ref, onMounted } from "vue";
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+
+const { t } = useI18n();
 const page = usePage();
 
 const { currency, currency_symbol } = page.props.configs;

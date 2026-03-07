@@ -248,7 +248,7 @@ class PosOrderController extends Controller
 
             $order = PosOrder::create([
                 'pos_session_id' => $data['pos_session_id'],
-                'branch_id' => $data['branch_id'] ?? 1,
+                'branch_id' => $data['branch_id'] ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                 'warehouse_id' => $warehouseId,
                 'customer_id' => $data['customer_id'] ?? null,
                 'user_id' => $userId,
@@ -311,7 +311,7 @@ class PosOrderController extends Controller
                 foreach ($payments as $payment) {
                     PosPayment::create([
                         'order_id' => $order->id,
-                        'branch_id' => $order->branch_id ?? session('current_branch_id') ?? 1,
+                        'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                         'payment_method_id' => $payment['payment_method_id'],
                         'amount' => $payment['amount'],
                         'paid_at' => now(),
@@ -520,7 +520,7 @@ class PosOrderController extends Controller
                         'type' => 'in',
                         'product_id' => $it->product_id,
                         'variation_id' => $it->variation_id,
-                        'branch_id' => $order?->branch_id ?? session('current_branch_id') ?? 1,
+                        'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                         'quantity' => $it->quantity,
                         'to_warehouse_id' => $order->warehouse_id,
                         'reference' => $order->invoice_no,
@@ -581,7 +581,7 @@ class PosOrderController extends Controller
             foreach ($data['payments'] as $p) {
                 PosPayment::create([
                     'order_id' => $order->id,
-                    'branch_id' => $order?->branch_id ?? session('current_branch_id') ?? 1,
+                    'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                     'payment_method_id' => $p['payment_method_id'],
                     'amount' => $p['amount'],
                     'paid_at' => now(),
@@ -651,7 +651,7 @@ class PosOrderController extends Controller
                 foreach ($data['payments'] as $p) {
                     PosPayment::create([
                         'order_id' => $order->id,
-                        'branch_id' => $order?->branch_id ?? session('current_branch_id') ?? 1,
+                        'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                         'payment_method_id' => $p['payment_method_id'],
                         'amount' => $p['amount'],
                         'paid_at' => now(),
@@ -694,7 +694,7 @@ class PosOrderController extends Controller
         DB::transaction(function () use ($order, $data) {
             PosPayment::create([
                 'order_id' => $order->id,
-                'branch_id' => $order?->branch_id ?? session('current_branch_id') ?? 1,
+                'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                 'payment_method_id' => $data['payment_method_id'],
                 'amount' => $data['amount'],
                 'paid_at' => now(),
@@ -878,8 +878,8 @@ class PosOrderController extends Controller
 
             // Update Order
             $order->update([
-                'pos_session_id' => $data['pos_session_id'], // update session to current?
-                'branch_id' => $data['branch_id'] ?? null,
+                'pos_session_id' => $data['pos_session_id'],
+                'branch_id' => $data['branch_id'] ?? session('current_branch_id') ?? Auth::user()->branch_id ?? $order->branch_id,
                 'warehouse_id' => $warehouseId,
                 'customer_id' => $data['customer_id'] ?? null,
                 'invoice_no' => $invoiceNo,
@@ -928,7 +928,7 @@ class PosOrderController extends Controller
             if (!$isDraft) {
                 foreach ($payments as $payment) {
                     $order->payments()->create([
-                        'branch_id' => $order->branch_id ?? session('current_branch_id'),
+                        'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
                         'payment_method_id' => $payment['payment_method_id'],
                         'amount' => $payment['amount'],
                         'paid_at' => now(),
