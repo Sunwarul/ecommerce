@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Supplier;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class SupplierSeeder extends Seeder
@@ -45,7 +45,7 @@ class SupplierSeeder extends Seeder
 
         foreach ($suppliers as $supplier) {
             Supplier::create([
-                'code' => 'SUP-' . strtoupper(Str::random(5)),
+                'code' => 'SUP-'.strtoupper(Str::random(5)),
                 'name' => $supplier['name'],
                 'address' => $supplier['address'],
                 'phone' => $supplier['phone'],

@@ -13,9 +13,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-    }
+    public function register(): void {}
 
     /**
      * Bootstrap any application services.
@@ -26,12 +24,10 @@ class AppServiceProvider extends ServiceProvider
             SettingLoader::load();
         }
         Inertia::share([
-            'branches' => fn() => auth()->check()
+            'branches' => fn () => auth()->check()
                 ? Branch::active()->select('id', 'name')->get()
                 : [],
         ]);
-
-
 
     }
 }

@@ -32,6 +32,6 @@ class Setting extends Model
 
     public function setKeyAttribute($key)
     {
-        $this->attributes['key'] = Str::slug($key, "_");
+        $this->attributes['key'] = Str::slug($key, '_');
     }
 }

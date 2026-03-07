@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 use App\Models\Tax;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TaxFactory extends Factory
 {
@@ -22,7 +21,7 @@ class TaxFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'rate_type' => fake()->randomElement(["percent","flat"]),
+            'rate_type' => fake()->randomElement(['percent', 'flat']),
             'rate_value' => fake()->randomFloat(4, 0, 999999.9999),
             'deleted_at' => fake()->word(),
         ];

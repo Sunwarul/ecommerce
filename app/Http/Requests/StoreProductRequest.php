@@ -10,6 +10,7 @@ class StoreProductRequest extends FormRequest
     {
         return true;
     }
+
     public function rules(): array
     {
         return [
@@ -29,7 +30,7 @@ class StoreProductRequest extends FormRequest
             // optional images (if you handle uploads here)
             'images' => ['nullable', 'array'],
             'images.*' => ['file', 'image', 'max:2048'], // 2MB each (change if needed)
-// OPTIONAL: SKUs + inventory (for product with variants)
+            // OPTIONAL: SKUs + inventory (for product with variants)
             'skus' => ['nullable', 'array'],
             'skus.*.code' => ['required_with:skus', 'string', 'max:255'],
             'skus.*.barcode' => ['nullable', 'string', 'max:255'],
@@ -47,15 +48,16 @@ class StoreProductRequest extends FormRequest
             'skus.*.inventory.warehouse_id' => [
                 'required_with:skus.*.inventory',
                 'integer',
-                'exists:warehouses,id'
+                'exists:warehouses,id',
             ],
             'skus.*.inventory.qty_on_hand' => [
                 'required_with:skus.*.inventory',
-                'integer'
+                'integer',
             ],
             'skus.*.inventory.low_stock_threshold' => ['nullable', 'integer'],
         ];
     }
+
     public function messages(): array
     {
         return [

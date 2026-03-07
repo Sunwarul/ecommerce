@@ -2,18 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\{
-    Product,
-    ProductVariation,
-    ProductStock,
-    ProductAttribute,
-    ProductAttributeValue,
-    Category,
-    Brand,
-    Tax,
-    Tag,
-    Warehouse
-};
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Models\ProductStock;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -38,25 +34,25 @@ class ProductSeeder4 extends Seeder
             $brandName = 'Hisense';
             // Handle Brand
             $brand = Brand::withTrashed()->where('name', $brandName)->first();
-            if (!$brand) {
+            if (! $brand) {
                 $brand = Brand::create(['name' => $brandName, 'is_active' => true]);
             } elseif ($brand->trashed()) {
                 $brand->restore();
             }
 
             // Category "Refrigerator" exists with ID 6 and slug "refrigerator"
-            $categoryName = "Refrigerator";
+            $categoryName = 'Refrigerator';
             $slug = 'refrigerator';
 
             // Handle Category with Soft Deletes
             $category = Category::withTrashed()->where('slug', $slug)->first();
-            if (!$category) {
+            if (! $category) {
                 // If for some reason it's missing, create it under "Home Appliances" (ID 2)
                 $category = Category::create([
                     'name' => $categoryName,
                     'slug' => $slug,
                     'parent_id' => 2,
-                    'is_active' => true
+                    'is_active' => true,
                 ]);
             } elseif ($category->trashed()) {
                 $category->restore();
@@ -64,11 +60,11 @@ class ProductSeeder4 extends Seeder
 
             $modelName = $item['model'];
             $name = $item['description'] ?? "{$brandName} {$modelName}";
-            $sku = strtoupper(Str::slug($brandName)) . "-" . strtoupper(Str::slug($modelName));
+            $sku = strtoupper(Str::slug($brandName)).'-'.strtoupper(Str::slug($modelName));
 
             // Clean price strings (remove commas)
-            $mrp = (float)($item['mrp'] ?? 0);
-            $lifting = (float)($item['lifting'] ?? 0);
+            $mrp = (float) ($item['mrp'] ?? 0);
+            $lifting = (float) ($item['lifting'] ?? 0);
 
             // Extract attributes from description if possible
             preg_match('/(\d+L)/i', $name, $capacityMatches);
@@ -102,7 +98,7 @@ class ProductSeeder4 extends Seeder
             } else {
                 $productSlug = Str::slug($name);
                 if (Product::withTrashed()->where('slug', $productSlug)->exists()) {
-                    $productSlug .= '-' . Str::random(4);
+                    $productSlug .= '-'.Str::random(4);
                 }
 
                 $product = Product::create([
@@ -131,21 +127,23 @@ class ProductSeeder4 extends Seeder
 
             $attrValues = [
                 'capacity' => $capacity,
-                'type' => $type
+                'type' => $type,
             ];
 
             foreach ($attributesToSeed as $key => $attrName) {
                 $value = $attrValues[$key] ?? '';
-                if (empty($value) || $value === 'N/A') continue;
+                if (empty($value) || $value === 'N/A') {
+                    continue;
+                }
 
                 // Create Attribute
                 $attribute = ProductAttribute::withTrashed()->where('name', Str::slug($attrName))->first();
-                if (!$attribute) {
+                if (! $attribute) {
                     $attribute = ProductAttribute::create([
                         'name' => Str::slug($attrName),
                         'display_name' => $attrName,
                         'type' => 'text',
-                        'is_active' => true
+                        'is_active' => true,
                     ]);
                 } elseif ($attribute->trashed()) {
                     $attribute->restore();
@@ -154,14 +152,14 @@ class ProductSeeder4 extends Seeder
                 // Create Value
                 $attributeValue = ProductAttributeValue::withTrashed()
                     ->where('attribute_id', $attribute->id)
-                    ->where('value', (string)$value)
+                    ->where('value', (string) $value)
                     ->first();
 
-                if (!$attributeValue) {
+                if (! $attributeValue) {
                     $attributeValue = ProductAttributeValue::create([
                         'attribute_id' => $attribute->id,
-                        'value' => (string)$value,
-                        'display_value' => (string)$value
+                        'value' => (string) $value,
+                        'display_value' => (string) $value,
                     ]);
                 } elseif ($attributeValue->trashed()) {
                     $attributeValue->restore();
@@ -175,10 +173,10 @@ class ProductSeeder4 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $product->attributes()->attach($attribute->id, [
                         'attribute_value_id' => $attributeValue->id,
-                        'variation_id' => null
+                        'variation_id' => null,
                     ]);
                 }
             }
@@ -190,7 +188,7 @@ class ProductSeeder4 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$stockExists) {
+                if (! $stockExists) {
                     ProductStock::create([
                         'branch_id' => 1,
                         'product_id' => $product->id,
@@ -216,7 +214,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG238NADP/BD3',
@@ -225,7 +223,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG238NAAB/BD3',
@@ -234,7 +232,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG238NAMB/BD3',
@@ -243,7 +241,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG277NAB2/BD3',
@@ -252,7 +250,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG277NARG/BD3',
@@ -261,7 +259,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 700,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG277NAGS/BD3',
@@ -270,7 +268,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 700,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG277NAFB/BD3',
@@ -279,7 +277,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RBDG270NARG/BD3',
@@ -288,7 +286,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RBDG270NAFB/BD3',
@@ -297,7 +295,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RBDG270NAAR/BD3',
@@ -306,7 +304,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1200,
-                'slab_18_above' => 1600
+                'slab_18_above' => 1600,
             ],
             [
                 'model' => 'RT1G238NAB/BD3',
@@ -315,7 +313,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1200,
-                'slab_18_above' => 1600
+                'slab_18_above' => 1600,
             ],
             [
                 'model' => 'RT1G238NAMB/BD3',
@@ -324,7 +322,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G238NACR/BD3',
@@ -333,7 +331,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1400
+                'slab_18_above' => 1400,
             ],
             [
                 'model' => 'RT1G238NARB/BD3',
@@ -342,7 +340,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1400
+                'slab_18_above' => 1400,
             ],
             [
                 'model' => 'RT1G277NAB/BD3',
@@ -351,7 +349,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G277NAMB/BD3',
@@ -360,7 +358,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 39702,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G277NABM/BD3',
@@ -369,7 +367,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 500,
                 'slab_10_17' => 900,
-                'slab_18_above' => 1300
+                'slab_18_above' => 1300,
             ],
             [
                 'model' => 'RT1G277NARB/BD3',
@@ -378,7 +376,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RB1G270NAB/BD3',
@@ -387,7 +385,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G270NADR/BD3',
@@ -396,7 +394,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G270NARB/BD3',
@@ -405,7 +403,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G270NMB/BD3',
@@ -414,7 +412,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G270NMMB/BD3',
@@ -423,7 +421,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 42042,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
 
             // --- Page 2 Data (Series 236, 276, 266) ---
@@ -434,7 +432,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G270NMRB/BD3',
@@ -443,7 +441,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RT1G236NAB/BD3',
@@ -452,7 +450,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1200,
-                'slab_18_above' => 1600
+                'slab_18_above' => 1600,
             ],
             [
                 'model' => 'RT1G236NACR/BD3',
@@ -461,7 +459,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1400
+                'slab_18_above' => 1400,
             ],
             [
                 'model' => 'RT1G236NARB/BD3',
@@ -470,7 +468,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 35022,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1400
+                'slab_18_above' => 1400,
             ],
             [
                 'model' => 'RT1G236NAMB/BD3',
@@ -479,7 +477,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG236NASR/BD3',
@@ -488,7 +486,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG236NADP/BD3',
@@ -497,7 +495,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG236NAAB/BD3',
@@ -506,7 +504,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG236NAMB/BD3',
@@ -515,7 +513,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 33462,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G276NAB/BD3',
@@ -524,7 +522,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G276NABM/BD3',
@@ -533,7 +531,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 500,
                 'slab_10_17' => 900,
-                'slab_18_above' => 1300
+                'slab_18_above' => 1300,
             ],
             [
                 'model' => 'RT1G276NARB/BD3',
@@ -542,7 +540,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38142,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RT1G276NAMB/BD3',
@@ -551,7 +549,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 39702,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG276NAB2/BD3',
@@ -560,7 +558,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RTDG276NARG/BD3',
@@ -569,7 +567,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 700,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG276NAGS/BD3',
@@ -578,7 +576,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 700,
                 'slab_10_17' => 1100,
-                'slab_18_above' => 1500
+                'slab_18_above' => 1500,
             ],
             [
                 'model' => 'RTDG276NAFB/BD3',
@@ -587,7 +585,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 36582,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RB1G266NAB/BD3',
@@ -596,7 +594,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G266NADR/BD3',
@@ -605,7 +603,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G266NARB/BD3',
@@ -614,7 +612,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 38922,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RBDG266NARG/BD3',
@@ -623,7 +621,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RBDG266NAFB/BD3',
@@ -632,7 +630,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 400,
                 'slab_10_17' => 800,
-                'slab_18_above' => 1200
+                'slab_18_above' => 1200,
             ],
             [
                 'model' => 'RBDG266NAAR/BD3',
@@ -641,7 +639,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 37362,
                 'slab_5_9' => 800,
                 'slab_10_17' => 1200,
-                'slab_18_above' => 1600
+                'slab_18_above' => 1600,
             ],
             [
                 'model' => 'RB1G266NMB/BD3',
@@ -650,7 +648,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G266NMBM/BD3',
@@ -659,7 +657,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G266NMRB/BD3',
@@ -668,7 +666,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 40482,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
             [
                 'model' => 'RB1G266NMMB/BD3',
@@ -677,7 +675,7 @@ class ProductSeeder4 extends Seeder
                 'lifting' => 42042,
                 'slab_5_9' => 0,
                 'slab_10_17' => 0,
-                'slab_18_above' => 0
+                'slab_18_above' => 0,
             ],
         ];
 

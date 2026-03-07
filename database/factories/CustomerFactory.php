@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 use App\Models\Customer;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CustomerFactory extends Factory
 {
@@ -21,7 +20,7 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
-            'customer_type' => fake()->randomElement(["retailer", "wholesaler"]),
+            'customer_type' => fake()->randomElement(['retailer', 'wholesaler']),
             'name' => fake()->name(),
             'email' => fake()->safeEmail(),
             'phone' => fake()->phoneNumber(),
@@ -32,7 +31,7 @@ class CustomerFactory extends Factory
             'address' => fake()->text(),
             'opening_balance' => 0,
             'opening_balance_date' => fake()->date(),
-            'opening_balance_type' => fake()->randomElement(["to_pay", "to_receive"]),
+            'opening_balance_type' => fake()->randomElement(['to_pay', 'to_receive']),
             'credit_limit' => fake()->word(),
             'has_credit_limit' => fake()->boolean(),
             'photo' => fake()->word(),

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\User;
-use App\Traits\HasCrud;
-use App\Utils\CrudConfig;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserStoreRequest;
 use App\Http\Requests\Admin\UserUpdateRequest;
 use App\Models\Branch;
 use App\Models\Role;
+use App\Models\User;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -31,13 +31,15 @@ class UserController extends Controller
             withRelations: ['roles:id,name'],
         ));
     }
+
     protected function addProps(): array
     {
         $roles = Role::all();
         $branches = Branch::active()->get();
+
         return [
             'roles' => $roles,
-            'branches' => $branches
+            'branches' => $branches,
         ];
     }
 
@@ -77,9 +79,8 @@ class UserController extends Controller
             $model->roles()->sync($validatedData['roles']);
         }
 
-        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
     }
-
 
     public function switch(Request $request)
     {

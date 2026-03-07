@@ -51,14 +51,14 @@ class StockService
             ]);
 
             // If branch_id provided, try to find stock with that branch first
-            if (!empty($data['branch_id'])) {
+            if (! empty($data['branch_id'])) {
                 $stock = $stock->where('branch_id', $data['branch_id']);
             }
 
             $stock = $stock->lockForUpdate()->first();
 
             // If no stock found with branch, try without branch constraint (warehouse-only stock)
-            if (!$stock) {
+            if (! $stock) {
                 $stock = ProductStock::where([
                     'product_id' => $productId,
                     'variation_id' => $variationId,
@@ -66,7 +66,7 @@ class StockService
                 ])->lockForUpdate()->first();
             }
 
-            if (!$stock || $stock->quantity < $quantity) {
+            if (! $stock || $stock->quantity < $quantity) {
                 $available = $stock ? $stock->quantity : 0;
                 throw new \Exception("Not enough stock. Available: {$available}");
             }

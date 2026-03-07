@@ -2,18 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\{
-    Product,
-    ProductVariation,
-    ProductStock,
-    ProductAttribute,
-    ProductAttributeValue,
-    Category,
-    Brand,
-    Tax,
-    Tag,
-    Warehouse
-};
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Models\ProductStock;
+use App\Models\ProductVariation;
+use App\Models\Tag;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -30,8 +28,9 @@ class ProductSeederExample extends Seeder
             $tags = Tag::take(3)->pluck('id')->toArray();
             $warehouses = Warehouse::take(2)->get();
 
-            if (!$category || !$warehouses->count()) {
+            if (! $category || ! $warehouses->count()) {
                 $this->command->warn('Missing category or warehouses. Seeder skipped.');
+
                 return;
             }
 
@@ -75,7 +74,7 @@ class ProductSeederExample extends Seeder
             ]);
 
             // Tags
-            if (!empty($tags)) {
+            if (! empty($tags)) {
                 $simpleProduct->tags()->sync($tags);
             }
 
@@ -169,7 +168,7 @@ class ProductSeederExample extends Seeder
             ]);
 
             // Tags
-            if (!empty($tags)) {
+            if (! empty($tags)) {
                 $variableProduct->tags()->sync($tags);
             }
 
@@ -186,7 +185,7 @@ class ProductSeederExample extends Seeder
 
                 $variation = ProductVariation::create([
                     'product_id' => $variableProduct->id,
-                    'sku' => 'HOODIE-' . strtoupper($skuParts),
+                    'sku' => 'HOODIE-'.strtoupper($skuParts),
                     'price' => 60,
                     'discount_price' => 55,
                     'image' => null,

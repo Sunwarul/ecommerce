@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Warehouse;
+use Illuminate\Database\Seeder;
 
 class WarehouseSeeder extends Seeder
 {
@@ -15,7 +15,7 @@ class WarehouseSeeder extends Seeder
                 'address' => 'Station Road, Rangpur',
                 'phone' => '',
                 'status' => true,
-            ]
+            ],
         ];
 
         foreach ($warehouses as $warehouse) {

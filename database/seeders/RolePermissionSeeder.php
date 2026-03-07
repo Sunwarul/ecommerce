@@ -31,9 +31,8 @@ class RolePermissionSeeder extends Seeder
             $role->syncPermissions($permissions);
         }
 
-
         $user = \App\Models\User::first();
-        if ($user && !$user->hasRole('Super Admin')) {
+        if ($user && ! $user->hasRole('Super Admin')) {
             $user->assignRole('Super Admin');
         }
     }

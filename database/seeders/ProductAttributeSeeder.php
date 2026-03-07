@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
+use Illuminate\Database\Seeder;
 
 class ProductAttributeSeeder extends Seeder
 {
@@ -24,7 +24,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $color->id, 'value' => 'green', 'display_value' => 'Green', 'color_code' => '#00FF00'],
         ]);
 
-
         /* ------------------ Size ------------------ */
         $size = ProductAttribute::create([
             'name' => 'size',
@@ -39,7 +38,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $size->id, 'value' => 'L', 'display_value' => 'Large'],
             ['attribute_id' => $size->id, 'value' => 'XL', 'display_value' => 'XL'],
         ]);
-
 
         /* ------------------ Material ------------------ */
         $material = ProductAttribute::create([
@@ -56,7 +54,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $material->id, 'value' => 'metal', 'display_value' => 'Metal'],
         ]);
 
-
         /* ------------------ Brand ------------------ */
         $brand = ProductAttribute::create([
             'name' => 'brand',
@@ -70,7 +67,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $brand->id, 'value' => 'adidas', 'display_value' => 'Adidas'],
             ['attribute_id' => $brand->id, 'value' => 'apple', 'display_value' => 'Apple'],
         ]);
-
 
         /* ------------------ Weight ------------------ */
         $weight = ProductAttribute::create([
@@ -86,7 +82,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $weight->id, 'value' => '2', 'display_value' => '2 kg'],
         ]);
 
-
         /* ------------------ Length ------------------ */
         $length = ProductAttribute::create([
             'name' => 'length',
@@ -100,7 +95,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $length->id, 'value' => '20', 'display_value' => '20 cm'],
             ['attribute_id' => $length->id, 'value' => '30', 'display_value' => '30 cm'],
         ]);
-
 
         /* ------------------ Style ------------------ */
         $style = ProductAttribute::create([
@@ -116,7 +110,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $style->id, 'value' => 'sport', 'display_value' => 'Sport'],
         ]);
 
-
         /* ------------------ Pattern ------------------ */
         $pattern = ProductAttribute::create([
             'name' => 'pattern',
@@ -130,7 +123,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $pattern->id, 'value' => 'striped', 'display_value' => 'Striped'],
             ['attribute_id' => $pattern->id, 'value' => 'checked', 'display_value' => 'Checked'],
         ]);
-
 
         /* ------------------ Capacity (for bags, bottles, etc.) ------------------ */
         $capacity = ProductAttribute::create([
@@ -146,7 +138,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $capacity->id, 'value' => '1000', 'display_value' => '1 L'],
         ]);
 
-
         /* ------------------ RAM ------------------ */
         $ram = ProductAttribute::create([
             'name' => 'ram',
@@ -160,7 +151,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $ram->id, 'value' => '8', 'display_value' => '8 GB'],
             ['attribute_id' => $ram->id, 'value' => '16', 'display_value' => '16 GB'],
         ]);
-
 
         /* ------------------ Storage ------------------ */
         $storage = ProductAttribute::create([
@@ -176,7 +166,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $storage->id, 'value' => '256', 'display_value' => '256 GB'],
         ]);
 
-
         /* ------------------ Gender ------------------ */
         $gender = ProductAttribute::create([
             'name' => 'gender',
@@ -190,7 +179,6 @@ class ProductAttributeSeeder extends Seeder
             ['attribute_id' => $gender->id, 'value' => 'women', 'display_value' => 'Women'],
             ['attribute_id' => $gender->id, 'value' => 'unisex', 'display_value' => 'Unisex'],
         ]);
-
 
         /* ------------------ Season ------------------ */
         $season = ProductAttribute::create([

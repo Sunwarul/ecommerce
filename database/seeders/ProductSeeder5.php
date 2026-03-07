@@ -2,18 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\{
-    Product,
-    ProductVariation,
-    ProductStock,
-    ProductAttribute,
-    ProductAttributeValue,
-    Category,
-    Brand,
-    Tax,
-    Tag,
-    Warehouse
-};
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Models\ProductStock;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -38,22 +34,22 @@ class ProductSeeder5 extends Seeder
         // Handle Brand
         $brandName = 'Whirlpool';
         $brand = Brand::withTrashed()->where('name', $brandName)->first();
-        if (!$brand) {
+        if (! $brand) {
             $brand = Brand::create(['name' => $brandName, 'is_active' => true]);
         } elseif ($brand->trashed()) {
             $brand->restore();
         }
 
         // Handle Category
-        $categoryName = "Microwave Oven";
+        $categoryName = 'Microwave Oven';
         $slug = 'microwave-oven';
         $category = Category::withTrashed()->where('slug', $slug)->first();
-        if (!$category) {
+        if (! $category) {
             $category = Category::create([
                 'name' => $categoryName,
                 'slug' => $slug,
                 'parent_id' => 33, // Kitchen Appliances from CategorySeeder
-                'is_active' => true
+                'is_active' => true,
             ]);
         } elseif ($category->trashed()) {
             $category->restore();
@@ -64,8 +60,8 @@ class ProductSeeder5 extends Seeder
             $name = $item['material_description'];
             $sku = "WHIRLPOOL-{$matCode}";
 
-            $mrp = (float)($item['mrp'] ?? 0);
-            $mop = (float)($item['mop'] ?? 0);
+            $mrp = (float) ($item['mrp'] ?? 0);
+            $mop = (float) ($item['mop'] ?? 0);
             $capacity = $item['capacity'] ?? 'N/A';
 
             // Check existence (including soft deleted)
@@ -89,7 +85,7 @@ class ProductSeeder5 extends Seeder
             } else {
                 $productSlug = Str::slug($name);
                 if (Product::withTrashed()->where('slug', $productSlug)->exists()) {
-                    $productSlug .= '-' . Str::random(4);
+                    $productSlug .= '-'.Str::random(4);
                 }
 
                 $product = Product::create([
@@ -99,8 +95,8 @@ class ProductSeeder5 extends Seeder
                     'name' => $name,
                     'slug' => $productSlug,
                     'sku' => $sku,
-                    'barcode' => (string)$matCode,
-                    'code' => (string)$matCode,
+                    'barcode' => (string) $matCode,
+                    'code' => (string) $matCode,
                     'base_price' => $mrp,
                     'base_discount_price' => $mop,
                     'type' => 'simple',
@@ -121,16 +117,18 @@ class ProductSeeder5 extends Seeder
 
             foreach ($attributesToSeed as $key => $attrName) {
                 $value = $attrValues[$key] ?? '';
-                if (empty($value) || $value === 'N/A') continue;
+                if (empty($value) || $value === 'N/A') {
+                    continue;
+                }
 
                 // Create Attribute
                 $attribute = ProductAttribute::withTrashed()->where('name', Str::slug($attrName))->first();
-                if (!$attribute) {
+                if (! $attribute) {
                     $attribute = ProductAttribute::create([
                         'name' => Str::slug($attrName),
                         'display_name' => $attrName,
                         'type' => 'text',
-                        'is_active' => true
+                        'is_active' => true,
                     ]);
                 } elseif ($attribute->trashed()) {
                     $attribute->restore();
@@ -139,14 +137,14 @@ class ProductSeeder5 extends Seeder
                 // Create Value
                 $attributeValue = ProductAttributeValue::withTrashed()
                     ->where('attribute_id', $attribute->id)
-                    ->where('value', (string)$value)
+                    ->where('value', (string) $value)
                     ->first();
 
-                if (!$attributeValue) {
+                if (! $attributeValue) {
                     $attributeValue = ProductAttributeValue::create([
                         'attribute_id' => $attribute->id,
-                        'value' => (string)$value,
-                        'display_value' => (string)$value
+                        'value' => (string) $value,
+                        'display_value' => (string) $value,
                     ]);
                 } elseif ($attributeValue->trashed()) {
                     $attributeValue->restore();
@@ -160,10 +158,10 @@ class ProductSeeder5 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $product->attributes()->attach($attribute->id, [
                         'attribute_value_id' => $attributeValue->id,
-                        'variation_id' => null
+                        'variation_id' => null,
                     ]);
                 }
             }
@@ -175,7 +173,7 @@ class ProductSeeder5 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$stockExists) {
+                if (! $stockExists) {
                     ProductStock::create([
                         'branch_id' => 1,
                         'product_id' => $product->id,
@@ -192,7 +190,7 @@ class ProductSeeder5 extends Seeder
     private function getProductData(): array
     {
 
-        return  [
+        return [
             'title' => 'Microwave Oven',
             'headers' => [
                 'mat_code' => 'MAT CODE',

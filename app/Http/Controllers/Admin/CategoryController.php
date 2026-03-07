@@ -13,9 +13,7 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-
     use HasCrud;
-
 
     public function __construct()
     {
@@ -30,10 +28,11 @@ class CategoryController extends Controller
             withRelations: ['parent'],
         ));
     }
-    
+
     protected function addProps(): array
     {
         $parentCategories = Category::select('id', 'name')->whereNull('parent_id')->get();
+
         return [
             'parentCategories' => $parentCategories,
         ];
@@ -46,9 +45,9 @@ class CategoryController extends Controller
         $model = new $this->modelClass;
         $model->fill($validatedData);
         $model->save();
-        
+
         cache()->increment('categories_version', 1);
-        
+
         return to_route('categories.index')->with('success', 'Created successfully');
     }
 
@@ -57,9 +56,9 @@ class CategoryController extends Controller
         $validatedData = app($this->updateRequestClass)->validated();
         $model = $this->modelClass::findOrFail($id);
         $model->update($validatedData);
-        
+
         cache()->increment('categories_version', 1);
-        
+
         return to_route('categories.index')->with('success', 'Updated successfully');
     }
 
@@ -67,9 +66,9 @@ class CategoryController extends Controller
     {
         $model = $this->modelClass::findOrFail($id);
         $model->delete();
-        
+
         cache()->increment('categories_version', 1);
-        
+
         return to_route('categories.index')->with('success', 'Deleted successfully');
     }
 }

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariation extends Model
@@ -57,7 +56,6 @@ class ProductVariation extends Model
         )->withPivot(['attribute_id', 'product_id']);
     }
 
-
     // Scopes
     public function scopeActive($query)
     {
@@ -85,7 +83,6 @@ class ProductVariation extends Model
         return $this->hasMany(ProductStock::class)->whereNotNull('variation_id');
     }
 
-
     // Helper methods
     public function getCurrentPrice(): float
     {
@@ -94,12 +91,12 @@ class ProductVariation extends Model
 
     public function hasDiscount(): bool
     {
-        return !is_null($this->discount_price);
+        return ! is_null($this->discount_price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (!$this->hasDiscount()) {
+        if (! $this->hasDiscount()) {
             return null;
         }
 
@@ -144,6 +141,4 @@ class ProductVariation extends Model
     {
         return $this->hasMany(StockMovement::class, 'variation_id');
     }
-
-
 }

@@ -1,33 +1,33 @@
 <?php
 
-use App\Utils\CrudRouter;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UnitController;
-use App\Http\Controllers\BranchController;
-use App\Http\Controllers\BaseUnitController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\Admin\TagController;
-use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\PosOrderController;
+use App\Http\Controllers\Admin\PosSessionController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SubCategoryController;
+use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\TodoController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\BrandController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\SubCategoryController;
-use App\Http\Controllers\Admin\PaymentMethodController;
-use App\Http\Controllers\Admin\PosOrderController;
-use App\Http\Controllers\Admin\PosSessionController;
-use App\Http\Controllers\Frontend\WelcomePageController;
-use App\Http\Controllers\SettingController;
 use App\Http\Controllers\Admin\WarrantyGuaranteeController;
-use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\BaseUnitController;
+use App\Http\Controllers\BranchController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\WarehouseController;
+use App\Utils\CrudRouter;
+use Illuminate\Support\Facades\Route;
 
-require_once __DIR__ . '/auth.php';
+require_once __DIR__.'/auth.php';
 
 Route::get('locale', [LocaleController::class, 'get'])->name('locale.get');
 Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
@@ -48,7 +48,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-    
+
     // Custom product routes
     Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
     Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
@@ -86,15 +86,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 
-
     // stock
     Route::get('admin/products/{product}/stock-move', [StockMovementController::class, 'create'])
         ->name('admin.stock.move.form');
 
     Route::post('admin/stock/move', [StockMovementController::class, 'store'])
         ->name('admin.stock.move');
-
-
 
     // =======================
     // POS
@@ -159,18 +156,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/pos/stock/adjust', [\App\Http\Controllers\Admin\PosStockController::class, 'adjust'])
         ->name('pos.stock.adjust');
 
-
-
-
     // Route::post('/pos/orders/{order}/refund', [PosRefundController::class, 'refund'])->name('pos.orders.refund');
     // Route::get('/pos/report/daily', [PosReportController::class, 'daily'])->name('pos.report.daily');
-
-
-
-
-
-
-
 
     CrudRouter::setFor('product-attributes', App\Http\Controllers\ProductAttributeController::class);
     CrudRouter::setFor('product-attribute-values', App\Http\Controllers\ProductAttributeValueController::class);
