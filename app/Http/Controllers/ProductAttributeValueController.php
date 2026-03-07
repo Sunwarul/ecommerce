@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ProductAttributeValue;
-// use App\Exports\ProductAttributeValueExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\ProductAttributeValueStoreRequest;
+// use App\Exports\ProductAttributeValueExport;
 use App\Http\Requests\ProductAttributeValueUpdateRequest;
 use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class ProductAttributeValueController extends Controller
 {
@@ -32,9 +31,9 @@ class ProductAttributeValueController extends Controller
     protected function addProps(): array
     {
         $attributes = ProductAttribute::select('id', 'display_name', 'type')->get();
+
         return [
             'attributes' => $attributes,
         ];
     }
-
 }

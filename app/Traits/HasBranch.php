@@ -17,7 +17,7 @@ trait HasBranch
                 session()->has('current_branch_id')
             ) {
                 $builder->where(
-                    $builder->getModel()->getTable() . '.branch_id',
+                    $builder->getModel()->getTable().'.branch_id',
                     session('current_branch_id')
                 );
             }

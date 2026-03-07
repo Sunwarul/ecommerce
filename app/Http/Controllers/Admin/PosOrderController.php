@@ -22,11 +22,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-
-use function Symfony\Component\String\s;
 
 class PosOrderController extends Controller
 {
@@ -37,7 +34,7 @@ class PosOrderController extends Controller
             ->with([
                 'variations:id,product_id,sku,price,discount_price',
                 'stocks:id,product_id,variation_id,warehouse_id,branch_id,quantity',
-                'stocks.warehouse:id,name'
+                'stocks.warehouse:id,name',
             ])
             ->orderBy('name')
             ->get();
@@ -59,7 +56,6 @@ class PosOrderController extends Controller
             'warrantyTemplates' => WarrantyGuarantee::where('is_active', true)->select('id', 'name', 'description', 'category_id')->get(),
         ]);
     }
-
 
     public function customerSearch(Request $request)
     {
@@ -114,7 +110,6 @@ class PosOrderController extends Controller
             'payments.*.meta.received_to_bank_account_id' => ['nullable', 'integer'],
             'payments.*.meta.txn_ref' => ['nullable', 'string', 'max:100'],
 
-
             // manual order discount fallback (optional)
             'order_discount_type' => ['nullable', 'in:none,percent,fixed'],
             'order_discount_value' => ['nullable', 'numeric', 'min:0'],
@@ -135,7 +130,7 @@ class PosOrderController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            $discount = !empty($data['discount_id'])
+            $discount = ! empty($data['discount_id'])
                 ? Discount::find($data['discount_id'])
                 : null;
 
@@ -147,7 +142,7 @@ class PosOrderController extends Controller
 
             foreach ($data['items'] as $item) {
                 $product = $products->get($item['product_id']);
-                if (!$product) {
+                if (! $product) {
                     throw ValidationException::withMessages(['items' => ['Invalid product.']]);
                 }
 
@@ -159,9 +154,9 @@ class PosOrderController extends Controller
                 }
 
                 $variation = null;
-                if (!empty($item['variation_id'])) {
+                if (! empty($item['variation_id'])) {
                     $variation = $product->variations->firstWhere('id', (int) $item['variation_id']);
-                    if (!$variation) {
+                    if (! $variation) {
                         throw ValidationException::withMessages([
                             'items' => ["Invalid variation for: {$product->name}"],
                         ]);
@@ -226,7 +221,7 @@ class PosOrderController extends Controller
 
             // payments: only on complete
             $payments = collect($data['payments'] ?? [])
-                ->filter(fn($p) => !empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
+                ->filter(fn ($p) => ! empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
                 ->values();
 
             $paidAmount = $isDraft ? 0 : (float) $payments->sum('amount');
@@ -237,14 +232,14 @@ class PosOrderController extends Controller
                 : ($paidAmount >= $total ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid'));
 
             // if complete -> require at least one payment (recommended)
-            if (!$isDraft && $payments->isEmpty()) {
+            if (! $isDraft && $payments->isEmpty()) {
                 throw ValidationException::withMessages([
                     'payments' => ['At least one payment is required to complete the order.'],
                 ]);
             }
 
             // invoice number only for completed (recommended)
-            $invoiceNo = $isDraft ? null : ('POS-' . now()->format('YmdHis') . '-' . $userId);
+            $invoiceNo = $isDraft ? null : ('POS-'.now()->format('YmdHis').'-'.$userId);
 
             $order = PosOrder::create([
                 'pos_session_id' => $data['pos_session_id'],
@@ -292,7 +287,7 @@ class PosOrderController extends Controller
                 ]);
 
                 // ✅ stock out only when completed (warehouse-based, not branch-dependent)
-                if (!$isDraft) {
+                if (! $isDraft) {
                     $stockService->stockOut([
                         'type' => 'out',
                         'product_id' => $product->id,
@@ -307,7 +302,7 @@ class PosOrderController extends Controller
             }
 
             // payments only when completed
-            if (!$isDraft) {
+            if (! $isDraft) {
                 foreach ($payments as $payment) {
                     PosPayment::create([
                         'order_id' => $order->id,
@@ -327,8 +322,6 @@ class PosOrderController extends Controller
             }
 
             return redirect()->route('pos.orders.invoice', $order->id);
-
-
 
             // return response()->json([
             //     'success' => true,
@@ -371,8 +364,6 @@ class PosOrderController extends Controller
         ]);
     }
 
-
-
     public function orders(Request $request)
     {
         $search = trim($request->string('search'));
@@ -394,35 +385,33 @@ class PosOrderController extends Controller
         $showAllBranches = $request->boolean('all_branches') && $isAdmin;
 
         $query = PosOrder::with(['customer', 'user', 'branch', 'session', 'items.product.category', 'items.product.brand'])
-            ->when(!$showAllBranches && $currentBranchId, fn($q) => $q->where('branch_id', $currentBranchId))
-            ->when($trashed, fn($q) => $q->onlyTrashed())
+            ->when(! $showAllBranches && $currentBranchId, fn ($q) => $q->where('branch_id', $currentBranchId))
+            ->when($trashed, fn ($q) => $q->onlyTrashed())
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('invoice_no', 'like', "%{$search}%")
                         ->orWhereHas(
                             'customer',
-                            fn($c) =>
-                            $c->where('name', 'like', "%{$search}%")
+                            fn ($c) => $c->where('name', 'like', "%{$search}%")
                         )
                         ->orWhereHas(
                             'user',
-                            fn($u) =>
-                            $u->where('name', 'like', "%{$search}%")
+                            fn ($u) => $u->where('name', 'like', "%{$search}%")
                         );
                 });
             })
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->when($paymentStatus, fn($q) => $q->where('payment_status', $paymentStatus))
-            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($paymentStatus, fn ($q) => $q->where('payment_status', $paymentStatus))
+            ->when($dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->whereDate('created_at', '<=', $dateTo))
             ->when($category_id, function ($q) use ($category_id) {
-                $q->whereHas('items.product', fn($p) => $p->where('category_id', $category_id));
+                $q->whereHas('items.product', fn ($p) => $p->where('category_id', $category_id));
             })
             ->when($brand_id, function ($q) use ($brand_id) {
-                $q->whereHas('items.product', fn($p) => $p->where('brand_id', $brand_id));
+                $q->whereHas('items.product', fn ($p) => $p->where('brand_id', $brand_id));
             })
             ->when($product_id, function ($q) use ($product_id) {
-                $q->whereHas('items', fn($i) => $i->where('product_id', $product_id));
+                $q->whereHas('items', fn ($i) => $i->where('product_id', $product_id));
             })
             ->latest('id');
 
@@ -479,8 +468,8 @@ class PosOrderController extends Controller
             'isAdmin' => $isAdmin,
             'insights' => [
                 'top_products' => $topProducts,
-                'brand_sales' => $brandSales
-            ]
+                'brand_sales' => $brandSales,
+            ],
         ]);
     }
 
@@ -502,7 +491,6 @@ class PosOrderController extends Controller
     {
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\OrderExport($orders), 'pos_orders_report.xlsx');
     }
-
 
     public function void($orderId, StockService $stockService)
     {
@@ -569,13 +557,13 @@ class PosOrderController extends Controller
 
             $total = (float) $order->total_amount;
 
-            $paid = collect($data['payments'])->sum(fn($p) => (float) $p['amount']);
+            $paid = collect($data['payments'])->sum(fn ($p) => (float) $p['amount']);
             $change = max(0, $paid - $total);
 
             $paymentStatus = $paid >= $total ? 'paid' : ($paid > 0 ? 'partial' : 'unpaid');
 
             // ✅ generate invoice no now
-            $invoiceNo = $order->invoice_no ?: ('POS-' . now()->format('YmdHis') . '-' . $order->id);
+            $invoiceNo = $order->invoice_no ?: ('POS-'.now()->format('YmdHis').'-'.$order->id);
 
             // ✅ create payment rows now
             foreach ($data['payments'] as $p) {
@@ -620,7 +608,6 @@ class PosOrderController extends Controller
                 ->with('success', 'Draft completed successfully');
         });
     }
-
 
     public function addPayment(Request $request, $orderId)
     {
@@ -719,7 +706,6 @@ class PosOrderController extends Controller
         return back()->with('success', 'Payment added successfully.');
     }
 
-
     public function edit($orderId)
     {
         $order = PosOrder::withoutGlobalScope('branch')
@@ -737,7 +723,7 @@ class PosOrderController extends Controller
             ->with([
                 'variations:id,product_id,sku,price,discount_price',
                 'stocks:id,product_id,variation_id,warehouse_id,branch_id,quantity',
-                'stocks.warehouse:id,name'
+                'stocks.warehouse:id,name',
             ])
             ->orderBy('name')
             ->get();
@@ -819,10 +805,12 @@ class PosOrderController extends Controller
 
             foreach ($data['items'] as $item) {
                 $product = $products->get($item['product_id']);
-                if (!$product) continue;
+                if (! $product) {
+                    continue;
+                }
 
                 $variation = null;
-                if (!empty($item['variation_id'])) {
+                if (! empty($item['variation_id'])) {
                     $variation = $product->variations->firstWhere('id', (int) $item['variation_id']);
                 }
 
@@ -863,18 +851,18 @@ class PosOrderController extends Controller
 
             // payments
             $payments = collect($data['payments'] ?? [])
-                ->filter(fn($p) => !empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
+                ->filter(fn ($p) => ! empty($p['payment_method_id']) && (float) ($p['amount'] ?? 0) > 0)
                 ->values();
 
             $paidAmount = $isDraft ? 0 : (float) $payments->sum('amount');
             $change = $isDraft ? 0 : max(0, $paidAmount - $total);
 
             // validate payment if complete
-            if (!$isDraft && $payments->isEmpty()) {
+            if (! $isDraft && $payments->isEmpty()) {
                 throw ValidationException::withMessages(['payments' => ['At least one payment is required.']]);
             }
 
-            $invoiceNo = (!$isDraft && !$order->invoice_no) ? ('POS-' . now()->format('YmdHis') . '-' . $userId) : $order->invoice_no;
+            $invoiceNo = (! $isDraft && ! $order->invoice_no) ? ('POS-'.now()->format('YmdHis').'-'.$userId) : $order->invoice_no;
 
             // Update Order
             $order->update([
@@ -909,7 +897,7 @@ class PosOrderController extends Controller
                     'line_total' => ($it['unit_price'] * $it['quantity']) - $it['discount_amount'] + $it['tax_amount'],
                 ]);
 
-                if (!$isDraft) {
+                if (! $isDraft) {
                     $stockService->stockOut([
                         'type' => 'out',
                         'product_id' => $it['product']->id,
@@ -925,7 +913,7 @@ class PosOrderController extends Controller
 
             // Sync Payments (delete old drafts? no, draft has no payments usually. delete all and recreate)
             $order->payments()->delete();
-            if (!$isDraft) {
+            if (! $isDraft) {
                 foreach ($payments as $payment) {
                     $order->payments()->create([
                         'branch_id' => $order->branch_id ?? session('current_branch_id') ?? Auth::user()->branch_id ?? 1,
@@ -989,12 +977,14 @@ class PosOrderController extends Controller
 
         if ($action === 'trash') {
             PosOrder::withoutGlobalScope('branch')->whereIn('id', $ids)->delete();
-            return back()->with('success', count($ids) . ' orders moved to trash.');
+
+            return back()->with('success', count($ids).' orders moved to trash.');
         }
 
         if ($action === 'restore') {
             PosOrder::onlyTrashed()->withoutGlobalScope('branch')->whereIn('id', $ids)->restore();
-            return back()->with('success', count($ids) . ' orders restored.');
+
+            return back()->with('success', count($ids).' orders restored.');
         }
 
         if ($action === 'force_delete') {
@@ -1005,7 +995,8 @@ class PosOrderController extends Controller
                     $order->forceDelete();
                 });
             });
-            return back()->with('success', count($ids) . ' orders permanently deleted.');
+
+            return back()->with('success', count($ids).' orders permanently deleted.');
         }
 
         return back();
@@ -1061,7 +1052,7 @@ class PosOrderController extends Controller
         $user = $request->user();
         $isAdmin = $user->hasRole('admin') || $user->hasRole('Super Admin') || $user->hasRole('manager');
 
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             return back()->with('error', 'Only admins can edit order date.');
         }
 

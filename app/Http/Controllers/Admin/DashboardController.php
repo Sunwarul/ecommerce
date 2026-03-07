@@ -62,7 +62,7 @@ class DashboardController extends Controller
             ],
             'chart' => [
                 'labels' => $chartLabels,
-                'data' => $chartData
+                'data' => $chartData,
             ],
             'top_products' => $topProducts,
             'low_stock' => $lowStockProducts,

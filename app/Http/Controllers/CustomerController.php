@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Customer;
-// use App\Exports\CustomerExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
+// use App\Exports\CustomerExport;
 use App\Models\Currency;
-use App\Models\Role;
+use App\Models\Customer;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CustomerController extends Controller
@@ -76,8 +75,6 @@ class CustomerController extends Controller
         }
         $res = $model->update($validatedData);
 
-
-        return to_route(str_replace('_', '-', $this->resource) . '.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
     }
-
 }

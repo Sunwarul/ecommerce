@@ -2,18 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\{
-    Product,
-    ProductVariation,
-    ProductStock,
-    ProductAttribute,
-    ProductAttributeValue,
-    Category,
-    Brand,
-    Tax,
-    Tag,
-    Warehouse
-};
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Models\ProductStock;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -38,22 +34,22 @@ class ProductSeeder3 extends Seeder
             $brandName = $item['brand'] ?? 'Haier';
             // Handle Brand
             $brand = Brand::withTrashed()->where('name', $brandName)->first();
-            if (!$brand) {
+            if (! $brand) {
                 $brand = Brand::create(['name' => $brandName, 'is_active' => true]);
             } elseif ($brand->trashed()) {
                 $brand->restore();
             }
 
-            $categoryName = "Air Conditioner"; // Specific for this seeder
+            $categoryName = 'Air Conditioner'; // Specific for this seeder
             $slug = Str::slug($categoryName);
 
             // Handle Category with Soft Deletes
             $category = Category::withTrashed()->where('slug', $slug)->first();
-            if (!$category) {
+            if (! $category) {
                 $category = Category::create([
                     'name' => $categoryName,
                     'slug' => $slug,
-                    'is_active' => true
+                    'is_active' => true,
                 ]);
             } elseif ($category->trashed()) {
                 $category->restore();
@@ -61,7 +57,7 @@ class ProductSeeder3 extends Seeder
 
             $modelName = $item['model'];
             $name = "{$brandName} {$modelName}";
-            $sku = strtoupper(Str::slug($brandName)) . "-" . strtoupper(Str::slug($modelName));
+            $sku = strtoupper(Str::slug($brandName)).'-'.strtoupper(Str::slug($modelName));
 
             // Clean price strings (remove commas)
             $mrp = (float) str_replace(',', '', $item['mrp_bdt'] ?? '0');
@@ -80,7 +76,7 @@ class ProductSeeder3 extends Seeder
                     'name' => $name,
                     'base_price' => $mrp,
                     'base_discount_price' => $netPrice,
-                    'description' => "<ul><li><strong>Capacity:</strong> {$item['capacity']}</li><li><strong>Series:</strong> " . ($item['series'] ?? 'N/A') . "</li><li><strong>Type:</strong> {$item['category']}</li></ul>",
+                    'description' => "<ul><li><strong>Capacity:</strong> {$item['capacity']}</li><li><strong>Series:</strong> ".($item['series'] ?? 'N/A')."</li><li><strong>Type:</strong> {$item['category']}</li></ul>",
                     'additional_info' => json_encode($item),
                     'is_active' => true,
                 ]);
@@ -88,7 +84,7 @@ class ProductSeeder3 extends Seeder
             } else {
                 $productSlug = Str::slug($name);
                 if (Product::withTrashed()->where('slug', $productSlug)->exists()) {
-                    $productSlug .= '-' . Str::random(4);
+                    $productSlug .= '-'.Str::random(4);
                 }
 
                 $product = Product::create([
@@ -103,7 +99,7 @@ class ProductSeeder3 extends Seeder
                     'base_price' => $mrp,
                     'base_discount_price' => $netPrice,
                     'type' => 'simple',
-                    'description' => "<ul><li><strong>Capacity:</strong> {$item['capacity']}</li><li><strong>Series:</strong> " . ($item['series'] ?? 'N/A') . "</li><li><strong>Type:</strong> {$item['category']}</li></ul>",
+                    'description' => "<ul><li><strong>Capacity:</strong> {$item['capacity']}</li><li><strong>Series:</strong> ".($item['series'] ?? 'N/A')."</li><li><strong>Type:</strong> {$item['category']}</li></ul>",
                     'additional_info' => json_encode($item),
                     'is_active' => true,
                 ]);
@@ -118,16 +114,18 @@ class ProductSeeder3 extends Seeder
 
             foreach ($attributesToSeed as $key => $attrName) {
                 $value = $item[$key] ?? '';
-                if (empty($value)) continue;
+                if (empty($value)) {
+                    continue;
+                }
 
                 // Create Attribute
                 $attribute = ProductAttribute::withTrashed()->where('name', Str::slug($attrName))->first();
-                if (!$attribute) {
+                if (! $attribute) {
                     $attribute = ProductAttribute::create([
                         'name' => Str::slug($attrName),
                         'display_name' => $attrName,
                         'type' => 'text',
-                        'is_active' => true
+                        'is_active' => true,
                     ]);
                 } elseif ($attribute->trashed()) {
                     $attribute->restore();
@@ -136,14 +134,14 @@ class ProductSeeder3 extends Seeder
                 // Create Value
                 $attributeValue = ProductAttributeValue::withTrashed()
                     ->where('attribute_id', $attribute->id)
-                    ->where('value', (string)$value)
+                    ->where('value', (string) $value)
                     ->first();
 
-                if (!$attributeValue) {
+                if (! $attributeValue) {
                     $attributeValue = ProductAttributeValue::create([
                         'attribute_id' => $attribute->id,
-                        'value' => (string)$value,
-                        'display_value' => (string)$value
+                        'value' => (string) $value,
+                        'display_value' => (string) $value,
                     ]);
                 } elseif ($attributeValue->trashed()) {
                     $attributeValue->restore();
@@ -157,10 +155,10 @@ class ProductSeeder3 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $product->attributes()->attach($attribute->id, [
                         'attribute_value_id' => $attributeValue->id,
-                        'variation_id' => null
+                        'variation_id' => null,
                     ]);
                 }
             }
@@ -172,7 +170,7 @@ class ProductSeeder3 extends Seeder
                     ->whereNull('variation_id')
                     ->exists();
 
-                if (!$stockExists) {
+                if (! $stockExists) {
                     ProductStock::create([
                         'branch_id' => 1,
                         'product_id' => $product->id,
@@ -190,102 +188,104 @@ class ProductSeeder3 extends Seeder
     {
         $hisense_ac_price_list = array_map(function ($item) {
             $item['brand'] = 'Hisense';
+
             return $item;
         }, [
             [
-                'category'   => 'INV',
-                'capacity'   => '1.5 TON',
-                'series'     => 'Smart Compact',
-                'model'      => 'AS18TW4RGSKB02DU',
-                'mrp_bdt'    => '73,900',
+                'category' => 'INV',
+                'capacity' => '1.5 TON',
+                'series' => 'Smart Compact',
+                'model' => 'AS18TW4RGSKB02DU',
+                'mrp_bdt' => '73,900',
                 'dis_amount' => '23,900',
-                'net_price'  => '50,000',
+                'net_price' => '50,000',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '1.0 TON',
-                'series'     => 'Smart Cool',
-                'model'      => 'AS12TW4RYETD00BU',
-                'mrp_bdt'    => '59,900',
+                'category' => 'INV',
+                'capacity' => '1.0 TON',
+                'series' => 'Smart Cool',
+                'model' => 'AS12TW4RYETD00BU',
+                'mrp_bdt' => '59,900',
                 'dis_amount' => '13,178',
-                'net_price'  => '46,722',
+                'net_price' => '46,722',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '1.5 TON',
-                'series'     => 'Smart Cool',
-                'model'      => 'AS18TW4RMATD01BU',
-                'mrp_bdt'    => '79,900',
+                'category' => 'INV',
+                'capacity' => '1.5 TON',
+                'series' => 'Smart Cool',
+                'model' => 'AS18TW4RMATD01BU',
+                'mrp_bdt' => '79,900',
                 'dis_amount' => '24,900',
-                'net_price'  => '55,000',
+                'net_price' => '55,000',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '2.0 TON',
-                'series'     => 'Smart Cool',
-                'model'      => 'AS22TW4RXBTD00BU',
-                'mrp_bdt'    => '95,900',
+                'category' => 'INV',
+                'capacity' => '2.0 TON',
+                'series' => 'Smart Cool',
+                'model' => 'AS22TW4RXBTD00BU',
+                'mrp_bdt' => '95,900',
                 'dis_amount' => '30,100',
-                'net_price'  => '65,800',
+                'net_price' => '65,800',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '1.5 TON',
-                'series'     => 'Smart WIFI',
-                'model'      => 'AS18TZ4RMATD01AU',
-                'mrp_bdt'    => '81,900',
+                'category' => 'INV',
+                'capacity' => '1.5 TON',
+                'series' => 'Smart WIFI',
+                'model' => 'AS18TZ4RMATD01AU',
+                'mrp_bdt' => '81,900',
                 'dis_amount' => '18,018',
-                'net_price'  => '63,882',
+                'net_price' => '63,882',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '2.0 TON',
-                'series'     => 'Smart WIFI',
-                'model'      => 'AS22TZ4RXBTD00AU',
-                'mrp_bdt'    => '99,900',
+                'category' => 'INV',
+                'capacity' => '2.0 TON',
+                'series' => 'Smart WIFI',
+                'model' => 'AS22TZ4RXBTD00AU',
+                'mrp_bdt' => '99,900',
                 'dis_amount' => '21,978',
-                'net_price'  => '77,922',
+                'net_price' => '77,922',
             ],
             [
-                'category'   => 'Non-INV',
-                'capacity'   => '1.0 TON',
-                'series'     => 'Smart Comfort',
-                'model'      => 'AS12CW4RGRKF01BU',
-                'mrp_bdt'    => '49,900',
+                'category' => 'Non-INV',
+                'capacity' => '1.0 TON',
+                'series' => 'Smart Comfort',
+                'model' => 'AS12CW4RGRKF01BU',
+                'mrp_bdt' => '49,900',
                 'dis_amount' => '10,978',
-                'net_price'  => '38,922',
+                'net_price' => '38,922',
             ],
             [
-                'category'   => 'Non-INV',
-                'capacity'   => '1.5 TON',
-                'series'     => 'Smart Comfort',
-                'model'      => 'AS18CW4RXSKF00AU',
-                'mrp_bdt'    => '63,900',
+                'category' => 'Non-INV',
+                'capacity' => '1.5 TON',
+                'series' => 'Smart Comfort',
+                'model' => 'AS18CW4RXSKF00AU',
+                'mrp_bdt' => '63,900',
                 'dis_amount' => '19,900',
-                'net_price'  => '44,000',
+                'net_price' => '44,000',
             ],
             [
-                'category'   => 'Non-INV',
-                'capacity'   => '2.0 TON',
-                'series'     => 'Smart Comfort',
-                'model'      => 'AS24CW4RBTKF00AU',
-                'mrp_bdt'    => '77,900',
+                'category' => 'Non-INV',
+                'capacity' => '2.0 TON',
+                'series' => 'Smart Comfort',
+                'model' => 'AS24CW4RBTKF00AU',
+                'mrp_bdt' => '77,900',
                 'dis_amount' => '17,138',
-                'net_price'  => '60,762',
+                'net_price' => '60,762',
             ],
             [
-                'category'   => 'INV',
-                'capacity'   => '4.0 TON',
-                'series'     => 'LCAC Cassette',
-                'model'      => 'AUC48TRFRQKA2U',
-                'mrp_bdt'    => '2,23,900',
+                'category' => 'INV',
+                'capacity' => '4.0 TON',
+                'series' => 'LCAC Cassette',
+                'model' => 'AUC48TRFRQKA2U',
+                'mrp_bdt' => '2,23,900',
                 'dis_amount' => '35,824',
-                'net_price'  => '1,88,076',
+                'net_price' => '1,88,076',
             ],
         ]);
 
         $gree_haiko_non_inv_list = array_map(function ($item) {
             $item['brand'] = (strpos($item['model'], 'HA-') === 0) ? 'Haiko' : 'Gree';
+
             return $item;
         }, [
             // GREE Non-Inverter Section
@@ -315,6 +315,7 @@ class ProductSeeder3 extends Seeder
 
         $gree_inv_list = array_map(function ($item) {
             $item['brand'] = 'Gree';
+
             return $item;
         }, [
             // 1.5 - 3.0 TON Section

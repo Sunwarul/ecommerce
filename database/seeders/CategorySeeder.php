@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use App\Models\Category;
 
 class CategorySeeder extends Seeder
 {
@@ -18,6 +18,7 @@ class CategorySeeder extends Seeder
             $slug = "{$base}-{$i}";
             $i++;
         }
+
         return $slug;
     }
 

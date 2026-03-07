@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\SubCategory;
 use App\Models\Tag;
 use App\Utils\FakeImageUtil;
 use Illuminate\Database\Seeder;

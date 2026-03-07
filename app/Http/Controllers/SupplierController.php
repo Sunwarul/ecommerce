@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Supplier;
-// use App\Exports\SupplierExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\SupplierStoreRequest;
+// use App\Exports\SupplierExport;
 use App\Http\Requests\SupplierUpdateRequest;
+use App\Models\Supplier;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 /*
 * @author Sunwarul Islam
@@ -30,6 +29,4 @@ class SupplierController extends Controller
             withRelations: [],
         ));
     }
-
-    
 }

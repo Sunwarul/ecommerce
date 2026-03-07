@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use Inertia\Inertia;
 
 class WelcomePageController extends Controller
 {

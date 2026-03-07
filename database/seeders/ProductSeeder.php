@@ -2,18 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\{
-    Product,
-    ProductVariation,
-    ProductStock,
-    ProductAttribute,
-    ProductAttributeValue,
-    Category,
-    Brand,
-    Tax,
-    Tag,
-    Warehouse
-};
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
+use App\Models\ProductStock;
+use App\Models\Tax;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -33,7 +29,7 @@ class ProductSeeder extends Seeder
 
         // Handle Brand
         $brand = Brand::withTrashed()->where('name', 'Haier')->first();
-        if (!$brand) {
+        if (! $brand) {
             $brand = Brand::create(['name' => 'Haier', 'is_active' => true]);
         } elseif ($brand->trashed()) {
             $brand->restore();
@@ -57,11 +53,11 @@ class ProductSeeder extends Seeder
 
             // Handle Category with Soft Deletes
             $category = Category::withTrashed()->where('slug', $slug)->first();
-            if (!$category) {
+            if (! $category) {
                 $category = Category::create([
                     'name' => $categoryName,
                     'slug' => $slug,
-                    'is_active' => true
+                    'is_active' => true,
                 ]);
             } elseif ($category->trashed()) {
                 $category->restore();
@@ -75,7 +71,7 @@ class ProductSeeder extends Seeder
 
                 $name = "Haier {$productTypeName} {$model}";
                 // Use material as SKU if available, otherwise generated SKU
-                $sku = $item['material'] ?? ("HAIER-" . Str::slug($model));
+                $sku = $item['material'] ?? ('HAIER-'.Str::slug($model));
 
                 // Check existence (including soft deleted)
                 $existingProduct = Product::withTrashed()->where('sku', $sku)->first();
@@ -94,15 +90,19 @@ class ProductSeeder extends Seeder
                     $showroomPrice = $item['showroom_price'] ?? null;
 
                     // Description
-                    $desc = "<ul>";
-                    if (!empty($item['remarks'])) $desc .= "<li><strong>Remarks:</strong> {$item['remarks']}</li>";
-                    if (!empty($item['specification'])) $desc .= "<li><strong>Specification:</strong> {$item['specification']}</li>";
-                    $desc .= "</ul>";
+                    $desc = '<ul>';
+                    if (! empty($item['remarks'])) {
+                        $desc .= "<li><strong>Remarks:</strong> {$item['remarks']}</li>";
+                    }
+                    if (! empty($item['specification'])) {
+                        $desc .= "<li><strong>Specification:</strong> {$item['specification']}</li>";
+                    }
+                    $desc .= '</ul>';
 
                     // Ensure unique slug if SKU was unique but slug collided (unlikely with random, but possible)
                     $productSlug = Str::slug($name);
                     if (Product::withTrashed()->where('slug', $productSlug)->exists()) {
-                        $productSlug .= '-' . Str::random(4);
+                        $productSlug .= '-'.Str::random(4);
                     }
 
                     $product = Product::create([
@@ -126,7 +126,9 @@ class ProductSeeder extends Seeder
 
                 // Dynamic Attributes
                 foreach ($item as $key => $value) {
-                    if (in_array($key, ['product', 'material', 'mrp', 'showroom_price', 'dealer_price', 'remarks'])) continue;
+                    if (in_array($key, ['product', 'material', 'mrp', 'showroom_price', 'dealer_price', 'remarks'])) {
+                        continue;
+                    }
 
                     // Map key to display name
                     $attrName = match ($key) {
@@ -139,16 +141,18 @@ class ProductSeeder extends Seeder
                         default => Str::title(str_replace('_', ' ', $key))
                     };
 
-                    if (empty($value)) continue;
+                    if (empty($value)) {
+                        continue;
+                    }
 
                     // Create Attribute
                     $attribute = ProductAttribute::withTrashed()->where('name', Str::slug($attrName))->first();
-                    if (!$attribute) {
+                    if (! $attribute) {
                         $attribute = ProductAttribute::create([
                             'name' => Str::slug($attrName),
                             'display_name' => $attrName,
                             'type' => 'text',
-                            'is_active' => true
+                            'is_active' => true,
                         ]);
                     } elseif ($attribute->trashed()) {
                         $attribute->restore();
@@ -157,14 +161,14 @@ class ProductSeeder extends Seeder
                     // Create Value
                     $attributeValue = ProductAttributeValue::withTrashed() // Assuming Value supports soft deletes too? Migration check: yes
                         ->where('attribute_id', $attribute->id)
-                        ->where('value', (string)$value)
+                        ->where('value', (string) $value)
                         ->first();
 
-                    if (!$attributeValue) {
+                    if (! $attributeValue) {
                         $attributeValue = ProductAttributeValue::create([
                             'attribute_id' => $attribute->id,
-                            'value' => (string)$value,
-                            'display_value' => (string)$value
+                            'value' => (string) $value,
+                            'display_value' => (string) $value,
                         ]);
                     } elseif ($attributeValue->trashed()) {
                         $attributeValue->restore();
@@ -179,10 +183,10 @@ class ProductSeeder extends Seeder
                         ->whereNull('variation_id') // Important
                         ->exists();
 
-                    if (!$exists) {
+                    if (! $exists) {
                         $product->attributes()->attach($attribute->id, [
                             'attribute_value_id' => $attributeValue->id,
-                            'variation_id' => null
+                            'variation_id' => null,
                         ]);
                     }
                 }
@@ -194,7 +198,7 @@ class ProductSeeder extends Seeder
                         ->whereNull('variation_id')
                         ->exists();
 
-                    if (!$stockExists) {
+                    if (! $stockExists) {
                         ProductStock::create([
                             'branch_id' => 1,
                             'product_id' => $product->id,

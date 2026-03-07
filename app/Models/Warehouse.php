@@ -49,5 +49,4 @@ class Warehouse extends Model
     {
         return $this->hasMany(StockMovement::class, 'to_warehouse_id');
     }
-
 }

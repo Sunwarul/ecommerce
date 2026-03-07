@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Session;
 
 class LocaleController extends Controller
@@ -24,12 +23,12 @@ class LocaleController extends Controller
         }
 
         Session::put('locale', $locale);
-        
+
         $response = response()->json([
             'success' => true,
             'locale' => $locale,
         ]);
-        
+
         $response->withCookie(cookie('locale', $locale, 60 * 24 * 365, '/', null, false, false, 'lax'));
 
         return $response;
@@ -37,7 +36,7 @@ class LocaleController extends Controller
 
     public function setFromUrl(Request $request, $locale)
     {
-        if (!in_array($locale, ['en', 'bn', 'ar', 'es', 'hi'])) {
+        if (! in_array($locale, ['en', 'bn', 'ar', 'es', 'hi'])) {
             $locale = 'en';
         }
 
@@ -48,17 +47,17 @@ class LocaleController extends Controller
         }
 
         Session::put('locale', $locale);
-        
+
         $response = redirect()->back()->withInput();
         $response->withCookie(cookie('locale', $locale, 60 * 24 * 365, '/', null, false, false, 'lax'));
-        
+
         return $response;
     }
 
     public function get()
     {
         $locale = app()->getLocale();
-        
+
         return response()->json([
             'locale' => $locale,
             'supported_locales' => config('app.supported_locales'),

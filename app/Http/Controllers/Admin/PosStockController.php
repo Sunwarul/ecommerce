@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use App\Models\ProductStock;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class PosStockController extends Controller
 {
@@ -34,7 +32,7 @@ class PosStockController extends Controller
             'to_warehouse_id' => $data['warehouse_id'], // adjust uses to_warehouse_id
             'from_warehouse_id' => null,
             'quantity' => $data['quantity'], // target quantity
-            'reference' => 'POS-ADJUST-' . now()->format('YmdHis'),
+            'reference' => 'POS-ADJUST-'.now()->format('YmdHis'),
             'note' => $data['note'] ?? 'Market quick adjustment from POS',
             'created_by' => Auth::id(),
         ]);

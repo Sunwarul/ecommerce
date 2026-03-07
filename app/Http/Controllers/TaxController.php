@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Tax;
-// use App\Exports\TaxExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\TaxStoreRequest;
+// use App\Exports\TaxExport;
 use App\Http\Requests\TaxUpdateRequest;
+use App\Models\Tax;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class TaxController extends Controller
 {
@@ -27,6 +26,4 @@ class TaxController extends Controller
             withRelations: [],
         ));
     }
-
-    
 }

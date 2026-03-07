@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PosOrder extends BaseModel
 {
-    use HasFactory, HasBranch, SoftDeletes;
+    use HasBranch, HasFactory, SoftDeletes;
 
     protected $table = 'pos_orders';
 
@@ -37,7 +37,7 @@ class PosOrder extends BaseModel
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
-        'created_at' => 'datetime:Y-m-d h:i A T'
+        'created_at' => 'datetime:Y-m-d h:i A T',
     ];
 
     public function session()
@@ -49,7 +49,6 @@ class PosOrder extends BaseModel
     {
         return $this->belongsTo(Branch::class);
     }
-
 
     public function customer()
     {

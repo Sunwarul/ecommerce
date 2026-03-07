@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
-use App\Traits\HasCrud;
-// use App\Exports\CurrencyExport;
-use App\Models\Currency;
-use App\Utils\CrudConfig;
-use Illuminate\Http\Request;
 use App\Http\Requests\CurrencyStoreRequest;
 use App\Http\Requests\CurrencyUpdateRequest;
+// use App\Exports\CurrencyExport;
+use App\Models\Currency;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class CurrencyController extends Controller
 {
@@ -28,7 +28,6 @@ class CurrencyController extends Controller
             withRelations: [],
         ));
     }
-
 
     public function index(Request $request)
     {
@@ -54,7 +53,7 @@ class CurrencyController extends Controller
         });
 
         if ($request->has('trashed')) {
-            $query->when($request->trashed, fn($query) => $query->onlyTrashed());
+            $query->when($request->trashed, fn ($query) => $query->onlyTrashed());
         }
 
         $query = $this->modifyQuery($query);

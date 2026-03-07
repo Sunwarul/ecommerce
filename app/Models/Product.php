@@ -47,7 +47,6 @@ class Product extends Model
         'meta_keywords',
     ];
 
-
     protected $casts = [
         'is_active' => 'boolean',
 
@@ -58,7 +57,6 @@ class Product extends Model
         'materials' => 'array',
         'images' => 'array',
     ];
-
 
     /*
     |--------------------------------------------------------------------------
@@ -180,12 +178,12 @@ class Product extends Model
 
     public function hasDiscount(): bool
     {
-        return !is_null($this->base_discount_price);
+        return ! is_null($this->base_discount_price);
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (!$this->hasDiscount()) {
+        if (! $this->hasDiscount()) {
             return null;
         }
 
@@ -198,5 +196,4 @@ class Product extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
-
 }

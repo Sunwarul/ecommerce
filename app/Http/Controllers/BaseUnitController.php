@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\BaseUnit;
-// use App\Exports\BaseUnitExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\BaseUnitStoreRequest;
+// use App\Exports\BaseUnitExport;
 use App\Http\Requests\BaseUnitUpdateRequest;
+use App\Models\BaseUnit;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class BaseUnitController extends Controller
 {
@@ -27,6 +26,4 @@ class BaseUnitController extends Controller
             withRelations: [],
         ));
     }
-
-
 }

@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Unit;
-// use App\Exports\UnitExport;
-use App\Utils\CrudConfig;
-use App\Traits\HasCrud;
 use App\Http\Requests\UnitStoreRequest;
+// use App\Exports\UnitExport;
 use App\Http\Requests\UnitUpdateRequest;
+use App\Models\Unit;
+use App\Traits\HasCrud;
+use App\Utils\CrudConfig;
 
 class UnitController extends Controller
 {
@@ -27,7 +26,6 @@ class UnitController extends Controller
             withRelations: [],
         ));
     }
-
 
     protected function addProps(): array
     {

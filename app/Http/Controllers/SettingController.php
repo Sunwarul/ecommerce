@@ -1,6 +1,7 @@
 <?php
 
 // app/Http/Controllers/SettingsController.php
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Admin\UpdateSettingsRequest;

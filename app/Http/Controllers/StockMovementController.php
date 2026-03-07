@@ -24,6 +24,7 @@ class StockMovementController extends Controller
             'branches' => Branch::active()->select('id', 'name')->orderBy('name')->get(),
         ]);
     }
+
     public function store(Request $request, StockService $stockService)
     {
         $data = $request->validate([
@@ -75,7 +76,7 @@ class StockMovementController extends Controller
 
         $msg = 'Stock updated successfully.';
 
-        if (!empty($data['move'])) {
+        if (! empty($data['move'])) {
             return redirect()
                 ->route('products.show', $data['product_id'])
                 ->with('success', $msg);
@@ -83,6 +84,4 @@ class StockMovementController extends Controller
 
         return back()->with('success', $msg);
     }
-
-
 }
