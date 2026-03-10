@@ -110,7 +110,9 @@ class ProductController extends Controller
         $sort = $request->input('sort', 'id_desc');
 
         $query = Product::query()
-            ->with(['category:id,name', 'brand:id,name'])
+            ->with(['category:id,name', 'brand:id,name', 'stocks' => function ($q) {
+                $q->select('id', 'product_id', 'warehouse_id', 'quantity', 'alert_quantity');
+            }])
             ->withSum('stocks as total_stock', 'quantity');
 
         // Search
