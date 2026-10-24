@@ -112,6 +112,23 @@ class RolePermissionSeeder extends Seeder
             'Order Invoice',
             'Order Complete',
             'Order Void',
+
+            // Reports
+            'Report Index',
+            'Report Export',
+            // Installments
+            'Installment Index',
+            'Installment Create',
+            'Installment Collect',
+            'Installment Cancel',
+            'Installment Plan Manage',
+            // Bank EMI
+            'EMI Index',
+            'EMI Manage',
+            // SMS
+            'SMS Index',
+            'SMS Send',
+            'SMS Settings',
             // Role
             'Role Index',
             'Role Store',

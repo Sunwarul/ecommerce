@@ -7,6 +7,7 @@ use App\Http\Requests\CustomerUpdateRequest;
 // use App\Exports\CustomerExport;
 use App\Models\Currency;
 use App\Models\Customer;
+use App\Support\Search;
 use App\Traits\HasCrud;
 use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
@@ -24,10 +25,16 @@ class CustomerController extends Controller
             storeRequestClass: CustomerStoreRequest::class,
             updateRequestClass: CustomerUpdateRequest::class,
             componentPath: 'Customers/Index',
-            searchColumns: [],
+            searchColumns: [], // handled in modifyQuery()
             // exportClass: CustomerExport::class,
             // withRelations: [],
         ));
+    }
+
+    /** Partial / wildcard search incl. digits-only phone matching ("01712-345678" ~ "1712345"). */
+    protected function modifyQuery($query)
+    {
+        return Search::customers($query, request('search'));
     }
 
     protected function addProps(): array

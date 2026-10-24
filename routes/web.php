@@ -19,7 +19,13 @@ use App\Http\Controllers\BranchController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\Frontend\WelcomePageController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\Reports\SalesReportController;
+use App\Http\Controllers\Sales\EmiController;
+use App\Http\Controllers\Sales\InstallmentController;
+use App\Http\Controllers\Sales\InstallmentPlanController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Sms\SmsController;
+use App\Http\Controllers\Sms\SmsSettingController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
@@ -161,4 +167,78 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     CrudRouter::setFor('product-attributes', App\Http\Controllers\ProductAttributeController::class);
     CrudRouter::setFor('product-attribute-values', App\Http\Controllers\ProductAttributeValueController::class);
+
+    // =======================
+    // Reports
+    // =======================
+    Route::get('/reports/sales', [SalesReportController::class, 'index'])
+        ->middleware('can:Report Index')->name('reports.sales');
+
+    // =======================
+    // Installments (hire purchase)
+    // =======================
+    Route::post('/installments/preview', [InstallmentController::class, 'preview'])->name('installments.preview');
+    Route::middleware('can:Installment Index')->group(function () {
+        Route::get('/installments', [InstallmentController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{installment}', [InstallmentController::class, 'show'])->whereNumber('installment')->name('installments.show');
+    });
+    Route::post('/installments', [InstallmentController::class, 'store'])
+        ->middleware('can:Installment Create')->name('installments.store');
+    Route::put('/installments/{installment}', [InstallmentController::class, 'update'])
+        ->middleware('can:Installment Create')->name('installments.update');
+    Route::post('/installments/{installment}/collect', [InstallmentController::class, 'collect'])
+        ->middleware('can:Installment Collect')->name('installments.collect');
+    Route::post('/installments/schedules/{schedule}/waive-late-fee', [InstallmentController::class, 'waiveLateFee'])
+        ->middleware('can:Installment Collect')->name('installments.waive-late-fee');
+    Route::put('/installments/{installment}/status', [InstallmentController::class, 'updateStatus'])
+        ->middleware('can:Installment Cancel')->name('installments.status');
+
+    Route::middleware('can:Installment Plan Manage')->group(function () {
+        Route::get('/installment-plans', [InstallmentPlanController::class, 'index'])->name('installment-plans.index');
+        Route::post('/installment-plans', [InstallmentPlanController::class, 'store'])->name('installment-plans.store');
+        Route::put('/installment-plans/{plan}', [InstallmentPlanController::class, 'update'])->name('installment-plans.update');
+        Route::delete('/installment-plans/{plan}', [InstallmentPlanController::class, 'destroy'])->name('installment-plans.destroy');
+    });
+
+    // =======================
+    // Bank EMI
+    // =======================
+    Route::post('/emi/quote', [EmiController::class, 'quote'])->name('emi.quote');
+    Route::get('/emi', [EmiController::class, 'index'])->middleware('can:EMI Index')->name('emi.index');
+    Route::middleware('can:EMI Manage')->group(function () {
+        Route::post('/emi/settle', [EmiController::class, 'settle'])->name('emi.settle');
+        Route::post('/emi/{transaction}/unsettle', [EmiController::class, 'unsettle'])->name('emi.unsettle');
+        Route::post('/emi/banks', [EmiController::class, 'storeBank'])->name('emi.banks.store');
+        Route::put('/emi/banks/{bank}', [EmiController::class, 'updateBank'])->name('emi.banks.update');
+        Route::delete('/emi/banks/{bank}', [EmiController::class, 'destroyBank'])->name('emi.banks.destroy');
+    });
+
+    // =======================
+    // SMS
+    // =======================
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::middleware('can:SMS Index')->group(function () {
+            Route::get('/', [SmsController::class, 'dashboard'])->name('dashboard');
+            Route::get('/logs', [SmsController::class, 'logs'])->name('logs');
+        });
+        Route::middleware('can:SMS Send')->group(function () {
+            Route::get('/send', [SmsController::class, 'compose'])->name('compose');
+            Route::post('/send', [SmsController::class, 'send'])->name('send');
+            Route::get('/customers', [SmsController::class, 'customers'])->name('customers');
+            Route::post('/resend', [SmsController::class, 'resend'])->name('resend');
+            Route::post('/retry-stuck', [SmsController::class, 'retryStuck'])->name('retry-stuck');
+        });
+        Route::middleware('can:SMS Settings')->group(function () {
+            Route::get('/settings', [SmsSettingController::class, 'index'])->name('settings');
+            Route::put('/settings', [SmsSettingController::class, 'update'])->name('settings.update');
+            Route::post('/templates', [SmsSettingController::class, 'storeTemplate'])->name('templates.store');
+            Route::put('/templates/{template}', [SmsSettingController::class, 'updateTemplate'])->name('templates.update');
+            Route::delete('/templates/{template}', [SmsSettingController::class, 'destroyTemplate'])->name('templates.destroy');
+            Route::post('/gateways', [SmsSettingController::class, 'storeGateway'])->name('gateways.store');
+            Route::put('/gateways/{gateway}', [SmsSettingController::class, 'updateGateway'])->name('gateways.update');
+            Route::delete('/gateways/{gateway}', [SmsSettingController::class, 'destroyGateway'])->name('gateways.destroy');
+            Route::post('/gateways/{gateway}/balance', [SmsSettingController::class, 'balance'])->name('gateways.balance');
+            Route::post('/gateways/{gateway}/test', [SmsSettingController::class, 'test'])->name('gateways.test');
+        });
+    });
 });

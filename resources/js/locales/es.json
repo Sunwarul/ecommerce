@@ -107,7 +107,16 @@
         "payment_methods": "Métodos de pago",
         "warranty_guarantees": "Garantías",
         "todos": "Tareas",
-        "tasks": "Tareas"
+        "tasks": "Tareas",
+        "installments": "Installments",
+        "installment_plans": "Installment Plans",
+        "bank_emi": "Bank EMI",
+        "sales_report": "Sales Report",
+        "sms": "SMS",
+        "sms_dashboard": "SMS Dashboard",
+        "sms_send": "Send SMS",
+        "sms_history": "SMS History",
+        "sms_settings": "SMS Settings"
     },
     "dashboard": {
         "welcome": "Bienvenido de nuevo",

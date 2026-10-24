@@ -95,6 +95,15 @@ const receiptMaxWidth = computed(() =>
         <div class="row">
             <span>Tax</span><span class="r">{{ money(order.tax_amount) }}</span>
         </div>
+        <div class="row" v-if="Number(order.emi_charge_amount) > 0">
+            <span>EMI Charge</span><span class="r">{{ money(order.emi_charge_amount) }}</span>
+        </div>
+        <div class="row" v-if="Number(order.installment_charge_amount) > 0">
+            <span>Installment Charge</span><span class="r">{{ money(order.installment_charge_amount) }}</span>
+        </div>
+        <div class="row" v-if="Number(order.late_fee_amount) > 0">
+            <span>Late Fee</span><span class="r">{{ money(order.late_fee_amount) }}</span>
+        </div>
 
         <div class="sep"></div>
 
@@ -110,6 +119,23 @@ const receiptMaxWidth = computed(() =>
         </div>
         <div class="row" v-if="due > 0">
             <span>Due</span><span class="r due">{{ money(due) }}</span>
+        </div>
+
+        <div v-if="order.installment_sale">
+            <div class="sep"></div>
+            <div class="bold">Installments ({{ order.installment_sale.agreement_no }})</div>
+            <div v-for="s in order.installment_sale.schedules" :key="s.id" class="row small">
+                <span>#{{ s.installment_no }} {{ s.due_date }}</span>
+                <span class="r">{{ money(s.amount) }}{{ s.status === 'paid' ? ' ✓' : '' }}</span>
+            </div>
+        </div>
+
+        <div v-if="order.emi_transactions?.length">
+            <div class="sep"></div>
+            <div v-for="e in order.emi_transactions" :key="e.id" class="row small">
+                <span>EMI {{ e.bank?.name }} {{ e.months }}m</span>
+                <span class="r">{{ e.months }} × {{ money(e.monthly_amount) }}</span>
+            </div>
         </div>
 
         <div v-if="order.payments?.length">

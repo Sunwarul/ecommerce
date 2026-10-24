@@ -75,6 +75,8 @@
                 <th>Discount</th>
                 <th>Tax</th>
                 <th>Total</th>
+                <th>Paid</th>
+                <th>Due</th>
                 <th>Payment</th>
                 <th>Status</th>
             </tr>
@@ -88,6 +90,8 @@
             @endphp
             @foreach($orders as $order)
                 @php 
+                    $totalPaid = ($totalPaid ?? 0) + $order->paid_amount;
+                    $totalDue = ($totalDue ?? 0) + ($order->status === 'completed' ? max(0, $order->total_amount - $order->paid_amount) : 0);
                     $totalAmount += $order->total_amount;
                     $totalSubtotal += $order->subtotal;
                     $totalDiscount += $order->discount_amount;
@@ -96,11 +100,13 @@
                 <tr>
                     <td>{{ $order->invoice_no ?? ($order->status === 'draft' ? "DRAFT-{$order->id}" : "#{$order->id}") }}</td>
                     <td>{{ $order->created_at->format('Y-m-d') }}</td>
-                    <td>{{ $order->customer?->name ?? 'Walk-in' }}</td>
+                    <td>{{ $order->customer?->name ?? 'Walk-in' }}@if($order->customer?->phone)<br><small>{{ $order->customer->phone }}</small>@endif</td>
                     <td class="text-right">{{ number_format($order->subtotal, 2) }}</td>
                     <td class="text-right">{{ number_format($order->discount_amount, 2) }}</td>
                     <td class="text-right">{{ number_format($order->tax_amount, 2) }}</td>
                     <td class="text-right"><strong>{{ number_format($order->total_amount, 2) }}</strong></td>
+                    <td class="text-right">{{ number_format($order->paid_amount, 2) }}</td>
+                    <td class="text-right">{{ number_format($order->status === 'completed' ? max(0, $order->total_amount - $order->paid_amount) : 0, 2) }}</td>
                     <td>
                         <span class="badge {{ $order->payment_status === 'paid' ? 'badge-success' : ($order->payment_status === 'partial' ? 'badge-warning' : 'badge-danger') }}">
                             {{ $order->payment_status }}
@@ -121,6 +127,8 @@
                 <th class="text-right">{{ number_format($totalDiscount, 2) }}</th>
                 <th class="text-right">{{ number_format($totalTax, 2) }}</th>
                 <th class="text-right">{{ number_format($totalAmount, 2) }}</th>
+                <th class="text-right">{{ number_format($totalPaid ?? 0, 2) }}</th>
+                <th class="text-right">{{ number_format($totalDue ?? 0, 2) }}</th>
                 <th colspan="2"></th>
             </tr>
         </tfoot>

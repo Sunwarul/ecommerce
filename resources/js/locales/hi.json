@@ -107,7 +107,16 @@
         "payment_methods": "भुगतान विधियां",
         "warranty_guarantees": "वारंटी और गारंटी",
         "todos": "कार्य",
-        "tasks": "कार्य"
+        "tasks": "कार्य",
+        "installments": "Installments",
+        "installment_plans": "Installment Plans",
+        "bank_emi": "Bank EMI",
+        "sales_report": "Sales Report",
+        "sms": "SMS",
+        "sms_dashboard": "SMS Dashboard",
+        "sms_send": "Send SMS",
+        "sms_history": "SMS History",
+        "sms_settings": "SMS Settings"
     },
     "dashboard": {
         "welcome": "वापसी पर स्वागत है",

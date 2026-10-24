@@ -1,6 +1,7 @@
 <script setup>
 import { useLayout } from '@/Layouts/Partials/LayoutComposable';
 import { useLocale } from '@/Composables/useLocale';
+import { useFlashToast } from '@/Composables/useFlashToast';
 import { computed, ref, watch } from 'vue';
 import AppFooter from '@/Layouts/Partials/AppFooter.vue';
 import AppSidebar from '@/Layouts/Partials/AppSidebar.vue';
@@ -11,6 +12,9 @@ const { layoutConfig, layoutState, isSidebarActive } = useLayout();
 const { initLocale } = useLocale();
 
 initLocale();
+
+// Server-side errors (->with('error', ...)) were never shown anywhere; pages toast their own successes.
+useFlashToast({ success: false, error: true });
 
 const outsideClickListener = ref(null);
 

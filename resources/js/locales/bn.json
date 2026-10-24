@@ -107,7 +107,16 @@
         "payment_methods": "পেমেন্ট পদ্ধতি",
         "warranty_guarantees": "ওয়ারেন্টি ও গ্যারান্টি",
         "todos": "কাজের তালিকা",
-        "tasks": "কাজ"
+        "tasks": "কাজ",
+        "installments": "কিস্তি",
+        "installment_plans": "কিস্তি পরিকল্পনা",
+        "bank_emi": "ব্যাংক ইএমআই",
+        "sales_report": "বিক্রয় রিপোর্ট",
+        "sms": "এসএমএস",
+        "sms_dashboard": "এসএমএস ড্যাশবোর্ড",
+        "sms_send": "এসএমএস পাঠান",
+        "sms_history": "এসএমএস ইতিহাস",
+        "sms_settings": "এসএমএস সেটিংস"
     },
     "dashboard": {
         "welcome": "স্বাগতম",

@@ -224,4 +224,28 @@ export const PERMISSIONS = Object.freeze({
     SETTING: {
         INDEX: "Setting Index",
     },
+
+    REPORT: {
+        INDEX: "Report Index",
+        EXPORT: "Report Export",
+    },
+
+    INSTALLMENT: {
+        INDEX: "Installment Index",
+        CREATE: "Installment Create",
+        COLLECT: "Installment Collect",
+        CANCEL: "Installment Cancel",
+        PLAN_MANAGE: "Installment Plan Manage",
+    },
+
+    EMI: {
+        INDEX: "EMI Index",
+        MANAGE: "EMI Manage",
+    },
+
+    SMS: {
+        INDEX: "SMS Index",
+        SEND: "SMS Send",
+        SETTINGS: "SMS Settings",
+    },
 });

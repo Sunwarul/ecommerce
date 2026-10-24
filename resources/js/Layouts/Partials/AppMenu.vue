@@ -104,7 +104,7 @@ const model = computed(() => {
             label: t('pos.sales'),
             icon: "pi pi-shopping-cart",
             permissionMode: "any",
-            permissions: [PERMISSIONS.POS.INDEX, PERMISSIONS.ORDER.INDEX],
+            permissions: [PERMISSIONS.POS.INDEX, PERMISSIONS.ORDER.INDEX, PERMISSIONS.INSTALLMENT.INDEX, PERMISSIONS.EMI.INDEX],
             items: [
                 {
                     label: t('menu.pos'),
@@ -123,6 +123,74 @@ const model = computed(() => {
                     icon: "pi pi-users",
                     to: route("customers.index"),
                     permissions: [PERMISSIONS.CUSTOMER.INDEX],
+                },
+                {
+                    label: t('menu.installments'),
+                    icon: "pi pi-calendar-clock",
+                    to: route("installments.index"),
+                    permissions: [PERMISSIONS.INSTALLMENT.INDEX],
+                },
+                {
+                    label: t('menu.installment_plans'),
+                    icon: "pi pi-sliders-h",
+                    to: route("installment-plans.index"),
+                    permissions: [PERMISSIONS.INSTALLMENT.PLAN_MANAGE],
+                },
+                {
+                    label: t('menu.bank_emi'),
+                    icon: "pi pi-credit-card",
+                    to: route("emi.index"),
+                    permissions: [PERMISSIONS.EMI.INDEX],
+                },
+            ],
+        },
+
+        // ================= REPORTS =================
+        {
+            label: t('menu.reports'),
+            icon: "pi pi-chart-bar",
+            permissionMode: "any",
+            permissions: [PERMISSIONS.REPORT.INDEX],
+            items: [
+                {
+                    label: t('menu.sales_report'),
+                    icon: "pi pi-chart-line",
+                    to: route("reports.sales"),
+                    permissions: [PERMISSIONS.REPORT.INDEX],
+                },
+            ],
+        },
+
+        // ================= SMS =================
+        {
+            label: t('menu.sms'),
+            icon: "pi pi-comment",
+            permissionMode: "any",
+            permissions: [PERMISSIONS.SMS.INDEX, PERMISSIONS.SMS.SEND, PERMISSIONS.SMS.SETTINGS],
+            items: [
+                {
+                    label: t('menu.sms_dashboard'),
+                    icon: "pi pi-chart-pie",
+                    to: route("sms.dashboard"),
+                    permissions: [PERMISSIONS.SMS.INDEX],
+                },
+                {
+                    label: t('menu.sms_send'),
+                    icon: "pi pi-send",
+                    to: route("sms.compose"),
+                    permissions: [PERMISSIONS.SMS.SEND],
+                },
+                {
+                    label: t('menu.sms_history'),
+                    icon: "pi pi-history",
+                    to: route("sms.logs"),
+                    permissions: [PERMISSIONS.SMS.INDEX],
+                },
+                {
+                    label: t('menu.sms_settings'),
+                    icon: "pi pi-cog",
+                    to: route("sms.settings"),
+                    permissions: [PERMISSIONS.SMS.SETTINGS],
                 },
             ],
         },

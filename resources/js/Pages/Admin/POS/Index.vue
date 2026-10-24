@@ -6,6 +6,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from 'vue-i18n';
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
+import { firstError } from "@/Helpers/format";
+import { defaultInstallmentConfig, installmentPayload } from "@/Helpers/installment";
+import InstallmentConfigurator from "@/Components/Sales/InstallmentConfigurator.vue";
+import EmiPaymentFields from "@/Components/Sales/EmiPaymentFields.vue";
+import SelectButton from "primevue/selectbutton";
 
 const { t } = useI18n();
 
@@ -32,6 +37,9 @@ const props = defineProps({
     order: { type: Object, default: null }, // ✅ Edit Draft Order
     lastWarrantyInfo: { type: String, default: "" },
     warrantyTemplates: { type: Array, default: () => [] },
+    installmentPlans: { type: Array, default: () => [] },
+    emiBanks: { type: Array, default: () => [] },
+    emiPaymentMethodId: { type: Number, default: null },
 });
 
 const toast = useToast();
@@ -133,7 +141,6 @@ function onCustomerComplete(event) {
     }, 300);
 }
 
-watch(selectedCustomer, (v) => console.log("selectedCustomer =", v));
 
 async function fetchCustomers(q) {
     try {
@@ -559,23 +566,19 @@ const total = computed(
 // Payments (✅ partial allowed)
 // -----------------------------
 let paymentRowId = 1;
-const payments = ref([
-    {
-        id: paymentRowId++,
-        payment_method_id: null,
-        amount: 0,
 
-        transaction_ref: null,
-        notes: null,
+function blankMeta() {
+    return {
+        customer_bank_name: null,
+        customer_account_no: null,
+        received_to_bank_account_id: null,
+        txn_ref: null,
+    };
+}
 
-        meta: {
-            customer_bank_name: null,
-            customer_account_no: null,
-            received_to_bank_account_id: null,
-            txn_ref: null,
-        },
-    },
-]);
+function blankEmi() {
+    return { emi_bank_id: null, emi_bank_tenure_id: null, card_last4: "", approval_code: "", card_holder_name: "" };
+}
 
 function blankPaymentRow() {
     return {
@@ -584,14 +587,12 @@ function blankPaymentRow() {
         amount: 0,
         transaction_ref: null,
         notes: null,
-        meta: {
-            customer_bank_name: null,
-            customer_account_no: null,
-            received_to_bank_account_id: null,
-            txn_ref: null,
-        },
+        meta: blankMeta(),
+        emi: blankEmi(),
     };
 }
+
+const payments = ref([blankPaymentRow()]);
 
 function addPaymentRow() {
     payments.value.push(blankPaymentRow());
@@ -605,11 +606,43 @@ function removePaymentRow(index) {
     payments.value.splice(index, 1);
 }
 
+// -----------------------------
+// Bank EMI rows: bank's customer charge is added on top of the row amount
+// -----------------------------
+function isEmiRow(row) {
+    return !!props.emiPaymentMethodId && row?.payment_method_id === props.emiPaymentMethodId;
+}
+
+function emiTenure(row) {
+    const bank = props.emiBanks.find((b) => b.id === row.emi?.emi_bank_id);
+    return bank?.tenures?.find((t) => t.id === row.emi?.emi_bank_tenure_id) || null;
+}
+
+function emiCharge(row) {
+    const t = isEmiRow(row) ? emiTenure(row) : null;
+    return t ? Math.round(n(row.amount) * n(t.customer_charge_percent)) / 100 : 0;
+}
+
+const emiChargeTotal = computed(() => payments.value.reduce((s, row) => s + emiCharge(row), 0));
+const grandTotal = computed(() => total.value + emiChargeTotal.value);
+
 const totalPaid = computed(() =>
-    payments.value.reduce((sum, row) => sum + n(row.amount), 0)
+    payments.value.reduce((sum, row) => sum + n(row.amount) + emiCharge(row), 0)
 );
-const due = computed(() => Math.max(0, total.value - totalPaid.value));
-const change = computed(() => Math.max(0, totalPaid.value - total.value));
+const due = computed(() => Math.max(0, grandTotal.value - totalPaid.value));
+const change = computed(() => Math.max(0, totalPaid.value - grandTotal.value));
+
+// -----------------------------
+// Sale type: regular (cash / due) or installment (hire purchase)
+// -----------------------------
+const saleMode = ref("regular");
+const saleModeOptions = [
+    { label: "Regular", value: "regular" },
+    { label: "Installment", value: "installment" },
+];
+const installmentConfig = ref(defaultInstallmentConfig());
+const installmentPreview = ref(null);
+const isInstallment = computed(() => saleMode.value === "installment");
 
 // --- helpers for Bank method detection ---
 const bankMethodIds = computed(() => {
@@ -625,14 +658,13 @@ function isBankRow(row) {
     return bankMethodIds.value.includes(row.payment_method_id);
 }
 
-// clear meta when method changes away from Bank
+// keep meta only for Bank rows (and make sure Bank rows always have a meta object to bind to)
 watch(
     () => payments.value.map(p => p.payment_method_id),
     () => {
         payments.value.forEach(row => {
-            if (!isBankRow(row)) {
-                row.meta = null;
-            }
+            row.meta = isBankRow(row) ? (row.meta || blankMeta()) : null;
+            if (isEmiRow(row) && !row.emi) row.emi = blankEmi();
         });
     }
 );
@@ -668,8 +700,33 @@ function submitOrder(action = "complete") {
         (p) => p.payment_method_id && n(p.amount) > 0
     );
 
-    // ✅ payments required only for complete / complete_print
-    if (action !== "draft") {
+    const installmentOn = action !== "draft" && isInstallment.value;
+
+    if (installmentOn) {
+        if (!selectedCustomer.value?.id) {
+            toast.add({ severity: "warn", summary: "Customer required", detail: "Select a customer for an installment sale", life: 2500 });
+            return;
+        }
+        const pv = installmentPreview.value;
+        if (!pv || pv.financed_amount <= 0) {
+            toast.add({ severity: "warn", summary: "Installment", detail: "Nothing left to pay in installments — check the down payment", life: 2500 });
+            return;
+        }
+        if (pv.min_down_payment > 0 && totalPaid.value + 0.009 < pv.min_down_payment) {
+            toast.add({ severity: "warn", summary: "Down payment", detail: `Minimum down payment is ${pv.min_down_payment.toFixed(2)}`, life: 2500 });
+            return;
+        }
+    }
+
+    for (const row of validPayments) {
+        if (isEmiRow(row) && !row.emi?.emi_bank_tenure_id) {
+            toast.add({ severity: "warn", summary: "Bank EMI", detail: "Select the bank and tenure for the EMI payment", life: 2500 });
+            return;
+        }
+    }
+
+    // ✅ payments required only for complete / complete_print (installment allows zero down payment)
+    if (action !== "draft" && !installmentOn) {
         if (!validPayments.length) {
             toast.add({
                 severity: "warn",
@@ -720,6 +777,15 @@ function submitOrder(action = "complete") {
                     transaction_ref: p.transaction_ref || null,
                     notes: p.notes || null,
 
+                    emi: isEmiRow(p)
+                        ? {
+                            emi_bank_tenure_id: p.emi.emi_bank_tenure_id,
+                            card_last4: p.emi.card_last4 || null,
+                            approval_code: p.emi.approval_code || null,
+                            card_holder_name: p.emi.card_holder_name || null,
+                        }
+                        : null,
+
                     meta: isBankRow(p)
                         ? {
                             customer_bank_name:
@@ -736,29 +802,28 @@ function submitOrder(action = "complete") {
         order_discount_type: discountMode.value,
         order_discount_value: discountValue.value,
 
-        // ✅ optional helpers for backend
-        total_amount: total.value,
-        paid_amount: totalPaid.value,
-        due_amount: due.value,
-
         notes: null,
         warranty_info: warranty_info.value,
+
+        installment: installmentOn ? installmentPayload(installmentConfig.value) : null,
+    };
+
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => handleSuccess(action),
+        onError: (errors) => {
+            toast.add({ severity: "error", summary: "Could not save", detail: firstError(errors) || "Please check the order", life: 4000 });
+        },
     };
 
     if (props.order?.id && props.order.status === 'draft') {
-        router.put(route("pos.orders.update", props.order.id), payload, {
-            preserveScroll: true,
-            onSuccess: handleSuccess,
-        });
+        router.put(route("pos.orders.update", props.order.id), payload, options);
     } else {
-        router.post(route("pos.orders.store"), payload, {
-            preserveScroll: true,
-            onSuccess: handleSuccess,
-        });
+        router.post(route("pos.orders.store"), payload, options);
     }
 }
 
-function handleSuccess(page) {
+function handleSuccess(action) {
     toast.add({
         severity: "success",
         summary: "Success",
@@ -780,9 +845,11 @@ function handleSuccess(page) {
     discountMode.value = "none";
     discountValue.value = 0;
     warranty_info.value = "";
-    payments.value = [
-        { id: paymentRowId++, payment_method_id: null, amount: 0 },
-    ];
+    payments.value = [blankPaymentRow()];
+    saleMode.value = "regular";
+    installmentConfig.value = defaultInstallmentConfig();
+    installmentPreview.value = null;
+
 }
 </script>
 
@@ -1136,16 +1203,30 @@ function handleSuccess(page) {
                                         }}</span>
                                 </div>
 
+                                <div v-if="emiChargeTotal > 0" class="flex items-center justify-between text-xs text-slate-500">
+                                    <span>Bank EMI charge</span>
+                                    <span class="font-medium text-slate-700">+{{ emiChargeTotal.toFixed(2) }}</span>
+                                </div>
+
                                 <div class="flex items-center justify-between text-sm mt-2">
                                     <span class="font-semibold text-slate-800">{{ t('orders.grand_total') }}</span>
-                                    <span class="text-lg font-bold text-emerald-600">{{ total.toFixed(2) }}</span>
+                                    <span class="text-lg font-bold text-emerald-600">{{ grandTotal.toFixed(2) }}</span>
                                 </div>
+                            </div>
+
+                            <!-- sale type -->
+                            <div class="mt-3">
+                                <SelectButton v-model="saleMode" :options="saleModeOptions" optionLabel="label" optionValue="value"
+                                    :allowEmpty="false" class="w-full [&>*]:flex-1" size="small" />
+                                <p v-if="!isInstallment" class="text-[11px] text-slate-400 mt-1">
+                                    Partial payment is allowed — the rest stays as due and can be collected later from Orders.
+                                </p>
                             </div>
 
                             <!-- payments -->
                             <div class="mt-3 space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-slate-500">{{ t('pos.payment') }}</span>
+                                    <span class="text-xs text-slate-500">{{ isInstallment ? 'Down payment' : t('pos.payment') }}</span>
                                     <Button icon="pi pi-plus" class="p-button-text p-button-sm" :label="t('common.create')"
                                         @click="addPaymentRow" type="button" />
                                 </div>
@@ -1171,8 +1252,11 @@ function handleSuccess(page) {
                                                 class="w-full text-xs" />
                                         </div>
 
+                                        <!-- Bank card EMI -->
+                                        <EmiPaymentFields v-if="isEmiRow(row) && row.emi" v-model="row.emi" :banks="emiBanks" :amount="Number(row.amount || 0)" />
+
                                         <!-- ✅ BANK META FIELDS -->
-                                        <div v-if="isBankRow(row)"
+                                        <div v-if="isBankRow(row) && row.meta"
                                             class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                                             <div
                                                 class="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -1198,11 +1282,6 @@ function handleSuccess(page) {
                                                     placeholder="Bank txn ref / cheque no" class="w-full text-xs" />
                                             </div>
 
-                                            <div class="text-[11px] text-slate-400 mt-2">
-                                                These fields go to
-                                                <b>payments.*.meta</b> in
-                                                backend.
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1216,11 +1295,21 @@ function handleSuccess(page) {
                                     <span class="font-semibold text-slate-800">{{ change.toFixed(2) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ t('orders.order_total') }}</span>
+                                    <span>{{ isInstallment ? 'Remaining (installments)' : 'Due' }}</span>
                                     <span class="font-semibold text-rose-600">{{
                                         due.toFixed(2)
                                         }}</span>
                                 </div>
+                            </div>
+
+                            <!-- installment plan -->
+                            <div v-if="isInstallment" class="mt-3 p-3 rounded-2xl border border-violet-200 bg-white">
+                                <div class="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                                    <i class="pi pi-calendar-clock text-violet-600" /> Installment plan
+                                </div>
+                                <p v-if="!selectedCustomer" class="text-[11px] text-rose-600 mb-2">Select a customer above — required for installments.</p>
+                                <InstallmentConfigurator v-model="installmentConfig" :saleAmount="grandTotal" :downPayment="totalPaid"
+                                    :plans="installmentPlans" compact @preview="installmentPreview = $event" />
                             </div>
 
                             <div class="grid grid-cols-1 gap-2 mt-4">
@@ -1228,7 +1317,7 @@ function handleSuccess(page) {
                                     :disabled="!cartItems.length || !posSession" @click="submitOrder('draft')"
                                     type="button" />
 
-                                <Button label="Complete" icon="pi pi-check" class="w-full" severity="info"
+                                <Button :label="isInstallment ? 'Complete installment sale' : 'Complete'" icon="pi pi-check" class="w-full" severity="info"
                                     :disabled="!cartItems.length || !posSession" @click="submitOrder('complete')"
                                     type="button" />
 
@@ -1317,7 +1406,7 @@ function handleSuccess(page) {
             </div>
             <template #footer>
                 <Button label="Close" icon="pi pi-times" @click="showVariationDialog = false" class="p-button-text" />
-                <Button label="Add to Cart" icon="pi pi-shopping-cart" @click="addSelectedVariation"
+                <Button label="Add to Cart" icon="pi pi-shopping-cart" @click="confirmAddVariation"
                     :disabled="!selectedVariationId" />
             </template>
         </Dialog>

@@ -18,6 +18,12 @@ import TabMenu from 'primevue/tabmenu';
 import SplitButton from 'primevue/splitbutton';
 import { useToast } from "primevue/usetoast";
 import { v4 as uuidv4 } from 'uuid';
+import AutoComplete from "primevue/autocomplete";
+import SelectButton from "primevue/selectbutton";
+import InstallmentConfigurator from "@/Components/Sales/InstallmentConfigurator.vue";
+import EmiPaymentFields from "@/Components/Sales/EmiPaymentFields.vue";
+import { firstError, ymdhms } from "@/Helpers/format";
+import { defaultInstallmentConfig, installmentPayload } from "@/Helpers/installment";
 
 const vTooltip = Tooltip;
 
@@ -34,12 +40,22 @@ const props = defineProps({
     currentBranchId: { type: Number, default: null },
     isAdmin: { type: Boolean, default: false },
     insights: { type: Object, default: () => ({}) },
+    installmentPlans: { type: Array, default: () => [] },
+    emiBanks: { type: Array, default: () => [] },
+    emiPaymentMethodId: { type: Number, default: null },
 });
 
 /* ---------------- Filters ---------------- */
 const search = ref(props.filters?.search || "");
 const status = ref(props.filters?.status || "");
 const paymentStatus = ref(props.filters?.payment_status || "");
+const saleType = ref(props.filters?.sale_type || "");
+const saleTypeOptions = [
+    { label: "All types", value: "" },
+    { label: "Regular", value: "regular" },
+    { label: "Installment", value: "installment" },
+    { label: "Bank EMI", value: "emi" },
+];
 const dateFrom = ref(
     props.filters?.date_from ? new Date(props.filters.date_from) : null
 );
@@ -95,6 +111,7 @@ function applyFilter() {
             search: search.value || undefined,
             status: status.value || undefined,
             payment_status: paymentStatus.value || undefined,
+            sale_type: saleType.value || undefined,
             date_from: dateFrom.value ? fmtDate(dateFrom.value) : undefined,
             date_to: dateTo.value ? fmtDate(dateTo.value) : undefined,
             category_id: categoryId.value || undefined,
@@ -111,6 +128,7 @@ function resetFilter() {
     search.value = "";
     status.value = "";
     paymentStatus.value = "";
+    saleType.value = "";
     dateFrom.value = null;
     dateTo.value = null;
     categoryId.value = null;
@@ -204,7 +222,12 @@ function newPaymentRow() {
             received_to_bank_account_id: null,
             txn_ref: "",
         },
+        emi: { emi_bank_id: null, emi_bank_tenure_id: null, card_last4: "", approval_code: "", card_holder_name: "" },
     };
+}
+
+function isEmiRow(row) {
+    return !!props.emiPaymentMethodId && row?.payment_method_id === props.emiPaymentMethodId;
 }
 
 function addRow(arrRef) {
@@ -220,6 +243,7 @@ function removeRow(arrRef, i) {
 }
 
 function needsBankMeta(row) {
+    if (isEmiRow(row)) return false;
     const pm = props.paymentMethods.find((x) => x.id === row.payment_method_id);
     const name = (pm?.name || "").toLowerCase();
     return name.includes("bank") || name.includes("transfer");
@@ -388,10 +412,16 @@ const completeRows = ref([newPaymentRow()]);
 function canCompleteDraft(order) {
     return order?.status === "draft";
 }
+const completeMode = ref("regular");
+const completeInstallment = ref(defaultInstallmentConfig());
+const completePreview = ref(null);
+
 function openCompleteModal(order) {
     completeTarget.value = order;
     showCompleteModal.value = true;
     completeRows.value = [newPaymentRow()];
+    completeMode.value = "regular";
+    completeInstallment.value = defaultInstallmentConfig();
 }
 
 const draftTotal = computed(() =>
@@ -441,6 +471,10 @@ function validatePaymentsOrToast(rowsRef) {
 
     // 2) bank meta required fields (only if bank selected)
     for (const row of validRows) {
+        if (isEmiRow(row) && !row.emi?.emi_bank_tenure_id) {
+            toast.add({ severity: "warn", summary: "Bank EMI", detail: "Select the bank and tenure for the EMI payment", life: 2500 });
+            return null;
+        }
         if (needsBankMeta(row)) {
             const bank = row.meta || {};
             if (!bank.customer_bank_name || !bank.customer_account_no) {
@@ -463,7 +497,15 @@ function validatePaymentsOrToast(rowsRef) {
         notes: p.notes?.trim() || null,
 
         // only send meta if it has values (matches nullable array)
-        meta: cleanMeta(p.meta),
+        meta: isEmiRow(p) ? null : cleanMeta(p.meta),
+        emi: isEmiRow(p)
+            ? {
+                emi_bank_tenure_id: p.emi.emi_bank_tenure_id,
+                card_last4: p.emi.card_last4 || null,
+                approval_code: p.emi.approval_code || null,
+                card_holder_name: p.emi.card_holder_name || null,
+            }
+            : null,
     }));
 
     return payload;
@@ -472,13 +514,19 @@ function validatePaymentsOrToast(rowsRef) {
 function completeDraft() {
     if (!completeTarget.value) return;
 
-    const valid = validatePaymentsOrToast(completeRows);
+    const installmentOn = completeMode.value === "installment";
+    const hasPayments = completeRows.value.some((p) => p.payment_method_id && Number(p.amount || 0) > 0);
+    const valid = installmentOn && !hasPayments ? [] : validatePaymentsOrToast(completeRows);
     if (!valid) return;
+    if (installmentOn && !completeTarget.value.customer_id) {
+        toast.add({ severity: "warn", summary: "Customer required", detail: "This draft has no customer. Use Edit to add one first.", life: 3000 });
+        return;
+    }
 
     completeLoading.value = true;
     router.post(
         route("pos.orders.complete", completeTarget.value.id),
-        { payments: valid },
+        { payments: valid, installment: installmentOn ? installmentPayload(completeInstallment.value) : null },
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -491,12 +539,12 @@ function completeDraft() {
                 showCompleteModal.value = false;
                 completeTarget.value = null;
             },
-            onError: () => {
+            onError: (errors) => {
                 toast.add({
                     severity: "error",
                     summary: "Failed",
-                    detail: "Could not complete draft",
-                    life: 2500,
+                    detail: firstError(errors) || "Could not complete draft",
+                    life: 3500,
                 });
             },
             onFinish: () => (completeLoading.value = false),
@@ -514,6 +562,7 @@ const payDueRows = ref([newPaymentRow()]);
 function canPayDue(order) {
     return (
         order &&
+        !(order.installment_sale && order.installment_sale.status === "active") &&
         order.status !== "void" &&
         order.status !== "draft" &&
         (order.payment_status === "partial" ||
@@ -536,6 +585,57 @@ const alreadyPaid = computed(() =>
 const currentDue = computed(() =>
     Math.max(0, orderTotal.value - alreadyPaid.value)
 );
+
+/* ---------------- Convert to Installment ---------------- */
+const showConvertModal = ref(false);
+const convertTarget = ref(null);
+const convertLoading = ref(false);
+const convertConfig = ref(defaultInstallmentConfig());
+const convertPreview = ref(null);
+const convertCustomer = ref(null);
+const customerSuggestions = ref([]);
+
+function canConvert(order) {
+    return order && !order.deleted_at && order.status === "completed" && !order.installment_sale
+        && Number(order.total_amount || 0) - Number(order.paid_amount || 0) > 0.009;
+}
+
+function openConvertModal(order) {
+    convertTarget.value = order;
+    convertConfig.value = defaultInstallmentConfig();
+    convertCustomer.value = order.customer || null;
+    showConvertModal.value = true;
+}
+
+async function searchCustomers(event) {
+    const q = (event.query || "").trim();
+    if (!q) return (customerSuggestions.value = []);
+    const res = await fetch(route("pos.customers.search", { q }), { headers: { Accept: "application/json" } });
+    customerSuggestions.value = (await res.json()).data || [];
+}
+
+function submitConvert() {
+    if (!convertTarget.value) return;
+    if (!convertCustomer.value?.id) {
+        toast.add({ severity: "warn", summary: "Customer required", detail: "Select the customer for this agreement", life: 2500 });
+        return;
+    }
+    convertLoading.value = true;
+    router.post(route("installments.store"), {
+        order_id: convertTarget.value.id,
+        customer_id: convertCustomer.value.id,
+        installment: installmentPayload(convertConfig.value),
+    }, {
+        onSuccess: () => (showConvertModal.value = false),
+        onError: (errors) => toast.add({ severity: "error", summary: "Failed", detail: firstError(errors), life: 3500 }),
+        onFinish: () => (convertLoading.value = false),
+    });
+}
+
+function orderDue(order) {
+    if (order.status !== "completed") return 0;
+    return Math.max(0, Number(order.total_amount || 0) - Number(order.paid_amount || 0));
+}
 
 const payNowTotal = computed(() =>
     payDueRows.value.reduce((s, r) => s + Number(r.amount || 0), 0)
@@ -603,7 +703,8 @@ function updateOrderDate() {
     if (!editDateTarget.value || !newSaleDate.value) return;
 
     editDateLoading.value = true;
-    const dateStr = newSaleDate.value.toISOString().slice(0, 19).replace('T', ' ');
+    // local time — toISOString() would shift the date to UTC
+    const dateStr = ymdhms(newSaleDate.value);
     
     router.put(route("pos.orders.update-date", editDateTarget.value.id), {
         sale_date: dateStr
@@ -735,7 +836,8 @@ function updateOrderDate() {
                 <div class="flex flex-wrap gap-3 items-center">
                     <InputGroup class="max-w-sm">
                         <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
-                        <InputText v-model="search" placeholder="Invoice / customer / cashier" class="w-full"
+                        <InputText v-model="search" placeholder="Invoice, customer name or phone (partial, * wildcard)" class="w-full"
+                            v-tooltip.bottom="'Partial match: 1712345 finds 01712-345678. Use * as wildcard, e.g. 017*678. Several words must all match.'"
                             @keyup.enter="applyFilter" />
                     </InputGroup>
 
@@ -743,6 +845,8 @@ function updateOrderDate() {
                         placeholder="Order Status" class="w-1/2 md:w-44" />
                     <Select v-model="paymentStatus" :options="paymentStatusOptions" optionLabel="label"
                         optionValue="value" placeholder="Payment Status" class="w-1/2 md:w-44" />
+                    <Select v-model="saleType" :options="saleTypeOptions" optionLabel="label"
+                        optionValue="value" placeholder="Sale type" class="w-1/2 md:w-44" />
 
                     <Calendar v-model="dateFrom" placeholder="From" dateFormat="yy-mm-dd" showIcon
                         class="w-1/2 md:w-44" />
@@ -767,6 +871,8 @@ function updateOrderDate() {
                             v-tooltip.top="'Export PDF'" @click="exportReport('pdf')" />
                         <Button icon="pi pi-file-excel" class="p-button-outlined p-button-success"
                             v-tooltip.top="'Export Excel'" @click="exportReport('excel')" />
+                        <Button icon="pi pi-file" class="p-button-outlined p-button-secondary"
+                            v-tooltip.top="'Export CSV'" @click="exportReport('csv')" />
                     </div>
                 </div>
             </div>
@@ -790,9 +896,12 @@ function updateOrderDate() {
                     </Column>
 
                     <Column header="Customer">
-                        <template #body="{ data }">{{
-                            data.customer?.name || "Walk-in"
-                            }}</template>
+                        <template #body="{ data }">
+                            <div class="flex flex-col">
+                                <span>{{ data.customer?.name || "Walk-in" }}</span>
+                                <span v-if="data.customer?.phone" class="text-xs text-slate-500">{{ data.customer.phone }}</span>
+                            </div>
+                        </template>
                     </Column>
 
                     <Column header="Categories">
@@ -821,9 +930,23 @@ function updateOrderDate() {
                         </template>
                     </Column>
 
+                    <Column header="Due">
+                        <template #body="{ data }">
+                            <span v-if="orderDue(data) > 0" class="font-semibold text-rose-600">{{ orderDue(data).toFixed(2) }}</span>
+                            <span v-else class="text-slate-400">-</span>
+                        </template>
+                    </Column>
+
                     <Column header="Payment">
                         <template #body="{ data }">
-                            <Tag :value="data.payment_status" :severity="paymentSeverity(data.payment_status)" />
+                            <div class="flex flex-col gap-1 items-start">
+                                <Tag :value="data.payment_status" :severity="paymentSeverity(data.payment_status)" />
+                                <a v-if="data.installment_sale" :href="route('installments.show', data.installment_sale.id)"
+                                    class="text-[11px] text-violet-700 hover:underline">
+                                    <i class="pi pi-calendar-clock !text-[10px]" /> {{ data.installment_sale.agreement_no }}
+                                </a>
+                                <Tag v-else-if="data.sale_type === 'emi'" value="Bank EMI" severity="info" class="!text-[10px]" />
+                            </div>
                         </template>
                     </Column>
 
@@ -855,6 +978,16 @@ function updateOrderDate() {
                                     <Button v-if="canPayDue(data)" icon="pi pi-wallet"
                                         class="p-button-text p-button-sm p-button-warning"
                                         @click="openPayDueModal(data)" v-tooltip.top="'Pay Due'" />
+
+                                    <!-- Installment orders collect on the agreement page -->
+                                    <Button v-if="data.installment_sale?.status === 'active'" icon="pi pi-calendar-clock"
+                                        class="p-button-text p-button-sm p-button-help"
+                                        @click="router.visit(route('installments.show', data.installment_sale.id))" v-tooltip.top="'Collect installment'" />
+
+                                    <!-- Completed with due => convert to installment plan -->
+                                    <Button v-if="canConvert(data)" icon="pi pi-calendar-plus"
+                                        class="p-button-text p-button-sm p-button-help"
+                                        @click="openConvertModal(data)" v-tooltip.top="'Convert due to installments'" />
 
                                     <!-- ✅ Draft => Complete Draft -->
                                     <Button v-if="canCompleteDraft(data)" icon="pi pi-check"
@@ -1036,8 +1169,11 @@ function updateOrderDate() {
 
                 <Divider />
 
+                <SelectButton v-model="completeMode" :allowEmpty="false" optionLabel="label" optionValue="value"
+                    :options="[{ label: 'Regular / due', value: 'regular' }, { label: 'Installment', value: 'installment' }]" />
+
                 <div class="flex items-center justify-between">
-                    <div class="font-semibold">Payments</div>
+                    <div class="font-semibold">{{ completeMode === 'installment' ? 'Down payment (optional)' : 'Payments' }}</div>
                     <Button label="Add payment" icon="pi pi-plus" class="p-button-text" @click="addRow(completeRows)" />
                 </div>
 
@@ -1081,6 +1217,8 @@ function updateOrderDate() {
                             </div>
                         </div>
 
+                        <EmiPaymentFields v-if="isEmiRow(row)" v-model="row.emi" :banks="emiBanks" :amount="Number(row.amount || 0)" />
+
                         <div v-if="row.payment_method_id && needsBankMeta(row)"
                             class="mt-3 rounded-lg border bg-slate-50 p-3">
                             <div class="font-semibold text-sm mb-2">
@@ -1121,6 +1259,12 @@ function updateOrderDate() {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div v-if="completeMode === 'installment'" class="rounded-xl border border-violet-200 p-3">
+                    <div class="font-semibold mb-2">Installment plan</div>
+                    <InstallmentConfigurator v-model="completeInstallment" :saleAmount="draftTotal" :downPayment="draftPayTotal"
+                        :plans="installmentPlans" @preview="completePreview = $event" />
                 </div>
 
                 <Divider />
@@ -1222,6 +1366,8 @@ function updateOrderDate() {
                             </div>
                         </div>
 
+                        <EmiPaymentFields v-if="isEmiRow(row)" v-model="row.emi" :banks="emiBanks" :amount="Number(row.amount || 0)" />
+
                         <div v-if="row.payment_method_id && needsBankMeta(row)"
                             class="mt-3 rounded-lg border bg-slate-50 p-3">
                             <div class="font-semibold text-sm mb-2">
@@ -1270,6 +1416,46 @@ function updateOrderDate() {
                     <Button label="Cancel" class="p-button-text" @click="showPayDueModal = false" />
                     <Button label="Submit Payment" icon="pi pi-check" class="p-button-warning" :loading="payDueLoading"
                         @click="submitPayDue" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- CONVERT TO INSTALLMENT MODAL -->
+        <Dialog v-model:visible="showConvertModal" modal header="Convert due to installments" :style="{ width: '820px' }"
+            :breakpoints="{ '960px': '85vw', '640px': '95vw' }">
+            <div v-if="convertTarget" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div class="p-3 border rounded-lg">
+                        <div class="text-xs text-gray-500 font-semibold">Invoice</div>
+                        <div class="font-semibold">{{ invoiceLabel(convertTarget) }}</div>
+                    </div>
+                    <div class="p-3 border rounded-lg">
+                        <div class="text-xs text-gray-500 font-semibold">Total / Paid</div>
+                        <div class="font-semibold">{{ Number(convertTarget.total_amount).toFixed(2) }} / {{ Number(convertTarget.paid_amount).toFixed(2) }}</div>
+                    </div>
+                    <div class="p-3 border rounded-lg">
+                        <div class="text-xs text-gray-500 font-semibold">Due to finance</div>
+                        <div class="font-semibold text-rose-600">{{ orderDue(convertTarget).toFixed(2) }}</div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">Customer <span class="text-red-600">*</span></div>
+                    <AutoComplete v-model="convertCustomer" :suggestions="customerSuggestions" optionLabel="name" class="w-full"
+                        inputClass="w-full" placeholder="Search by name or phone" @complete="searchCustomers">
+                        <template #option="{ option }">
+                            <div class="flex flex-col"><span>{{ option.name }}</span><span class="text-xs text-slate-500">{{ option.phone }}</span></div>
+                        </template>
+                    </AutoComplete>
+                </div>
+
+                <InstallmentConfigurator v-model="convertConfig" :saleAmount="Number(convertTarget.total_amount)"
+                    :downPayment="Number(convertTarget.paid_amount)" :plans="installmentPlans" @preview="convertPreview = $event" />
+
+                <div class="flex justify-end gap-2">
+                    <Button label="Cancel" class="p-button-text" @click="showConvertModal = false" />
+                    <Button label="Create agreement" icon="pi pi-calendar-plus" :loading="convertLoading"
+                        :disabled="!convertPreview || convertPreview.financed_amount <= 0" @click="submitConvert" />
                 </div>
             </div>
         </Dialog>

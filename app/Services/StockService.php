@@ -57,18 +57,22 @@ class StockService
 
             $stock = $stock->lockForUpdate()->first();
 
-            // If no stock found with branch, try without branch constraint (warehouse-only stock)
-            if (! $stock) {
+            // If no stock found with branch, try without branch constraint (warehouse-only stock).
+            // Several rows can exist per warehouse (one per branch): use the one holding the most.
+            if (! $stock || $stock->quantity < $quantity) {
                 $stock = ProductStock::where([
                     'product_id' => $productId,
                     'variation_id' => $variationId,
                     'warehouse_id' => $warehouseId,
-                ])->lockForUpdate()->first();
+                ])->orderByDesc('quantity')->lockForUpdate()->first();
             }
 
             if (! $stock || $stock->quantity < $quantity) {
                 $available = $stock ? $stock->quantity : 0;
-                throw new \Exception("Not enough stock. Available: {$available}");
+                $name = \App\Models\Product::whereKey($productId)->value('name') ?? "#{$productId}";
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items' => ["Not enough stock for {$name}. Available: {$available}"],
+                ]);
             }
 
             $stock->quantity -= $quantity;

@@ -35,6 +35,16 @@ class Customer extends Model
         'created_by',
     ];
 
+    public function orders()
+    {
+        return $this->hasMany(PosOrder::class);
+    }
+
+    public function installmentSales()
+    {
+        return $this->hasMany(InstallmentSale::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
