@@ -47,8 +47,9 @@ class PaymentMethodSeeder extends Seeder
             ],
         ];
 
+        // idempotent: re-running never duplicates methods
         foreach ($methods as $method) {
-            PaymentMethod::create($method);
+            PaymentMethod::firstOrCreate(['name' => $method['name']], $method);
         }
     }
 }

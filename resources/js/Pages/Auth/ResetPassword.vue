@@ -1,20 +1,16 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const props = defineProps({
-    email: {
-        type: String,
-        required: true,
-    },
-    token: {
-        type: String,
-        required: true,
-    },
+    email: { type: String, required: true },
+    token: { type: String, required: true },
 });
 
 const form = useForm({
@@ -32,70 +28,32 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Reset Password" />
+    <GuestLayout :title="t('auth.reset_password')" :subtitle="t('auth_pages.reset_subtitle')">
+        <Head :title="t('auth.reset_password')" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+        <form class="flex flex-col gap-4" @submit.prevent="submit" novalidate>
+            <div class="flex flex-col gap-1.5">
+                <label for="email" class="text-sm font-medium text-slate-700">{{ t('auth.email') }}</label>
+                <InputText id="email" v-model="form.email" type="email" autocomplete="username" required :invalid="!!form.errors.email" fluid />
+                <small v-if="form.errors.email" class="text-red-600">{{ form.errors.email }}</small>
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
+            <div class="flex flex-col gap-1.5">
+                <label for="password" class="text-sm font-medium text-slate-700">{{ t('auth_pages.new_password') }}</label>
+                <Password inputId="password" v-model="form.password" toggleMask autocomplete="new-password" autofocus required
+                    :invalid="!!form.errors.password" :promptLabel="t('auth_pages.password_prompt')" :weakLabel="t('auth_pages.weak')"
+                    :mediumLabel="t('auth_pages.medium')" :strongLabel="t('auth_pages.strong')" fluid />
+                <small v-if="form.errors.password" class="text-red-600">{{ form.errors.password }}</small>
             </div>
 
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
+            <div class="flex flex-col gap-1.5">
+                <label for="password_confirmation" class="text-sm font-medium text-slate-700">{{ t('auth.confirm_password') }}</label>
+                <Password inputId="password_confirmation" v-model="form.password_confirmation" :feedback="false" toggleMask
+                    autocomplete="new-password" required :invalid="!!form.errors.password_confirmation" fluid />
+                <small v-if="form.errors.password_confirmation" class="text-red-600">{{ form.errors.password_confirmation }}</small>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Reset Password
-                </PrimaryButton>
-            </div>
+            <Button type="submit" :label="t('auth.reset_password')" icon="pi pi-key" :loading="form.processing" fluid />
         </form>
     </GuestLayout>
 </template>

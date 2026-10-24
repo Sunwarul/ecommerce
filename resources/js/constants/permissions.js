@@ -82,6 +82,10 @@ export const PERMISSIONS = Object.freeze({
         INVOICE: "Order Invoice",
         COMPLETE: "Order Complete",
         VOID: "Order Void",
+        PAYMENT: "Order Payment",
+        DELETE: "Order Delete",
+        TRANSFER: "Order Transfer",
+        EDIT_DATE: "Order Edit Date",
     },
 
     ROLE: {
@@ -223,6 +227,58 @@ export const PERMISSIONS = Object.freeze({
 
     SETTING: {
         INDEX: "Setting Index",
+        UPDATE: "Setting Update",
+    },
+
+    SUB_CATEGORY: {
+        INDEX: "Sub Category Index",
+        STORE: "Sub Category Store",
+        UPDATE: "Sub Category Update",
+        EDIT: "Sub Category Edit",
+        DELETE: "Sub Category Delete",
+        EXPORT: "Sub Category Export",
+        BULK_DELETE: "Sub Category Bulk Delete",
+        BULK_RESTORE: "Sub Category Bulk Restore",
+    },
+    PRODUCT_ATTRIBUTE: {
+        INDEX: "Product Attribute Index",
+        STORE: "Product Attribute Store",
+        UPDATE: "Product Attribute Update",
+        EDIT: "Product Attribute Edit",
+        DELETE: "Product Attribute Delete",
+        EXPORT: "Product Attribute Export",
+        BULK_DELETE: "Product Attribute Bulk Delete",
+        BULK_RESTORE: "Product Attribute Bulk Restore",
+    },
+    WARRANTY: {
+        INDEX: "Warranty Index",
+        STORE: "Warranty Store",
+        UPDATE: "Warranty Update",
+        EDIT: "Warranty Edit",
+        DELETE: "Warranty Delete",
+        EXPORT: "Warranty Export",
+        BULK_DELETE: "Warranty Bulk Delete",
+        BULK_RESTORE: "Warranty Bulk Restore",
+    },
+    TODO: {
+        INDEX: "Todo Index",
+        STORE: "Todo Store",
+        UPDATE: "Todo Update",
+        EDIT: "Todo Edit",
+        DELETE: "Todo Delete",
+        EXPORT: "Todo Export",
+        BULK_DELETE: "Todo Bulk Delete",
+        BULK_RESTORE: "Todo Bulk Restore",
+    },
+    TASK: {
+        INDEX: "Task Index",
+        STORE: "Task Store",
+        UPDATE: "Task Update",
+        EDIT: "Task Edit",
+        DELETE: "Task Delete",
+        EXPORT: "Task Export",
+        BULK_DELETE: "Task Bulk Delete",
+        BULK_RESTORE: "Task Bulk Restore",
     },
 
     REPORT: {

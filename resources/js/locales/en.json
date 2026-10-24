@@ -116,7 +116,14 @@
         "sms_dashboard": "SMS Dashboard",
         "sms_send": "Send SMS",
         "sms_history": "SMS History",
-        "sms_settings": "SMS Settings"
+        "sms_settings": "SMS Settings",
+        "sales": "Sales",
+        "catalog": "Catalog",
+        "product_setup": "Product setup",
+        "finance": "Finance",
+        "organization": "Organization",
+        "user_management": "Users & access",
+        "tools": "Tools"
     },
     "dashboard": {
         "welcome": "Welcome back",

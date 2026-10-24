@@ -52,6 +52,11 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        // The last Super Admin can't delete themselves, or nobody could manage the system any more
+        if ($user->hasRole('Super Admin') && \App\Models\User::role('Super Admin')->count() <= 1) {
+            return back()->withErrors(['password' => __('You are the only Super Admin. Assign another Super Admin before deleting your account.')]);
+        }
+
         Auth::logout();
 
         $user->delete();

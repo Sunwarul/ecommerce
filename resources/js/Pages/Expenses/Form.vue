@@ -1,143 +1,104 @@
 <template>
-    <div class="grid grid-cols-2 gap-4">
-        <div class="mb-4">
-            <label for="title" class="">Title</label>
-            <InputText id="title" v-model="form.title" class="mt-1 block w-full" />
-            <div v-if="form?.errors?.title" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.title }}
-            </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label for="title" class="text-sm font-medium text-slate-700">{{ t('crud.fields.title') }} <span class="text-red-500">*</span></label>
+            <InputText id="title" v-model.trim="form.title" fluid autofocus :invalid="!!form.errors.title" />
+            <small v-if="form.errors.title" class="text-red-600">{{ form.errors.title }}</small>
         </div>
 
-        <div class="mb-4">
-            <label for="date" class="">Date</label>
-            <Calendar id="date" v-model="form.date" class="mt-1 block w-full" dateFormat="yy-mm-dd" />
-            <div v-if="form?.errors?.date" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.date }}
-            </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="date" class="text-sm font-medium text-slate-700">{{ t('crud.fields.date') }} <span class="text-red-500">*</span></label>
+            <DatePicker inputId="date" v-model="dateModel" dateFormat="dd-mm-yy" showIcon fluid :invalid="!!form.errors.date" />
+            <small v-if="form.errors.date" class="text-red-600">{{ form.errors.date }}</small>
         </div>
 
-        <div class="mb-4">
-            <label for="amount" class="">Amount</label>
-            <InputNumber id="amount" v-model="form.amount" class="mt-1 block w-full" />
-            <div v-if="form?.errors?.amount" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.amount }}
-            </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="amount" class="text-sm font-medium text-slate-700">{{ t('crud.fields.amount') }} <span class="text-red-500">*</span></label>
+            <InputNumber inputId="amount" v-model="form.amount" :min="0" :minFractionDigits="0" :maxFractionDigits="2"
+                fluid :invalid="!!form.errors.amount" />
+            <small v-if="form.errors.amount" class="text-red-600">{{ form.errors.amount }}</small>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3 mb-4">
-            <div>
-                <label for="expense_category_id" class="block font-bold mb-2">Expense Category</label>
-                <Select v-model="form.expense_category_id" :options="expenseCategories" optionLabel="name"
-                    optionValue="id" placeholder="Select a category" class="w-full" :required="true" />
-                <small v-if="submitted && form.expense_category_id == null" class="text-red-500">
-                    Expense category is required.
-                </small>
-            </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="expense_category_id" class="text-sm font-medium text-slate-700">{{ t('crud.fields.expense_category') }} <span class="text-red-500">*</span></label>
+            <Select inputId="expense_category_id" v-model="form.expense_category_id" :options="expenseCategories" optionLabel="name"
+                optionValue="id" filter :placeholder="t('crud.fields.select_category')" fluid :invalid="!!form.errors.expense_category_id" />
+            <small v-if="form.errors.expense_category_id" class="text-red-600">{{ form.errors.expense_category_id }}</small>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3 mb-4">
-            <div>
-                <label for="user_id" class="block font-bold mb-2">Users</label>
-                <Select v-model="form.user_id" :options="users" optionLabel="name" optionValue="id"
-                    placeholder="Select a user" class="w-full" :required="true" />
-                <small v-if="submitted && form.user_id == null" class="text-red-500">
-                    User is required.
-                </small>
-            </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="warehouse_id" class="text-sm font-medium text-slate-700">{{ t('crud.fields.warehouse') }} <span class="text-red-500">*</span></label>
+            <Select inputId="warehouse_id" v-model="form.warehouse_id" :options="warehouses" optionLabel="name" optionValue="id"
+                filter :placeholder="t('crud.fields.select_warehouse')" fluid :invalid="!!form.errors.warehouse_id" />
+            <small v-if="form.errors.warehouse_id" class="text-red-600">{{ form.errors.warehouse_id }}</small>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3 mb-4">
-            <div>
-                <label for="warehouse_id" class="block font-bold mb-2">Warehouse</label>
-                <Select v-model="form.warehouse_id" :options="warehouses" optionLabel="name" optionValue="id"
-                    placeholder="Select a warehouse" class="w-full" :required="true" />
-                <small v-if="submitted && form.warehouse_id == null" class="text-red-500">
-                    Warehouse is required.
-                </small>
-            </div>
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label for="user_id" class="text-sm font-medium text-slate-700">{{ t('crud.fields.spent_by') }} <span class="text-red-500">*</span></label>
+            <Select inputId="user_id" v-model="form.user_id" :options="users" optionLabel="name" optionValue="id"
+                filter :placeholder="t('crud.fields.select_user')" fluid :invalid="!!form.errors.user_id" />
+            <small v-if="form.errors.user_id" class="text-red-600">{{ form.errors.user_id }}</small>
         </div>
 
-        <div class="mb-4">
-            <label for="details" class="">Details</label>
-            <Textarea id="details" v-model="form.details" class="mt-1 block w-full" rows="3" />
-            <div v-if="form?.errors?.details" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.details }}
-            </div>
-        </div>
-        <div class="mb-4 col-span-2">
-            <div class="flex items-center">
-                <Checkbox id="status" v-model="form.status" class="h-4 w-4" binary />
-                <label for="status" class="ml-2">Status</label>
-            </div>
-            <div v-if="form?.errors?.status" class="text-red-500 text-sm mt-1">
-                {{ form?.errors?.status }}
-            </div>
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label for="details" class="text-sm font-medium text-slate-700">{{ t('crud.fields.details') }}</label>
+            <Textarea id="details" v-model="form.details" rows="3" autoResize fluid :invalid="!!form.errors.details" />
+            <small v-if="form.errors.details" class="text-red-600">{{ form.errors.details }}</small>
         </div>
 
-        <div class="flex flex-col gap-6 mt-3">
-            <div>
-                <label for="photo" class="block font-bold mb-2">Attachment</label>
-                <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true" chooseLabel="Choose File" class="w-full" />
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label class="text-sm font-medium text-slate-700">{{ t('crud.fields.attachment') }}</label>
+            <div class="flex flex-wrap items-center gap-3">
+                <FileUpload mode="basic" name="photo" customUpload :auto="true" accept="image/*,application/pdf"
+                    :chooseLabel="t('crud.fields.choose_file')" @select="handlePhotoUpload" />
+                <span v-if="selectedName" class="text-sm text-slate-600">{{ t('crud.fields.selected_file', { name: selectedName }) }}</span>
+                <a v-else-if="typeof form.photo === 'string' && form.photo" :href="resolveImagePath?.(form.photo)" target="_blank"
+                    class="text-sm text-emerald-700 hover:underline">
+                    <i class="pi pi-paperclip !text-xs" /> {{ t('crud.fields.view_file') }}
+                </a>
             </div>
-            <div>
-                <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)" alt="File"
-                    class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-            </div>
+            <small class="text-slate-500">{{ t('admin.expenses.receipt_hint') }}</small>
+            <img v-if="photoPreview && photoPreview.startsWith('data:image')" :src="photoPreview" alt=""
+                class="rounded-lg border border-slate-200 max-h-40 w-auto object-contain mt-1" />
+            <small v-if="form.errors.photo" class="text-red-600">{{ form.errors.photo }}</small>
         </div>
 
-        <!--
-    <div class="flex flex-col gap-6">
-        <div>
-            <label for="name" class="block font-bold mb-2">Name</label>
-            <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                :invalid="submitted && !form.name" fluid />
-            <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
+        <div class="flex items-center gap-3 sm:col-span-2">
+            <ToggleSwitch inputId="status" :modelValue="!!Number(form.status)" @update:modelValue="(v) => (form.status = v ? 1 : 0)" />
+            <label for="status" class="text-sm text-slate-700">{{ t('crud.fields.active') }}</label>
         </div>
-    </div>
-    -->
-        <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    -->
     </div>
 </template>
 
 <script setup>
-const { expenseCategories, form } = defineProps({
-    form: {
-        type: Object,
-        required: true,
-    },
-    users: {
-        type: Object,
-        required: true,
-    },
-    warehouses: {
-        type: Object,
-        required: true,
-    },
-    expenseCategories: {
-        type: Object,
-        required: true,
-    },
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import DatePicker from 'primevue/datepicker';
+import FileUpload from 'primevue/fileupload';
+import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import Textarea from 'primevue/textarea';
+import ToggleSwitch from 'primevue/toggleswitch';
+import { ymd } from '@/Helpers/format';
+
+const props = defineProps({
+    form: { type: Object, required: true },
+    users: { type: Array, default: () => [] },
+    warehouses: { type: Array, default: () => [] },
+    expenseCategories: { type: Array, default: () => [] },
+    handlePhotoUpload: { type: Function, default: () => {} },
+    photoPreview: { type: String, default: null },
+    resolveImagePath: { type: Function, default: null },
 });
+
+const { t } = useI18n();
+
+// keep the form value as a local "YYYY-MM-DD" string (a Date would be posted as a UTC timestamp)
+const dateModel = computed({
+    get: () => (props.form.date ? new Date(`${String(props.form.date).slice(0, 10)}T00:00:00`) : null),
+    set: (v) => (props.form.date = v ? ymd(v) : ''),
+});
+
+const selectedName = computed(() => (props.form.photo instanceof File ? props.form.photo.name : ''));
 </script>

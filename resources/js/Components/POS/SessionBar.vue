@@ -2,163 +2,115 @@
 import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { firstError } from "@/Helpers/format";
 
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Dropdown from "primevue/dropdown";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
-
-const toast = useToast();
+import Select from "primevue/select";
 
 const props = defineProps({
     currentSession: { type: Object, default: null },
-    branches: { type: Array, default: () => [] }, // pass from controller
-    warehouses: { type: Array, default: () => [] }, // pass from controller
+    branches: { type: Array, default: () => [] },
+    warehouses: { type: Array, default: () => [] },
 });
 
+const { t } = useI18n();
+const toast = useToast();
 const page = usePage();
 
-const posSession = computed(() => page.props.currentSession);
+const posSession = computed(() => page.props.currentSession ?? props.currentSession);
+const dialogBreakpoints = { "960px": "75vw", "640px": "95vw" };
 
 const openDialog = ref(false);
 const closeDialog = ref(false);
+const loading = ref(false);
 
-const openForm = ref({
-    branch_id: null,
-    warehouse_id: null,
-    opening_cash: 0,
-    note: "",
-});
+const openForm = ref({ branch_id: null, warehouse_id: null, opening_cash: 0, note: "" });
+const closeForm = ref({ closing_cash: 0, note: "" });
 
-const closeForm = ref({
-    closing_cash: 0,
-    note: "",
-});
-
-watch(openDialog, (newVal) => {
-    if (newVal) {
-        const currentBranchId = page.props.auth?.user?.branch_id;
-        if (props.branches && props.branches.length > 0 && !openForm.value.branch_id) {
-            openForm.value.branch_id = currentBranchId || props.branches[0].id;
-        }
-        if (props.warehouses && props.warehouses.length > 0 && !openForm.value.warehouse_id) {
-            openForm.value.warehouse_id = props.warehouses[0].id;
-        }
+watch(openDialog, (visible) => {
+    if (!visible) return;
+    if (props.branches.length && !openForm.value.branch_id) {
+        openForm.value.branch_id = page.props.auth?.user?.branch_id || props.branches[0].id;
+    }
+    if (props.warehouses.length && !openForm.value.warehouse_id) {
+        openForm.value.warehouse_id = props.warehouses[0].id;
     }
 });
 
-function openSession() {
-    router.post(route("pos.session.open"), openForm.value, {
+// The controller redirects back with a flash message (shown by the page), and fresh
+// `currentSession` props — so no page reload is needed.
+function submit(routeName, data, dialog, failKey) {
+    router.post(route(routeName), data, {
         preserveScroll: true,
-        onSuccess: () => {
-            toast.add({
-                severity: "success",
-                summary: "Opened",
-                detail: "POS session opened",
-                life: 2000,
-            });
-            openDialog.value = false;
-            window.location.reload();
-        },
-        onError: () => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "Failed to open session",
-                life: 2500,
-            });
-        },
+        preserveState: true,
+        onStart: () => (loading.value = true),
+        onFinish: () => (loading.value = false),
+        onSuccess: () => (dialog.value = false),
+        onError: (errors) => toast.add({ severity: "error", summary: t(failKey), detail: firstError(errors), life: 3500 }),
     });
 }
 
-function closeSession() {
-    router.post(route("pos.session.close"), closeForm.value, {
-        preserveScroll: true,
-        onSuccess: () => {
-            toast.add({
-                severity: "success",
-                summary: "Closed",
-                detail: "POS session closed",
-                life: 2000,
-            });
-            closeDialog.value = false;
-            window.location.reload();
-        },
-        onError: () => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "Failed to close session",
-                life: 2500,
-            });
-        },
-    });
-}
+const openSession = () => submit("pos.session.open", openForm.value, openDialog, "pos_screen.session_open_failed");
+const closeSession = () => submit("pos.session.close", closeForm.value, closeDialog, "pos_screen.session_close_failed");
 </script>
 
 <template>
     <div class="flex items-center gap-2">
-        <Button v-if="!posSession" label="Open POS Session" icon="pi pi-play" @click="openDialog = true" />
-
-        <Button v-else label="Close POS Session" icon="pi pi-stop" class="p-button-danger"
+        <Button v-if="!posSession" :label="t('pos.open_session')" icon="pi pi-play" size="small" @click="openDialog = true" />
+        <Button v-else :label="t('pos.close_session')" icon="pi pi-stop-circle" severity="danger" outlined size="small"
             @click="closeDialog = true" />
 
-        <!-- OPEN DIALOG -->
-        <Dialog v-model:visible="openDialog" modal header="Open POS Session" :style="{ width: '420px' }">
-            <div class="space-y-3">
+        <!-- OPEN -->
+        <Dialog v-model:visible="openDialog" modal :header="t('pos.open_session')" :style="{ width: '440px' }" :breakpoints="dialogBreakpoints">
+            <form class="space-y-3" @submit.prevent="openSession">
                 <div>
-                    <label class="text-sm font-medium">Branch *</label>
-                    <Dropdown v-model="openForm.branch_id" :options="branches" optionLabel="name" optionValue="id"
-                        class="w-full" />
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("shared.terms.branch") }} <span class="text-rose-600">*</span></label>
+                    <Select v-model="openForm.branch_id" :options="branches" optionLabel="name" optionValue="id" class="w-full" />
                 </div>
-
                 <div>
-                    <label class="text-sm font-medium">Warehouse *</label>
-                    <Dropdown v-model="openForm.warehouse_id" :options="warehouses" optionLabel="name" optionValue="id"
-                        class="w-full" />
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("pos_screen.warehouse") }} <span class="text-rose-600">*</span></label>
+                    <Select v-model="openForm.warehouse_id" :options="warehouses" optionLabel="name" optionValue="id" class="w-full" />
+                    <p class="text-[11px] text-slate-500 mt-1">{{ t("pos_screen.warehouse_hint") }}</p>
                 </div>
-
                 <div>
-                    <label class="text-sm font-medium">Opening Cash</label>
-                    <InputNumber v-model="openForm.opening_cash" class="w-full" :min="0" />
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("pos.opening_cash") }}</label>
+                    <InputNumber v-model="openForm.opening_cash" class="w-full" inputClass="w-full" :min="0" :maxFractionDigits="2" />
                 </div>
-
                 <div>
-                    <label class="text-sm font-medium">Note</label>
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("shared.terms.notes") }}</label>
                     <InputText v-model="openForm.note" class="w-full" />
                 </div>
-
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button label="Cancel" class="p-button-text" @click="openDialog = false" />
-                    <Button label="Open" icon="pi pi-check" @click="openSession" />
+                    <Button type="button" :label="t('shared.terms.cancel')" text severity="secondary" @click="openDialog = false" />
+                    <Button type="submit" :label="t('pos_screen.open')" icon="pi pi-check" :loading="loading" />
                 </div>
-            </div>
+            </form>
         </Dialog>
 
-        <!-- CLOSE DIALOG -->
-        <Dialog v-model:visible="closeDialog" modal header="Close POS Session" :style="{ width: '420px' }">
-            <div class="space-y-3">
-                <div class="text-sm text-slate-600">
-                    Closing session will stop sales until you open a new
-                    session.
+        <!-- CLOSE -->
+        <Dialog v-model:visible="closeDialog" modal :header="t('pos.close_session')" :style="{ width: '440px' }" :breakpoints="dialogBreakpoints">
+            <form class="space-y-3" @submit.prevent="closeSession">
+                <div class="text-sm text-slate-600 p-3 rounded-lg bg-amber-50 border border-amber-200 flex gap-2">
+                    <i class="pi pi-info-circle text-amber-600 mt-0.5" />
+                    <span>{{ t("pos_screen.close_session_hint") }}</span>
                 </div>
-
                 <div>
-                    <label class="text-sm font-medium">Closing Cash</label>
-                    <InputNumber v-model="closeForm.closing_cash" class="w-full" :min="0" />
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("pos.closing_cash") }}</label>
+                    <InputNumber v-model="closeForm.closing_cash" class="w-full" inputClass="w-full" :min="0" :maxFractionDigits="2" />
                 </div>
-
                 <div>
-                    <label class="text-sm font-medium">Note</label>
+                    <label class="text-sm font-medium text-slate-700 block mb-1">{{ t("shared.terms.notes") }}</label>
                     <InputText v-model="closeForm.note" class="w-full" />
                 </div>
-
                 <div class="flex justify-end gap-2 pt-2">
-                    <Button label="Cancel" class="p-button-text" @click="closeDialog = false" />
-                    <Button label="Close" icon="pi pi-check" class="p-button-danger" @click="closeSession" />
+                    <Button type="button" :label="t('shared.terms.cancel')" text severity="secondary" @click="closeDialog = false" />
+                    <Button type="submit" :label="t('pos.close_session')" icon="pi pi-stop-circle" severity="danger" :loading="loading" />
                 </div>
-            </div>
+            </form>
         </Dialog>
     </div>
 </template>

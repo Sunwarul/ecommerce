@@ -1,214 +1,160 @@
 <script setup>
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
+import { money } from "@/Helpers/format";
 
 const props = defineProps({
     order: { type: Object, required: true },
     shop: { type: Object, required: true },
-    width: { type: Number, default: 80 }, // 58 or 80
+    width: { type: Number, default: 80 }, // 58 or 80 (mm)
 });
 
-const money = (v) => Number(v || 0).toFixed(2);
+const { t } = useI18n();
 
-const totalPaid = computed(() =>
-    (props.order.payments || []).reduce(
-        (sum, p) => sum + Number(p.amount || 0),
-        0
-    )
-);
-
-const paidAmount = computed(() =>
-    Number(props.order.paid_amount ?? totalPaid.value)
-);
-
-const due = computed(() =>
-    Math.max(0, Number(props.order.total_amount || 0) - paidAmount.value)
-);
-
-const change = computed(() =>
-    Math.max(0, paidAmount.value - Number(props.order.total_amount || 0))
-);
-
-const receiptMaxWidth = computed(() =>
-    props.width === 58 ? "280px" : "380px"
-);
+const totalPaid = computed(() => (props.order.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0));
+const paidAmount = computed(() => Number(props.order.paid_amount ?? totalPaid.value));
+const isCompleted = computed(() => props.order.status === "completed");
+const due = computed(() => (isCompleted.value ? Math.max(0, Number(props.order.total_amount || 0) - paidAmount.value) : 0));
+const change = computed(() => Math.max(0, paidAmount.value - Number(props.order.total_amount || 0)));
+const receiptMaxWidth = computed(() => (props.width === 58 ? "280px" : "380px"));
+const hasCharge = (key) => Number(props.order[key] || 0) > 0;
 </script>
 
 <template>
     <div class="receipt" :style="{ maxWidth: receiptMaxWidth }">
-        <div v-if="order.status === 'draft'" class="watermark">DRAFT</div>
+        <div v-if="order.status === 'draft' || order.status === 'void'" class="watermark">
+            {{ t(`shared.status.${order.status}`) }}
+        </div>
 
         <div class="center">
             <div class="shop-name">{{ shop.name }}</div>
             <div class="small">{{ shop.address }}</div>
-            <div class="small">Phone: {{ shop.phone }}</div>
+            <div v-if="shop.phone" class="small">{{ t("shared.terms.phone") }}: <span class="ltr">{{ shop.phone }}</span></div>
         </div>
 
         <div class="sep"></div>
 
         <div class="meta small">
-            <div>Invoice: {{ order.invoice_no || `#${order.id}` }}</div>
-            <div>Date: {{ new Date(order.created_at).toLocaleString() }}</div>
-            <div>Cashier: {{ order.user?.name || "—" }}</div>
-            <div>Branch: {{ order.branch?.name || "—" }}</div>
+            <div>{{ t("shared.terms.invoice") }}: <span class="ltr">{{ order.invoice_no || `#${order.id}` }}</span></div>
+            <div>{{ t("shared.terms.date") }}: <span class="ltr">{{ order.created_at }}</span></div>
+            <div>{{ t("shared.terms.cashier") }}: {{ order.user?.name || "—" }}</div>
+            <div>{{ t("shared.terms.branch") }}: {{ order.branch?.name || "—" }}</div>
         </div>
 
         <div class="sep"></div>
 
         <div class="small">
-            <div><b>Customer:</b> {{ order.customer?.name || "Walk-in" }}</div>
-            <div v-if="order.customer?.phone">
-                Phone: {{ order.customer.phone }}
-            </div>
-            <div v-if="order.customer?.email">
-                Email: {{ order.customer.email }}
-            </div>
+            <div><b>{{ t("shared.terms.customer") }}:</b> {{ order.customer?.name || t("shared.terms.walk_in") }}</div>
+            <div v-if="order.customer?.phone">{{ t("shared.terms.phone") }}: <span class="ltr">{{ order.customer.phone }}</span></div>
         </div>
 
         <div class="sep"></div>
 
-        <div class="row head"><span>Item</span><span class="r">Amt</span></div>
+        <div class="row head"><span>{{ t("invoice.item") }}</span><span class="r">{{ t("shared.terms.amount") }}</span></div>
         <div class="sep thin"></div>
 
         <div v-for="it in order.items" :key="it.id" class="item">
             <div class="row">
                 <span class="bold">{{ it.name }}</span>
-                <span class="r bold">{{ money(it.line_total || 0) }}</span>
+                <span class="r bold">{{ money(it.line_total) }}</span>
             </div>
             <div class="row small">
-                <span>{{ it.sku }}</span>
-                <span class="r"
-                    >{{ it.quantity }} × {{ money(it.unit_price) }}</span
-                >
+                <span class="ltr">{{ it.sku }}</span>
+                <span class="r">{{ it.quantity }} × {{ money(it.unit_price) }}</span>
             </div>
         </div>
 
         <div class="sep"></div>
 
-        <div class="row">
-            <span>Subtotal</span
-            ><span class="r">{{ money(order.subtotal) }}</span>
+        <div class="row"><span>{{ t("orders.subtotal") }}</span><span class="r">{{ money(order.subtotal) }}</span></div>
+        <div class="row"><span>{{ t("pos.discount") }}</span><span class="r neg">-{{ money(order.discount_amount) }}</span></div>
+        <div class="row"><span>{{ t("pos.tax") }}</span><span class="r">{{ money(order.tax_amount) }}</span></div>
+        <div v-if="hasCharge('emi_charge_amount')" class="row">
+            <span>{{ t("pos_screen.emi_charge") }}</span><span class="r">{{ money(order.emi_charge_amount) }}</span>
         </div>
-        <div class="row">
-            <span>Discount</span
-            ><span class="r neg">-{{ money(order.discount_amount) }}</span>
+        <div v-if="hasCharge('installment_charge_amount')" class="row">
+            <span>{{ t("invoice.installment_charge") }}</span><span class="r">{{ money(order.installment_charge_amount) }}</span>
         </div>
-        <div class="row">
-            <span>Tax</span><span class="r">{{ money(order.tax_amount) }}</span>
-        </div>
-        <div class="row" v-if="Number(order.emi_charge_amount) > 0">
-            <span>EMI Charge</span><span class="r">{{ money(order.emi_charge_amount) }}</span>
-        </div>
-        <div class="row" v-if="Number(order.installment_charge_amount) > 0">
-            <span>Installment Charge</span><span class="r">{{ money(order.installment_charge_amount) }}</span>
-        </div>
-        <div class="row" v-if="Number(order.late_fee_amount) > 0">
-            <span>Late Fee</span><span class="r">{{ money(order.late_fee_amount) }}</span>
+        <div v-if="hasCharge('late_fee_amount')" class="row">
+            <span>{{ t("invoice.late_fee") }}</span><span class="r">{{ money(order.late_fee_amount) }}</span>
         </div>
 
         <div class="sep"></div>
 
-        <div class="row big">
-            <span>Total</span
-            ><span class="r">{{ money(order.total_amount) }}</span>
-        </div>
-        <div class="row">
-            <span>Paid</span><span class="r">{{ money(paidAmount) }}</span>
-        </div>
-        <div class="row" v-if="change > 0">
-            <span>Change</span><span class="r">{{ money(change) }}</span>
-        </div>
-        <div class="row" v-if="due > 0">
-            <span>Due</span><span class="r due">{{ money(due) }}</span>
-        </div>
+        <div class="row big"><span>{{ t("shared.terms.total") }}</span><span class="r">{{ money(order.total_amount) }}</span></div>
+        <div class="row"><span>{{ t("shared.terms.paid") }}</span><span class="r">{{ money(paidAmount) }}</span></div>
+        <div v-if="change > 0" class="row"><span>{{ t("pos.change") }}</span><span class="r">{{ money(change) }}</span></div>
+        <div v-if="due > 0" class="row"><span>{{ t("shared.terms.due") }}</span><span class="r due">{{ money(due) }}</span></div>
 
         <div v-if="order.installment_sale">
             <div class="sep"></div>
-            <div class="bold">Installments ({{ order.installment_sale.agreement_no }})</div>
+            <div class="bold">{{ t("invoice.installments_title", { no: order.installment_sale.agreement_no }) }}</div>
             <div v-for="s in order.installment_sale.schedules" :key="s.id" class="row small">
-                <span>#{{ s.installment_no }} {{ s.due_date }}</span>
-                <span class="r">{{ money(s.amount) }}{{ s.status === 'paid' ? ' ✓' : '' }}</span>
+                <span class="ltr">#{{ s.installment_no }} {{ s.due_date }}</span>
+                <span class="r">{{ money(s.amount) }}{{ s.status === "paid" ? " ✓" : "" }}</span>
             </div>
         </div>
 
         <div v-if="order.emi_transactions?.length">
             <div class="sep"></div>
             <div v-for="e in order.emi_transactions" :key="e.id" class="row small">
-                <span>EMI {{ e.bank?.name }} {{ e.months }}m</span>
+                <span>{{ t("shared.sale_type.emi") }} · {{ e.bank?.name }}</span>
                 <span class="r">{{ e.months }} × {{ money(e.monthly_amount) }}</span>
             </div>
         </div>
 
         <div v-if="order.payments?.length">
             <div class="sep"></div>
-            <div class="bold">Payments</div>
+            <div class="bold">{{ t("pos_screen.payments") }}</div>
 
             <div v-for="p in order.payments" :key="p.id" class="pay-block">
-                <!-- main line -->
                 <div class="row small">
-                    <span class="bold">{{
-                        p.payment_method?.name || "Method"
-                    }}</span>
+                    <span class="bold">{{ p.payment_method?.name || t("shared.terms.method") }}</span>
                     <span class="r bold">{{ money(p.amount) }}</span>
                 </div>
-
-                <!-- refs -->
                 <div v-if="p.transaction_ref" class="row small">
-                    <span class="muted">Txn Ref</span>
-                    <span class="r">{{ p.transaction_ref }}</span>
+                    <span class="muted">{{ t("shared.terms.reference") }}</span><span class="r ltr">{{ p.transaction_ref }}</span>
                 </div>
-
                 <div v-if="p.notes" class="row small">
-                    <span class="muted">Note</span>
-                    <span class="r">{{ p.notes }}</span>
+                    <span class="muted">{{ t("shared.terms.notes") }}</span><span class="r">{{ p.notes }}</span>
                 </div>
-
-                <!-- meta (bank info) -->
                 <div v-if="p.meta" class="meta-wrap">
                     <div v-if="p.meta.customer_bank_name" class="row small">
-                        <span class="muted">Customer Bank</span>
-                        <span class="r">{{ p.meta.customer_bank_name }}</span>
+                        <span class="muted">{{ t("pos_screen.customer_bank_name") }}</span><span class="r">{{ p.meta.customer_bank_name }}</span>
                     </div>
-
                     <div v-if="p.meta.customer_account_no" class="row small">
-                        <span class="muted">Customer A/C</span>
-                        <span class="r">{{ p.meta.customer_account_no }}</span>
+                        <span class="muted">{{ t("pos_screen.customer_account_no") }}</span><span class="r ltr">{{ p.meta.customer_account_no }}</span>
                     </div>
-
-                    <div
-                        v-if="p.meta.received_to_bank_account_id"
-                        class="row small"
-                    >
-                        <span class="muted">Received To</span>
-                        <span class="r"
-                            >#{{ p.meta.received_to_bank_account_id }}</span
-                        >
+                    <div v-if="p.meta.received_to_bank_account_id" class="row small">
+                        <span class="muted">{{ t("invoice.received_to") }}</span><span class="r ltr">#{{ p.meta.received_to_bank_account_id }}</span>
                     </div>
-
                     <div v-if="p.meta.txn_ref" class="row small">
-                        <span class="muted">Bank Txn/Cheque</span>
-                        <span class="r">{{ p.meta.txn_ref }}</span>
+                        <span class="muted">{{ t("pos_screen.bank_txn_ref") }}</span><span class="r ltr">{{ p.meta.txn_ref }}</span>
+                    </div>
+                    <div v-if="p.meta.card_last4" class="row small">
+                        <span class="muted">{{ t("invoice.card") }}</span><span class="r ltr">**** {{ p.meta.card_last4 }}</span>
                     </div>
                 </div>
-
                 <div class="sep thin"></div>
             </div>
         </div>
 
         <div class="sep"></div>
-        <div class="center bold">Thank you!</div>
-        <div class="center small">Powered by POS</div>
+        <div class="center bold">{{ t("invoice.thank_you_short") }}</div>
     </div>
 </template>
 
 <style scoped>
+/* Receipt paper: black on white regardless of app theme */
 .receipt {
     position: relative;
     margin: 0 auto;
     padding: 12px;
     border: 1px solid #ddd;
     background: #fff;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
+    color: #000;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+        "Noto Sans Bengali", "Noto Sans Arabic", "Noto Sans Devanagari", monospace;
     font-size: 13px;
 }
 .center {
@@ -225,7 +171,12 @@ const receiptMaxWidth = computed(() =>
     font-weight: 800;
 }
 .r {
-    text-align: right;
+    text-align: end;
+    white-space: nowrap;
+}
+.ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
 }
 .neg {
     color: #b91c1c;
@@ -250,15 +201,14 @@ const receiptMaxWidth = computed(() =>
     padding: 6px 0;
     border-bottom: 1px dashed rgba(0, 0, 0, 0.25);
 }
-
 .sep {
     border-top: 1px dashed #000;
     margin: 8px 0;
 }
 .sep.thin {
     border-top-style: dotted;
+    margin: 6px 0;
 }
-
 .watermark {
     position: absolute;
     inset: 0;
@@ -269,8 +219,8 @@ const receiptMaxWidth = computed(() =>
     font-weight: 900;
     opacity: 0.07;
     pointer-events: none;
+    text-transform: uppercase;
 }
-
 .pay-block {
     margin-top: 6px;
 }
@@ -279,10 +229,6 @@ const receiptMaxWidth = computed(() =>
 }
 .muted {
     opacity: 0.75;
-}
-.sep.thin {
-    border-top-style: dotted;
-    margin: 6px 0;
 }
 
 @media print {

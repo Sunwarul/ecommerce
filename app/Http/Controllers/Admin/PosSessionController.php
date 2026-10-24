@@ -51,7 +51,7 @@ class PosSessionController extends Controller
                 'opened_at' => now(),
             ]);
 
-            return back()->with('success', 'POS session opened.');
+            return back()->with('success', __('POS session opened.'));
         });
     }
 
@@ -82,7 +82,7 @@ class PosSessionController extends Controller
                 'closed_at' => now(),
             ]);
 
-            return back()->with('success', 'POS session closed.');
+            return back()->with('success', __('POS session closed.'));
         });
     }
 }

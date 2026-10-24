@@ -74,6 +74,7 @@ class SmsController extends Controller
             ->selectRaw('error, COUNT(*) as total')->groupBy('error')->orderByDesc('total')->limit(5)->get();
 
         if ($request->filled('export')) {
+            abort_unless($request->user()->can('Report Export'), 403);
             $rows = collect($labels)->map(fn ($l, $i) => [$l, $sent[$i], $failed[$i], $sent[$i] + $failed[$i]])->all();
 
             return ReportExporter::download($request->get('export'), 'SMS Delivery Report', ['Day', 'Sent', 'Failed', 'Total'], $rows, [
@@ -169,7 +170,7 @@ class SmsController extends Controller
         ]);
 
         if (! $this->sms->enabled()) {
-            throw ValidationException::withMessages(['message' => ['SMS is turned off. Enable it in SMS Settings first.']]);
+            throw ValidationException::withMessages(['message' => [__('SMS is turned off. Enable it in SMS Settings first.')]]);
         }
 
         // Collect recipients: [normalized phone => [customer|null, raw phone]]
@@ -192,7 +193,7 @@ class SmsController extends Controller
         }
 
         if (empty($recipients)) {
-            throw ValidationException::withMessages(['customer_ids' => ['Select at least one customer or enter a valid number.']]);
+            throw ValidationException::withMessages(['customer_ids' => [__('Select at least one customer or enter a valid number.')]]);
         }
 
         $campaign = DB::transaction(function () use ($data, $recipients) {
@@ -234,7 +235,7 @@ class SmsController extends Controller
         }
 
         return redirect()->route('sms.logs', ['campaign_id' => $campaign->id])
-            ->with('success', count($recipients).' SMS queued for sending.');
+            ->with('success', __(':count SMS queued for sending.', ['count' => count($recipients)]));
     }
 
     // ------------------------------------------------------------------
@@ -259,6 +260,7 @@ class SmsController extends Controller
     public function logs(Request $request)
     {
         if ($request->filled('export')) {
+            abort_unless($request->user()->can('Report Export'), 403);
             $rows = $this->logsQuery($request)->limit(20000)->get()->map(fn ($l) => [
                 $l->created_at?->format('d-m-Y H:i'),
                 $l->phone,
@@ -305,7 +307,7 @@ class SmsController extends Controller
             ]);
         }
 
-        return back()->with('success', $logs->count().' SMS re-queued.');
+        return back()->with('success', __(':count SMS re-queued.', ['count' => $logs->count()]));
     }
 
     /** Re-check queued messages older than a few minutes (e.g. if the queue worker was down). */
@@ -316,6 +318,6 @@ class SmsController extends Controller
             $this->sms->dispatch($log);
         }
 
-        return back()->with('success', $logs->count().' queued SMS dispatched again.');
+        return back()->with('success', __(':count queued SMS dispatched again.', ['count' => $logs->count()]));
     }
 }

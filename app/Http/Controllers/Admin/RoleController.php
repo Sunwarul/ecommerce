@@ -37,6 +37,7 @@ class RoleController extends Controller
     public function store(RoleStoreRequest $request)
     {
         $data = $request->validated();
+        $this->ensureGrantable($data['ids']);
         $role = Role::create(['name' => $data['name']]);
         if (isset($role)) {
             $permissions = Permission::whereKey($data['ids'])->get();
@@ -47,7 +48,13 @@ class RoleController extends Controller
 
     public function update(RoleUpdateRequest $request, Role $role)
     {
+        // The Super Admin role is managed by Gate::before; it can't be renamed or narrowed,
+        // and users can't widen the role they themselves hold.
+        abort_if($role->name === 'Super Admin', 403, __('The Super Admin role cannot be edited.'));
+        abort_if(! $request->user()->hasRole('Super Admin') && $request->user()->hasRole($role->name), 403, __('You cannot edit a role you belong to.'));
+
         $data = $request->validated();
+        $this->ensureGrantable($data['ids']);
         $role->update(['name' => $data['name']]);
         if (isset($role)) {
             $permissions = Permission::whereKey($data['ids'])->get();
@@ -59,8 +66,7 @@ class RoleController extends Controller
     public function destroy(Role $role)
     {
         if (isset($role)) {
-            $superAdminId = 1;
-            $isNotSuperAdmin = (Role::count() > 1) && $role->id != $superAdminId;
+            $isNotSuperAdmin = (Role::count() > 1) && $role->name !== 'Super Admin';
             if ($isNotSuperAdmin) {
                 $role->delete();
                 $this->clearAuthCache();
@@ -69,11 +75,24 @@ class RoleController extends Controller
             }
         }
 
-        return \redirect()->back()->withErrors('Super Admin Can\'t be Deleted');
+        return \redirect()->back()->with('error', __('The Super Admin role cannot be deleted.'));
+    }
+
+    /** Non-Super-Admins can only hand out permissions they hold themselves. */
+    protected function ensureGrantable(array $permissionIds): void
+    {
+        $actor = request()->user();
+        if ($actor->hasRole('Super Admin')) {
+            return;
+        }
+        $own = $actor->getAllPermissions()->pluck('id');
+        abort_if(collect($permissionIds)->map(fn ($id) => (int) $id)->diff($own)->isNotEmpty(), 403,
+            __('You can only grant permissions you have yourself.'));
     }
 
     protected function clearAuthCache(): void
     {
-        cache()->increment('auth_version', 1);
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        cache()->forever('auth_version', time());
     }
 }

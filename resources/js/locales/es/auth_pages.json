@@ -1,0 +1,21 @@
+{
+    "login_title": "Bienvenido de nuevo",
+    "login_subtitle": "Inicie sesión para gestionar su tienda",
+    "register_title": "Cree su cuenta",
+    "register_subtitle": "Un administrador asignará sus permisos",
+    "forgot_title": "¿Olvidó su contraseña?",
+    "forgot_subtitle": "Introduzca su correo y le enviaremos un enlace",
+    "reset_subtitle": "Elija una nueva contraseña",
+    "confirm_title": "Confirmar contraseña",
+    "confirm_subtitle": "Esta es un área segura. Confirme su contraseña para continuar.",
+    "back_to_login": "Volver al inicio de sesión",
+    "no_account": "¿No tiene cuenta?",
+    "name": "Nombre completo",
+    "new_password": "Nueva contraseña",
+    "password_prompt": "Use 8+ caracteres con letras y números",
+    "weak": "Débil",
+    "medium": "Media",
+    "strong": "Fuerte",
+    "verify_intro": "¡Gracias por registrarse! Verifique su correo con el enlace que enviamos. ¿No lo recibió? Podemos enviar otro.",
+    "resend_verification": "Reenviar correo de verificación"
+}

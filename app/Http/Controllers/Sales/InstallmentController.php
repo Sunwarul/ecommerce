@@ -91,6 +91,8 @@ class InstallmentController extends Controller
         $mode = $request->get('mode', 'agreements'); // agreements | schedules
 
         if ($request->filled('export')) {
+            abort_unless($request->user()->can('Report Export'), 403);
+
             return $this->export($request, $mode);
         }
 
@@ -233,7 +235,7 @@ class InstallmentController extends Controller
 
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($data['order_id']);
         if ($order->status !== 'completed') {
-            throw ValidationException::withMessages(['order_id' => ['Only completed orders can be converted to installments.']]);
+            throw ValidationException::withMessages(['order_id' => [__('Only completed orders can be converted to installments.')]]);
         }
 
         $sale = DB::transaction(function () use ($order, $data) {
@@ -244,7 +246,7 @@ class InstallmentController extends Controller
             return $this->service->createForOrder($order, $data['installment'], Auth::id());
         });
 
-        return redirect()->route('installments.show', $sale->id)->with('success', 'Installment agreement created.');
+        return redirect()->route('installments.show', $sale->id)->with('success', __('Installment agreement created.'));
     }
 
     public function collect(Request $request, InstallmentSale $installment)
@@ -260,14 +262,14 @@ class InstallmentController extends Controller
 
         $result = DB::transaction(fn () => $this->service->collect($installment, $data['payments'], Auth::id()));
 
-        return back()->with('success', 'Collected '.number_format($result['collected'], 2).'.');
+        return back()->with('success', __('Collected :amount.', ['amount' => number_format($result['collected'], 2)]));
     }
 
     public function waiveLateFee(InstallmentSchedule $schedule)
     {
         $amount = DB::transaction(fn () => $this->service->waiveLateFee($schedule));
 
-        return back()->with('success', 'Late fee waived: '.number_format($amount, 2));
+        return back()->with('success', __('Late fee waived: :amount', ['amount' => number_format($amount, 2)]));
     }
 
     public function updateStatus(Request $request, InstallmentSale $installment)
@@ -285,7 +287,7 @@ class InstallmentController extends Controller
             }
         });
 
-        return back()->with('success', 'Agreement status updated.');
+        return back()->with('success', __('Agreement status updated.'));
     }
 
     public function update(Request $request, InstallmentSale $installment)
@@ -301,6 +303,6 @@ class InstallmentController extends Controller
 
         $installment->update($data);
 
-        return back()->with('success', 'Agreement updated.');
+        return back()->with('success', __('Agreement updated.'));
     }
 }

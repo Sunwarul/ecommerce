@@ -11,30 +11,31 @@ class RolePermissionSeeder extends Seeder
     /**
      * Run the database seeds.
      */
+    /**
+     * Safe to run any time (including production): creates missing permissions and the Super Admin
+     * role, never deletes roles, permissions or assignments.
+     */
     public function run(): void
     {
-        // foregin key checks disabled
-        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        Role::truncate();
-        Permission::truncate();
-        \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        $names = array_unique(array_merge(
+            $this->getPermissions(),
+            \App\Http\Middleware\AuthorizeRoutePermission::allPermissionNames(),
+        ));
 
-        if (Permission::count() == 0) {
-            foreach ($this->getPermissions() as $permissionName) {
-                Permission::create(['name' => $permissionName]);
-            }
+        foreach ($names as $permissionName) {
+            Permission::findOrCreate($permissionName, 'web');
         }
 
-        if (Role::count() == 0) {
-            $role = Role::create(['name' => 'Super Admin']);
-            $permissions = Permission::all();
-            $role->syncPermissions($permissions);
-        }
+        $role = Role::findOrCreate('Super Admin', 'web');
+        $role->syncPermissions(Permission::where('guard_name', 'web')->get());
 
-        $user = \App\Models\User::first();
-        if ($user && ! $user->hasRole('Super Admin')) {
+        $user = \App\Models\User::orderBy('id')->first();
+        if ($user && ! \App\Models\User::role('Super Admin')->exists()) {
             $user->assignRole('Super Admin');
         }
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        cache()->forever('auth_version', time());
     }
 
     private function getPermissions(): array

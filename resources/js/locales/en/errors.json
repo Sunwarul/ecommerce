@@ -1,0 +1,21 @@
+{
+    "403": {
+        "title": "Access denied",
+        "description": "You don't have permission to open this page. Ask an administrator to give your role access."
+    },
+    "404": {
+        "title": "Page not found",
+        "description": "The page you're looking for doesn't exist or was moved."
+    },
+    "500": {
+        "title": "Something went wrong",
+        "description": "An unexpected error occurred. It has been logged — please try again in a moment."
+    },
+    "503": {
+        "title": "Down for maintenance",
+        "description": "We're updating the system. Please check back in a few minutes."
+    },
+    "go_back": "Go back",
+    "dashboard": "Dashboard",
+    "sign_in": "Sign in"
+}

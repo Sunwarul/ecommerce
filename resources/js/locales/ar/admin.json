@@ -1,0 +1,40 @@
+{
+    "users": {
+        "name": "الاسم الكامل",
+        "email": "البريد الإلكتروني",
+        "phone": "الهاتف",
+        "password": "كلمة المرور",
+        "password_confirmation": "تأكيد كلمة المرور",
+        "password_edit_note": "اترك حقلي كلمة المرور فارغين للإبقاء على كلمة المرور الحالية.",
+        "roles": "الأدوار",
+        "select_roles": "اختر الأدوار",
+        "no_role": "بلا دور",
+        "branch": "الفرع",
+        "select_branch": "اختر الفرع",
+        "avatar": "صورة الملف الشخصي",
+        "account": "الحساب",
+        "access": "الوصول"
+    },
+    "roles": {
+        "name": "اسم الدور",
+        "name_placeholder": "مثال: أمين الصندوق",
+        "permissions": "الصلاحيات",
+        "permissions_count": "{count} صلاحية",
+        "selected_count": "تم تحديد {selected} من {total}",
+        "search_permissions": "تصفية الصلاحيات…",
+        "select_all": "تحديد الكل",
+        "clear_all": "إلغاء الكل",
+        "group_all": "الكل",
+        "no_match": "لا توجد صلاحيات مطابقة.",
+        "super_admin_note": "المسؤول الأعلى يملك جميع الصلاحيات ولا يمكن حذفه."
+    },
+    "permissions": {
+        "name": "اسم الصلاحية",
+        "name_hint": "الصيغة: الوحدة الإجراء، مثل \"Product Export\". يتحقق النظام من الصلاحية بهذا الاسم بالضبط.",
+        "locked_note": "تُستخدم الصلاحيات بالاسم داخل النظام، لذلك تم تعطيل تعديلها وحذفها.",
+        "module": "الوحدة"
+    },
+    "expenses": {
+        "receipt_hint": "صورة أو ملف PDF للإيصال (اختياري)"
+    }
+}

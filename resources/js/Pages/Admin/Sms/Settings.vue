@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputNumber from "primevue/inputnumber";
@@ -20,10 +20,12 @@ import Textarea from "primevue/textarea";
 import ToggleSwitch from "primevue/toggleswitch";
 import { useToast } from "primevue/usetoast";
 import { useFlashToast } from "@/Composables/useFlashToast";
+import { useI18n } from "vue-i18n";
 import { dateTime, firstError, money } from "@/Helpers/format";
 
 useFlashToast();
 const toast = useToast();
+const { t, te } = useI18n();
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
@@ -34,22 +36,16 @@ const props = defineProps({
     placeholders: { type: Array, default: () => [] },
 });
 
-const onError = (errors) => toast.add({ severity: "error", summary: "Error", detail: firstError(errors), life: 4000 });
+const onError = (errors) => toast.add({ severity: "error", summary: t("shared.terms.error"), detail: firstError(errors), life: 4000 });
+const eventLabel = (key, fallback) => (te(`sms.events.${key}`) ? t(`sms.events.${key}`) : fallback || key);
 
 // ---------------- General ----------------
 const general = reactive({ ...props.settings });
 const eventToggles = reactive(Object.fromEntries(props.events.map((e) => [e.key, !!e.enabled])));
 const savingGeneral = ref(false);
 
-const deliveryModes = [
-    { label: "Send right after the request (no worker needed)", value: "after_response" },
-    { label: "Queue worker (php artisan queue:work)", value: "queue" },
-    { label: "Immediately (slower)", value: "sync" },
-];
-const roundingOptions = [
-    { label: "Round installments to whole amount", value: "integer" },
-    { label: "Keep decimals", value: "none" },
-];
+const deliveryModes = computed(() => ["after_response", "queue", "sync"].map((v) => ({ label: t(`sms.settings.delivery.${v}`), value: v })));
+const roundingOptions = computed(() => ["integer", "none"].map((v) => ({ label: t(`sms.settings.rounding.${v}`), value: v })));
 
 function saveGeneral() {
     savingGeneral.value = true;
@@ -98,7 +94,7 @@ function saveGateway() {
 }
 
 function deleteGateway(g) {
-    if (!confirm(`Delete gateway "${g.name}"?`)) return;
+    if (!confirm(t("sms.settings.confirm_delete_gateway", { name: g.name }))) return;
     router.delete(route("sms.gateways.destroy", g.id), { preserveScroll: true, onError });
 }
 
@@ -158,19 +154,28 @@ function insertInto(tpl, ph) {
     }
 }
 
+const savingTpl = ref(null);
 function saveTemplate(tpl) {
-    router.put(route("sms.templates.update", tpl.id), { name: tpl.name, body: tpl.body, is_active: tpl.is_active }, { preserveScroll: true, onError });
+    savingTpl.value = tpl.id;
+    router.put(route("sms.templates.update", tpl.id), { name: tpl.name, body: tpl.body, is_active: tpl.is_active }, {
+        preserveScroll: true,
+        onError,
+        onFinish: () => (savingTpl.value = null),
+    });
 }
 function deleteTemplate(tpl) {
-    if (!confirm(`Delete template "${tpl.name}"?`)) return;
+    if (!confirm(t("sms.settings.confirm_delete_template", { name: tpl.name }))) return;
     router.delete(route("sms.templates.destroy", tpl.id), { preserveScroll: true, onError });
 }
 
 const showNewTpl = ref(false);
 const newTpl = reactive({ name: "", body: "" });
+const creatingTpl = ref(false);
 function createTemplate() {
+    creatingTpl.value = true;
     router.post(route("sms.templates.store"), { ...newTpl }, {
         preserveScroll: true,
+        onFinish: () => (creatingTpl.value = false),
         onSuccess: () => {
             showNewTpl.value = false;
             newTpl.name = "";
@@ -182,23 +187,23 @@ function createTemplate() {
 </script>
 
 <template>
-    <Head title="SMS Settings" />
+    <Head :title="t('sms.settings_title')" />
     <AuthenticatedLayout>
         <div class="p-4 md:p-6 space-y-4 max-w-5xl mx-auto">
             <div class="flex flex-wrap justify-between items-start gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold text-slate-800 flex items-center gap-2"><i class="pi pi-cog text-primary" /> SMS Settings</h2>
-                    <p class="text-sm text-slate-500">Turn SMS on/off, configure vendors and message templates</p>
+                    <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2"><i class="pi pi-cog text-primary" /> {{ t('sms.settings_title') }}</h1>
+                    <p class="text-sm text-slate-500">{{ t('sms.settings.subtitle') }}</p>
                 </div>
-                <Link :href="route('sms.dashboard')"><Button label="SMS Dashboard" icon="pi pi-chart-bar" size="small" severity="secondary" outlined /></Link>
+                <Link :href="route('sms.dashboard')"><Button :label="t('sms.dashboard.title')" icon="pi pi-chart-pie" size="small" severity="secondary" outlined /></Link>
             </div>
 
             <div class="card p-0 md:p-2">
-                <Tabs value="general">
+                <Tabs value="general" scrollable>
                     <TabList>
-                        <Tab value="general">General</Tab>
-                        <Tab value="gateways">Gateways</Tab>
-                        <Tab value="templates">Templates</Tab>
+                        <Tab value="general"><i class="pi pi-sliders-h me-2" />{{ t('sms.settings.tab_general') }}</Tab>
+                        <Tab value="gateways"><i class="pi pi-server me-2" />{{ t('sms.settings.tab_gateways') }}</Tab>
+                        <Tab value="templates"><i class="pi pi-file-edit me-2" />{{ t('sms.settings.tab_templates') }}</Tab>
                     </TabList>
                     <TabPanels>
                         <!-- GENERAL -->
@@ -207,48 +212,48 @@ function createTemplate() {
                                 <div class="flex items-center justify-between gap-4 p-3 rounded-xl border"
                                     :class="general.sms_enabled ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'">
                                     <div>
-                                        <div class="font-semibold text-slate-800">SMS sending</div>
-                                        <div class="text-xs text-slate-500">Master switch. When off, no SMS (automatic or manual) is sent.</div>
+                                        <div class="font-semibold text-slate-800">{{ t('sms.settings.master') }}</div>
+                                        <div class="text-xs text-slate-500">{{ t('sms.settings.master_help') }}</div>
                                     </div>
-                                    <ToggleSwitch v-model="general.sms_enabled" />
+                                    <ToggleSwitch v-model="general.sms_enabled" :aria-label="t('sms.settings.master')" />
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="text-xs text-slate-500 block mb-1">Country code</label>
-                                        <InputText v-model="general.sms_country_code" class="w-full" placeholder="880" />
-                                        <div class="text-[11px] text-slate-500 mt-1">Local numbers like 01712345678 become 8801712345678.</div>
+                                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.country_code') }}</label>
+                                        <InputText v-model="general.sms_country_code" class="w-full ltr-nums" inputmode="numeric" placeholder="880" />
+                                        <div class="text-[11px] text-slate-500 mt-1">{{ t('sms.settings.country_code_help') }}</div>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-slate-500 block mb-1">Delivery mode</label>
+                                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.delivery_mode') }}</label>
                                         <Select v-model="general.sms_delivery_mode" :options="deliveryModes" optionLabel="label" optionValue="value" class="w-full" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-slate-500 block mb-1">Installment reminder (days before due)</label>
+                                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.reminder_days') }}</label>
                                         <InputNumber v-model="general.sms_installment_reminder_days" :min="0" :max="30" class="w-full" inputClass="w-full" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-slate-500 block mb-1">Installment rounding</label>
+                                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.installment_rounding') }}</label>
                                         <Select v-model="general.installment_rounding" :options="roundingOptions" optionLabel="label" optionValue="value" class="w-full" />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <div class="font-semibold text-slate-700 mb-2">Automatic messages</div>
+                                    <div class="font-semibold text-slate-700 mb-2">{{ t('sms.settings.automatic') }}</div>
                                     <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl">
                                         <div v-for="e in events" :key="e.key" class="flex items-center justify-between gap-3 px-3 py-2.5">
                                             <div>
-                                                <div class="text-sm text-slate-800">{{ e.label }}</div>
+                                                <div class="text-sm text-slate-800">{{ eventLabel(e.key, e.label) }}</div>
                                                 <div class="text-[11px] text-slate-500">{{ e.key }}</div>
                                             </div>
-                                            <ToggleSwitch v-model="eventToggles[e.key]" :disabled="!general.sms_enabled" />
+                                            <ToggleSwitch v-model="eventToggles[e.key]" :disabled="!general.sms_enabled" :aria-label="eventLabel(e.key, e.label)" />
                                         </div>
                                     </div>
-                                    <div class="text-[11px] text-slate-500 mt-1">Reminders and overdue notices are sent by the daily scheduler (php artisan schedule:run).</div>
+                                    <div class="text-[11px] text-slate-500 mt-1">{{ t('sms.settings.scheduler_note') }}</div>
                                 </div>
 
                                 <div class="flex justify-end">
-                                    <Button label="Save settings" icon="pi pi-save" :loading="savingGeneral" @click="saveGeneral" />
+                                    <Button :label="t('sms.settings.save_settings')" icon="pi pi-save" :loading="savingGeneral" @click="saveGeneral" />
                                 </div>
                             </div>
                         </TabPanel>
@@ -258,9 +263,9 @@ function createTemplate() {
                             <div class="space-y-4">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <p class="text-xs text-slate-500 max-w-xl">
-                                        Vendor endpoints for BulkSMSBD / Alpha SMS / Greenweb follow their public docs — verify with your vendor; use Generic HTTP for any other provider.
+                                        {{ t('sms.settings.vendor_note') }}
                                     </p>
-                                    <Button label="Add gateway" icon="pi pi-plus" size="small" @click="openGateway()" />
+                                    <Button :label="t('sms.settings.add_gateway')" icon="pi pi-plus" size="small" @click="openGateway()" />
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -268,27 +273,27 @@ function createTemplate() {
                                         <div class="flex items-start justify-between gap-2">
                                             <div class="min-w-0">
                                                 <div class="font-semibold text-slate-800 truncate">{{ g.name }}</div>
-                                                <div class="text-xs text-slate-500">{{ driverLabel(g.driver) }}<span v-if="g.sender_id"> · Sender: {{ g.sender_id }}</span></div>
+                                                <div class="text-xs text-slate-500">{{ driverLabel(g.driver) }}<span v-if="g.sender_id"> · {{ t('sms.settings.sender') }}: {{ g.sender_id }}</span></div>
                                             </div>
                                             <div class="flex gap-1 shrink-0">
-                                                <Tag v-if="g.is_default" value="Default" severity="info" />
-                                                <Tag :value="g.is_active ? 'Active' : 'Inactive'" :severity="g.is_active ? 'success' : 'secondary'" />
+                                                <Tag v-if="g.is_default" :value="t('sms.default')" severity="info" />
+                                                <Tag :value="g.is_active ? t('shared.status.active') : t('shared.status.inactive')" :severity="g.is_active ? 'success' : 'secondary'" />
                                             </div>
                                         </div>
                                         <div class="text-sm text-slate-700">
-                                            Balance: <b>{{ g.balance !== null && g.balance !== undefined ? money(g.balance) : "—" }}</b>
-                                            <span class="text-xs text-slate-500 ml-1">{{ g.balance_checked_at ? "(" + dateTime(g.balance_checked_at) + ")" : "" }}</span>
+                                            {{ t('shared.terms.balance') }}: <b class="ltr-nums">{{ g.balance !== null && g.balance !== undefined ? money(g.balance) : "—" }}</b>
+                                            <span class="text-xs text-slate-500 ms-1">{{ g.balance_checked_at ? "(" + dateTime(g.balance_checked_at) + ")" : "" }}</span>
                                         </div>
                                         <div class="flex flex-wrap gap-1">
-                                            <Button label="Edit" icon="pi pi-pencil" size="small" outlined @click="openGateway(g)" />
-                                            <Button label="Test" icon="pi pi-send" size="small" outlined severity="secondary" @click="openTest(g)" />
-                                            <Button v-if="drivers.find((d) => d.value === g.driver)?.supports_balance" label="Balance" icon="pi pi-wallet" size="small" outlined
+                                            <Button :label="t('common.edit')" icon="pi pi-pencil" size="small" outlined @click="openGateway(g)" />
+                                            <Button :label="t('sms.settings.test')" icon="pi pi-send" size="small" outlined severity="secondary" @click="openTest(g)" />
+                                            <Button v-if="drivers.find((d) => d.value === g.driver)?.supports_balance" :label="t('shared.terms.balance')" icon="pi pi-wallet" size="small" outlined
                                                 severity="secondary" :loading="checking === g.id" @click="checkBalance(g)" />
-                                            <Button icon="pi pi-trash" size="small" text severity="danger" @click="deleteGateway(g)" v-tooltip.top="'Delete'" />
+                                            <Button icon="pi pi-trash" size="small" text severity="danger" @click="deleteGateway(g)" v-tooltip.top="t('common.delete')" :aria-label="t('common.delete')" />
                                         </div>
                                     </div>
                                     <div v-if="!gateways.length" class="text-sm text-slate-500 p-4 border border-dashed border-slate-300 rounded-xl">
-                                        No gateway yet. Add your SMS vendor to start sending.
+                                        {{ t('sms.settings.no_gateway') }}
                                     </div>
                                 </div>
                             </div>
@@ -299,26 +304,27 @@ function createTemplate() {
                             <div class="space-y-4">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <div class="flex flex-wrap gap-1">
-                                        <span v-for="ph in placeholders" :key="ph" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">{{ ph }}</span>
+                                        <span class="text-xs text-slate-500 w-full">{{ t('sms.settings.placeholders_help') }}</span>
+                                        <span v-for="ph in placeholders" :key="ph" dir="ltr" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">{{ ph }}</span>
                                     </div>
-                                    <Button label="New template" icon="pi pi-plus" size="small" @click="showNewTpl = true" />
+                                    <Button :label="t('sms.settings.new_template')" icon="pi pi-plus" size="small" @click="showNewTpl = true" />
                                 </div>
 
                                 <div v-for="tpl in tplForms" :key="tpl.id" class="border border-slate-200 rounded-xl p-4 space-y-2">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <InputText v-model="tpl.name" class="flex-1 min-w-[180px]" size="small" />
+                                        <InputText v-model="tpl.name" dir="auto" class="flex-1 min-w-0 sm:min-w-[180px]" size="small" :aria-label="t('common.name')" />
                                         <span class="text-[11px] text-slate-500">{{ tpl.key }}</span>
-                                        <label class="flex items-center gap-2 text-xs text-slate-600 ml-auto">Active <ToggleSwitch v-model="tpl.is_active" /></label>
+                                        <label class="flex items-center gap-2 text-xs text-slate-600 ms-auto">{{ t('shared.status.active') }} <ToggleSwitch v-model="tpl.is_active" /></label>
                                     </div>
-                                    <Textarea :ref="(el) => (tplRefs[tpl.id] = el)" v-model="tpl.body" rows="3" class="w-full text-sm" />
+                                    <Textarea :ref="(el) => (tplRefs[tpl.id] = el)" v-model="tpl.body" rows="3" dir="auto" class="w-full text-sm" />
                                     <div class="flex flex-wrap items-center gap-1">
                                         <Button v-for="ph in placeholders" :key="ph" :label="ph" size="small" text class="!text-[11px] !px-1.5 !py-0.5" @click="insertInto(tpl, ph)" />
                                     </div>
                                     <div class="flex flex-wrap items-center justify-between gap-2">
-                                        <span class="text-xs text-slate-500">{{ parts(tpl.body).len }} chars · {{ parts(tpl.body).parts }} part(s){{ parts(tpl.body).unicode ? " · Unicode" : "" }}</span>
+                                        <span class="text-xs text-slate-500">{{ t('sms.counter', { chars: parts(tpl.body).len, parts: parts(tpl.body).parts }) }}{{ parts(tpl.body).unicode ? " · Unicode" : "" }}</span>
                                         <div class="flex gap-1">
-                                            <Button v-if="tpl.key.startsWith('custom_')" icon="pi pi-trash" size="small" text severity="danger" @click="deleteTemplate(tpl)" />
-                                            <Button label="Save" icon="pi pi-save" size="small" @click="saveTemplate(tpl)" />
+                                            <Button v-if="tpl.key.startsWith('custom_')" icon="pi pi-trash" size="small" text severity="danger" :aria-label="t('common.delete')" @click="deleteTemplate(tpl)" />
+                                            <Button :label="t('shared.terms.save')" icon="pi pi-save" size="small" :loading="savingTpl === tpl.id" @click="saveTemplate(tpl)" />
                                         </div>
                                     </div>
                                 </div>
@@ -330,24 +336,24 @@ function createTemplate() {
         </div>
 
         <!-- Gateway dialog -->
-        <Dialog v-model:visible="showGateway" modal :header="editingId ? 'Edit gateway' : 'Add gateway'" :style="{ width: '560px' }" :breakpoints="{ '640px': '95vw' }">
+        <Dialog v-model:visible="showGateway" modal :header="editingId ? t('sms.settings.edit_gateway') : t('sms.settings.add_gateway')" :style="{ width: '560px' }" :breakpoints="{ '640px': '95vw' }">
             <div class="space-y-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Name *</label>
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('common.name') }} *</label>
                         <InputText v-model="gForm.name" class="w-full" />
                     </div>
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Driver *</label>
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.driver') }} *</label>
                         <Select v-model="gForm.driver" :options="drivers" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Sender ID / From</label>
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.sender_id') }}</label>
                         <InputText v-model="gForm.sender_id" class="w-full" />
                     </div>
                     <div class="flex items-end gap-4 pb-1">
-                        <label class="flex items-center gap-2 text-sm text-slate-700"><ToggleSwitch v-model="gForm.is_active" /> Active</label>
-                        <label class="flex items-center gap-2 text-sm text-slate-700"><ToggleSwitch v-model="gForm.is_default" /> Default</label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700"><ToggleSwitch v-model="gForm.is_active" /> {{ t('shared.status.active') }}</label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700"><ToggleSwitch v-model="gForm.is_default" /> {{ t('sms.default') }}</label>
                     </div>
                 </div>
 
@@ -355,53 +361,53 @@ function createTemplate() {
                     <div v-for="field in currentDriver.fields" :key="field.key">
                         <label class="text-xs text-slate-500 block mb-1">{{ field.label }}</label>
                         <Select v-if="field.type === 'select'" v-model="gForm.credentials[field.key]" :options="field.options" class="w-full" />
-                        <Textarea v-else-if="field.type === 'textarea'" v-model="gForm.credentials[field.key]" rows="3" class="w-full text-sm" />
-                        <InputText v-else v-model="gForm.credentials[field.key]" :type="field.type === 'password' ? 'password' : 'text'" class="w-full" autocomplete="off" />
+                        <Textarea v-else-if="field.type === 'textarea'" v-model="gForm.credentials[field.key]" rows="3" dir="ltr" class="w-full text-sm font-mono" />
+                        <InputText v-else v-model="gForm.credentials[field.key]" :type="field.type === 'password' ? 'password' : 'text'" dir="ltr" class="w-full" autocomplete="off" />
                         <div v-if="field.help" class="text-[11px] text-slate-500 mt-0.5">{{ field.help }}</div>
                     </div>
                 </div>
-                <div v-else class="text-xs text-slate-500">This driver needs no credentials.</div>
+                <div v-else class="text-xs text-slate-500">{{ t('sms.settings.no_credentials') }}</div>
             </div>
             <template #footer>
-                <Button label="Cancel" text @click="showGateway = false" />
-                <Button label="Save" icon="pi pi-save" :loading="gSaving" @click="saveGateway" />
+                <Button :label="t('shared.terms.cancel')" text @click="showGateway = false" />
+                <Button :label="t('shared.terms.save')" icon="pi pi-save" :loading="gSaving" @click="saveGateway" />
             </template>
         </Dialog>
 
         <!-- Test dialog -->
-        <Dialog v-model:visible="showTest" modal :header="'Test ' + (testTarget?.name || '')" :style="{ width: '440px' }" :breakpoints="{ '640px': '95vw' }">
+        <Dialog v-model:visible="showTest" modal :header="t('sms.settings.test_title', { name: testTarget?.name || '' })" :style="{ width: '440px' }" :breakpoints="{ '640px': '95vw' }">
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs text-slate-500 block mb-1">Phone *</label>
-                    <InputText v-model="testForm.phone" class="w-full" placeholder="01712345678" />
+                    <label class="text-xs text-slate-500 block mb-1">{{ t('shared.terms.phone') }} *</label>
+                    <InputText v-model="testForm.phone" type="tel" class="w-full" placeholder="01712345678" />
                 </div>
                 <div>
-                    <label class="text-xs text-slate-500 block mb-1">Message (optional)</label>
-                    <Textarea v-model="testForm.message" rows="3" class="w-full text-sm" />
+                    <label class="text-xs text-slate-500 block mb-1">{{ t('sms.settings.message_optional') }}</label>
+                    <Textarea v-model="testForm.message" rows="3" dir="auto" class="w-full text-sm" />
                 </div>
             </div>
             <template #footer>
-                <Button label="Cancel" text @click="showTest = false" />
-                <Button label="Send test" icon="pi pi-send" :loading="testing" @click="sendTest" />
+                <Button :label="t('shared.terms.cancel')" text @click="showTest = false" />
+                <Button :label="t('sms.settings.send_test')" icon="pi pi-send" :loading="testing" :disabled="!testForm.phone" @click="sendTest" />
             </template>
         </Dialog>
 
         <!-- New template dialog -->
-        <Dialog v-model:visible="showNewTpl" modal header="New template" :style="{ width: '520px' }" :breakpoints="{ '640px': '95vw' }">
+        <Dialog v-model:visible="showNewTpl" modal :header="t('sms.settings.new_template')" :style="{ width: '520px' }" :breakpoints="{ '640px': '95vw' }">
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs text-slate-500 block mb-1">Name *</label>
-                    <InputText v-model="newTpl.name" class="w-full" placeholder="Puja greetings" />
+                    <label class="text-xs text-slate-500 block mb-1">{{ t('common.name') }} *</label>
+                    <InputText v-model="newTpl.name" dir="auto" class="w-full" :placeholder="t('sms.settings.template_name_placeholder')" />
                 </div>
                 <div>
-                    <label class="text-xs text-slate-500 block mb-1">Message *</label>
-                    <Textarea v-model="newTpl.body" rows="4" class="w-full text-sm" />
-                    <div class="text-xs text-slate-500 mt-1">{{ parts(newTpl.body).len }} chars · {{ parts(newTpl.body).parts }} part(s)</div>
+                    <label class="text-xs text-slate-500 block mb-1">{{ t('sms.message') }} *</label>
+                    <Textarea v-model="newTpl.body" rows="4" dir="auto" class="w-full text-sm" />
+                    <div class="text-xs text-slate-500 mt-1">{{ t('sms.counter', { chars: parts(newTpl.body).len, parts: parts(newTpl.body).parts }) }}</div>
                 </div>
             </div>
             <template #footer>
-                <Button label="Cancel" text @click="showNewTpl = false" />
-                <Button label="Create" icon="pi pi-plus" @click="createTemplate" />
+                <Button :label="t('shared.terms.cancel')" text @click="showNewTpl = false" />
+                <Button :label="t('common.create')" icon="pi pi-plus" :loading="creatingTpl" :disabled="!newTpl.name || !newTpl.body" @click="createTemplate" />
             </template>
         </Dialog>
     </AuthenticatedLayout>

@@ -1,40 +1,45 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { useI18n } from 'vue-i18n';
+import { useI18n } from "vue-i18n";
 
 import { resolveImagePath } from "@/Helpers/imageHelper";
-import { firstError } from "@/Helpers/format";
+import { firstError, money } from "@/Helpers/format";
 import { defaultInstallmentConfig, installmentPayload } from "@/Helpers/installment";
+import { useFlashToast } from "@/Composables/useFlashToast";
 import InstallmentConfigurator from "@/Components/Sales/InstallmentConfigurator.vue";
 import EmiPaymentFields from "@/Components/Sales/EmiPaymentFields.vue";
-import SelectButton from "primevue/selectbutton";
-
-const { t } = useI18n();
-
-// PrimeVue
 import SessionBar from "@/Components/POS/SessionBar.vue";
+
 import AutoComplete from "primevue/autocomplete";
 import Badge from "primevue/badge";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Select from "primevue/select";
 import InputGroup from "primevue/inputgroup";
 import InputGroupAddon from "primevue/inputgroupaddon";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
+import Select from "primevue/select";
+import SelectButton from "primevue/selectbutton";
 import Textarea from "primevue/textarea";
+import Tooltip from "primevue/tooltip";
+
+const vTooltip = Tooltip;
+const { t } = useI18n();
+const toast = useToast();
+const page = usePage();
+useFlashToast();
 
 const props = defineProps({
     products: { type: Array, default: () => [] },
-    customers: { type: Array, default: () => [] }, // not required now, but ok
+    customers: { type: Array, default: () => [] },
     paymentMethods: { type: Array, default: () => [] },
     currentSession: { type: Object, default: null },
     warehouses: { type: Array, default: () => [] },
     branches: { type: Array, default: () => [] },
-    order: { type: Object, default: null }, // ✅ Edit Draft Order
+    order: { type: Object, default: null }, // editing a draft
     lastWarrantyInfo: { type: String, default: "" },
     warrantyTemplates: { type: Array, default: () => [] },
     installmentPlans: { type: Array, default: () => [] },
@@ -42,480 +47,280 @@ const props = defineProps({
     emiPaymentMethodId: { type: Number, default: null },
 });
 
-const toast = useToast();
-const page = usePage();
-
-const currentBranchId = computed(() => page.props.auth?.user?.branch_id);
-
-const branchMismatch = computed(() => {
-    if (!posSession.value) return false;
-    return posSession.value.branch_id !== currentBranchId.value;
-});
-
-// session + clock
-const posSession = ref(props.currentSession);
-const now = ref(new Date());
-const showWarrantyDialog = ref(false);
-
-const selectWarrantyTemplate = (template) => {
-    warranty_info.value = template.description;
-    showWarrantyDialog.value = false;
-    toast.add({ severity: 'info', summary: 'Template Applied', detail: template.name, life: 1500 });
-};
-
-const suggestedTemplates = computed(() => {
-    const templates = props.warrantyTemplates || [];
-    if (cartItems.value.length === 0) return templates;
-
-    // Get categories of items in cart
-    const cartCategoryIds = [...new Set(cartItems.value.map(item => {
-        const product = props.products.find(p => p.id === item.product_id);
-        return product?.category_id;
-    }).filter(Boolean))];
-
-    if (cartCategoryIds.length === 0) return templates;
-
-    // Sort: templates matching cart categories first, then those with null category, then others
-    return [...templates].sort((a, b) => {
-        const aMatch = cartCategoryIds.includes(a.category_id);
-        const bMatch = cartCategoryIds.includes(b.category_id);
-
-        if (aMatch && !bMatch) return -1;
-        if (!aMatch && bMatch) return 1;
-
-        if (a.category_id === null && b.category_id !== null) return -1;
-        if (a.category_id !== null && b.category_id === null) return 1;
-
-        return 0;
-    });
-});
-let timer = null;
-
-onMounted(() => {
-    timer = setInterval(() => (now.value = new Date()), 1000);
-});
-onUnmounted(() => {
-    if (timer) clearInterval(timer);
-});
-
-
-
-
-// product search
-// product search
-const search = ref("");
-const warranty_info = ref(props.order ? (props.order.warranty_info || "") : (props.lastWarrantyInfo || ""));
-
-
-// -----------------------------
-// ✅ Customer Remote Search (Backend)
-// -----------------------------
-const selectedCustomer = ref(null); // object or null (walk-in)
-const customerSuggestions = ref([]);
-const customerLoading = ref(false);
-
-let customerSearchTimer = null;
-let customerAbort = null;
-
-function customerLabel(c) {
-    if (!c) return "Walk-in customer";
-    const phone = c.phone ? ` • ${c.phone}` : "";
-    const email = c.email ? ` • ${c.email}` : "";
-    return `${c.name || "Customer"}${phone}${email}`;
-}
-
-// Called by PrimeVue AutoComplete
-function onCustomerComplete(event) {
-    const q = (event.query || "").trim();
-
-    // allow clearing suggestions when empty
-    if (!q) {
-        customerSuggestions.value = [];
-        return;
-    }
-
-    // debounce
-    if (customerSearchTimer) clearTimeout(customerSearchTimer);
-    customerSearchTimer = setTimeout(() => {
-        fetchCustomers(q);
-    }, 300);
-}
-
-
-async function fetchCustomers(q) {
-    try {
-        customerLoading.value = true;
-
-        // cancel previous request
-        if (customerAbort) customerAbort.abort();
-        customerAbort = new AbortController();
-
-        // ✅ backend route (create this route in Laravel)
-        // Example: route('pos.customers.search', { q })
-        const url = route("pos.customers.search", { q });
-
-        const res = await fetch(url, {
-            method: "GET",
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-            signal: customerAbort.signal,
-        });
-
-        if (!res.ok) throw new Error("Customer search failed");
-        const data = await res.json();
-
-        // Expect: { data: [ {id,name,phone,email}, ... ] } OR just array
-        customerSuggestions.value = Array.isArray(data)
-            ? data
-            : data.data || [];
-    } catch (e) {
-        // ignore abort errors
-        if (String(e?.name) === "AbortError") return;
-
-        toast.add({
-            severity: "warn",
-            summary: "Search error",
-            detail: "Could not load customers",
-            life: 2000,
-        });
-    } finally {
-        customerLoading.value = false;
-    }
-}
-
-// cart
-const cartItems = ref([]);
-
-// order discount
-const discountMode = ref("none"); // none | percent | fixed
-const discountValue = ref(0);
-
-// -----------------------------
-// Quick Stock Adjust
-// -----------------------------
-const showAdjustStockDialog = ref(false);
-const adjustSku = ref(null); // which product/variation is being adjusted
-const adjustProduct = ref(null);
-const adjustVariation = ref(null);
-const adjustmentForm = ref({}); // { warehouse_id: new_qty }
-
-function openAdjustStock(product, variation = null) {
-    adjustProduct.value = product;
-    adjustVariation.value = variation;
-    adjustSku.value = variation ? variation.sku : product.sku;
-
-    // reset form
-    const form = {};
-    props.warehouses.forEach(wh => {
-        const stockRecord = product.stocks?.find(s =>
-            s.warehouse_id === wh.id &&
-            s.variation_id === (variation ? variation.id : null)
-        );
-        form[wh.id] = stockRecord ? Number(stockRecord.quantity) : 0;
-    });
-    adjustmentForm.value = form;
-    showAdjustStockDialog.value = true;
-}
-
-function submitQuickAdjust(warehouseId) {
-    const qty = adjustmentForm.value[warehouseId];
-    router.post(route("pos.stock.adjust"), {
-        product_id: adjustProduct.value.id,
-        variation_id: adjustVariation.value?.id || null,
-        warehouse_id: warehouseId,
-        branch_id: posSession.value?.branch_id || props.branches[0]?.id || 1,
-        quantity: qty,
-        note: "Quick adjustment from POS catalog",
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            // we don't close dialog, just show success
-            toast.add({ severity: 'success', summary: 'Updated', detail: 'Stock updated', life: 1500 });
-        }
-    });
-}
-
-
-// -----------------------------
-// Price helpers
-// -----------------------------
+const dialogBreakpoints = { "960px": "75vw", "640px": "95vw" };
 const n = (v) => Number(v || 0);
 
-const getProductUnitPrice = (p) => n(p.base_price);
+// -----------------------------
+// Session, branch & clock
+// -----------------------------
+const posSession = ref(props.currentSession);
+watch(() => props.currentSession, (v) => (posSession.value = v));
 
+const currentBranchId = computed(() => page.props.auth?.user?.branch_id);
+const branchMismatch = computed(() => !!posSession.value && posSession.value.branch_id !== currentBranchId.value);
+const sessionWarehouseName = computed(
+    () => props.warehouses.find((w) => w.id === posSession.value?.warehouse_id)?.name || ""
+);
+
+const now = ref(new Date());
+let clockTimer = null;
+onMounted(() => (clockTimer = setInterval(() => (now.value = new Date()), 1000)));
+onUnmounted(() => clockTimer && clearInterval(clockTimer));
+const clock = computed(() => now.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+
+function ensureSession() {
+    if (posSession.value) return true;
+    toast.add({ severity: "warn", summary: t("pos_screen.no_session"), detail: t("pos_screen.no_session_hint"), life: 2500 });
+    return false;
+}
+
+// Mobile: products and cart are two views switched from a bottom bar
+const mobileView = ref("products"); // products | cart
+
+// -----------------------------
+// Price & stock helpers
+// -----------------------------
+const getProductUnitPrice = (p) => n(p.base_price);
 const getProductDiscountPrice = (p) => {
     const up = getProductUnitPrice(p);
     const dp = n(p.base_discount_price);
     return dp > 0 && dp < up ? dp : null;
 };
-
 const productDiscountPercent = (p) => {
     const up = getProductUnitPrice(p);
     const dp = getProductDiscountPrice(p);
-    if (!dp || up <= 0) return 0;
-    return Math.round(((up - dp) / up) * 100);
+    return !dp || up <= 0 ? 0 : Math.round(((up - dp) / up) * 100);
 };
-
 const getVariationUnitPrice = (v) => n(v.price);
-
 const getVariationDiscountPrice = (v) => {
     const up = getVariationUnitPrice(v);
     const dp = n(v.discount_price);
     return dp > 0 && dp < up ? dp : null;
 };
-
 const variationDiscountPercent = (v) => {
     const up = getVariationUnitPrice(v);
     const dp = getVariationDiscountPrice(v);
-    if (!dp || up <= 0) return 0;
-    return Math.round(((up - dp) / up) * 100);
+    return !dp || up <= 0 ? 0 : Math.round(((up - dp) / up) * 100);
 };
+
+/** Stock rows for a product/variation (variationId null = simple product). */
+const stockRows = (p, variationId = null) => (p?.stocks || []).filter((s) => (s.variation_id ?? null) === variationId);
+const totalStock = (p, variationId = null) => stockRows(p, variationId).reduce((s, r) => s + n(r.quantity), 0);
+/** Stock available in the open session's warehouse — that is where the sale is taken from. */
+const sessionStock = (p, variationId = null) =>
+    stockRows(p, variationId)
+        .filter((r) => r.warehouse_id === posSession.value?.warehouse_id)
+        .reduce((s, r) => s + n(r.quantity), 0);
+const stockTooltip = (p, variationId = null) => {
+    const rows = stockRows(p, variationId);
+    if (!rows.length) return t("pos_screen.no_stock_info");
+    return rows.map((r) => `${r.warehouse?.name || "#" + r.warehouse_id}: ${n(r.quantity).toFixed(0)}`).join("\n");
+};
+const warehouseNames = (p, variationId = null) =>
+    stockRows(p, variationId)
+        .filter((r) => n(r.quantity) > 0)
+        .map((r) => r.warehouse?.name || `#${r.warehouse_id}`);
 
 // -----------------------------
-// Stock helpers
+// Product search + barcode scanner
 // -----------------------------
-const getProductStockTotal = (p) => {
-    if (!p.stocks) return 0;
-    // For simple products, variation_id is null
-    return p.stocks.reduce((sum, s) => {
-        if (!s.variation_id) return sum + Number(s.quantity);
-        return sum;
-    }, 0);
-};
+const search = ref("");
+const searchInput = ref(null);
 
-const getVariationStockTotal = (v, p) => {
-    if (!p.stocks) return 0;
-    return p.stocks.reduce((sum, s) => {
-        if (s.variation_id === v.id) return sum + Number(s.quantity);
-        return sum;
-    }, 0);
-};
-
-const getStockTooltip = (stocks, variationId = null) => {
-    if (!stocks || stocks.length === 0) return "No stock info";
-    const filtered = stocks.filter(s => s.variation_id === variationId);
-    if (filtered.length === 0) return "Out of stock";
-
-    return filtered.map(s => {
-        const whName = s.warehouse?.name || `Warehouse #${s.warehouse_id}`;
-        return `${whName}: ${Number(s.quantity).toFixed(0)}`;
-    }).join('\n');
-};
-
-const getProductWarehouseNames = (stocks, variationId = null) => {
-    if (!stocks || stocks.length === 0) return [];
-    const filtered = stocks.filter(s => s.variation_id === variationId && Number(s.quantity) > 0);
-    return filtered.map(s => s.warehouse?.name || `WH#${s.warehouse_id}`);
-};
-
-// -----------------------------
-// filtered products
-// -----------------------------
 const filteredProducts = computed(() => {
-    let list = props.products || [];
-    if (!search.value) return list;
-
-    const t = search.value.toLowerCase();
+    const list = props.products || [];
+    const q = search.value.trim().toLowerCase();
+    if (!q) return list;
     return list.filter(
         (p) =>
-            (p.name && p.name.toLowerCase().includes(t)) ||
-            (p.sku && p.sku.toLowerCase().includes(t)) ||
-            (p.barcode && p.barcode.toLowerCase().includes(t))
+            p.name?.toLowerCase().includes(q) ||
+            p.sku?.toLowerCase().includes(q) ||
+            p.barcode?.toLowerCase().includes(q) ||
+            (p.variations || []).some((v) => v.sku?.toLowerCase().includes(q))
     );
 });
 
-// -----------------------------
-// variation picker dialog
-// -----------------------------
-const showVariationDialog = ref(false);
-const dialogProduct = ref(null);
-const selectedVariationId = ref(null);
+/** Enter in the search box (what barcode scanners send): add the exact barcode/SKU match. */
+function onSearchEnter() {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return;
 
-const dialogVariations = computed(() => {
-    const p = dialogProduct.value;
-    if (!p) return [];
-    return (p.variations || []).map((v) => ({
-        label: v.sku || `Variation #${v.id}`,
-        value: v.id,
-        raw: v,
-    }));
-});
-
-const selectedVariation = computed(() => {
-    const p = dialogProduct.value;
-    if (!p || !selectedVariationId.value) return null;
-    return (p.variations || []).find((v) => v.id === selectedVariationId.value);
-});
-
-// ✅ Populate if editing draft
-watch(() => props.order, (newOrder) => {
-    if (newOrder) {
-        // Customer
-        if (newOrder.customer) {
-            selectedCustomer.value = newOrder.customer;
-        }
-        if (newOrder.warranty_info) {
-            warranty_info.value = newOrder.warranty_info;
-        }
-
-        let totalLineDiscount = 0;
-
-        // Cart Items
-        if (newOrder.items && Array.isArray(newOrder.items)) {
-            cartItems.value = newOrder.items.map((i) => {
-                const qty = Number(i.quantity) || 1;
-                const unitPrice = Number(i.unit_price) || 0;
-
-                // if we strictly assume unit_price is what was sold
-                const sellPrice = unitPrice;
-
-                // discount_amount in table is total for the line? or per unit?
-                // Usually line_total = (unit * qty) - discount + tax.
-                // But here let's assume discount_amount is TOTAL line discount
-                const lineDisc = Number(i.discount_amount) || 0;
-                const lineTax = Number(i.tax_amount) || 0;
-
-                totalLineDiscount += lineDisc;
-
-                return {
-                    product_id: i.product_id,
-                    variation_id: i.variation_id,
-                    name: i.name,
-                    sku: i.sku,
-                    unit_price: unitPrice,
-                    sell_price: sellPrice,
-                    quantity: qty,
-
-                    // we can't easily revert to original base price if not stored
-                    // so we assume discount_price is 0 for editing purpose unless we refetch product
-                    discount_price: 0,
-
-                    line_discount_amount: lineDisc,
-                    tax_amount: lineTax,
-                };
-            });
-        }
-
-        // Order Discount
-        // Total discount stored in order = sum(line discounts) + order_discount
-        const totalOrderDiscount = Number(newOrder.discount_amount) || 0;
-        const diff = totalOrderDiscount - totalLineDiscount;
-
-        if (diff > 0.01) {
-            discountMode.value = 'fixed';
-            discountValue.value = diff;
-        } else {
-            discountMode.value = 'none';
-            discountValue.value = 0;
+    for (const p of props.products) {
+        const variation = (p.variations || []).find((v) => v.sku?.toLowerCase() === q);
+        if (variation) {
+            addVariationToCart(p, variation);
+            search.value = "";
+            return;
         }
     }
-}, { immediate: true });
-
-function formatCurrency(value) {
-    if (value === undefined || value === null) {
-        return "";
+    const exact = props.products.filter((p) => p.barcode?.toLowerCase() === q || p.sku?.toLowerCase() === q);
+    const match = exact.length === 1 ? exact[0] : filteredProducts.value.length === 1 ? filteredProducts.value[0] : null;
+    if (match) {
+        addProduct(match);
+        search.value = "";
+        return;
     }
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: page.props.currency || "BDT",
-    }).format(value);
+    toast.add({ severity: "warn", summary: t("pos_screen.not_found", { code: search.value.trim() }), life: 2000 });
 }
-function ensureSession() {
-    if (posSession.value) return true;
+
+// -----------------------------
+// Customer remote search
+// -----------------------------
+const selectedCustomer = ref(null); // object or null (walk-in)
+const customerSuggestions = ref([]);
+const customerLoading = ref(false);
+let customerSearchTimer = null;
+let customerAbort = null;
+
+function customerLabel(c) {
+    if (!c) return t("shared.terms.walk_in");
+    return [c.name, c.phone, c.email].filter(Boolean).join(" • ");
+}
+
+function onCustomerComplete(event) {
+    const q = (event.query || "").trim();
+    if (!q) {
+        customerSuggestions.value = [];
+        return;
+    }
+    clearTimeout(customerSearchTimer);
+    customerSearchTimer = setTimeout(() => fetchCustomers(q), 300);
+}
+
+async function fetchCustomers(q) {
+    try {
+        customerLoading.value = true;
+        customerAbort?.abort();
+        customerAbort = new AbortController();
+        const res = await fetch(route("pos.customers.search", { q }), {
+            headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+            signal: customerAbort.signal,
+        });
+        if (!res.ok) throw new Error("Customer search failed");
+        const data = await res.json();
+        customerSuggestions.value = Array.isArray(data) ? data : data.data || [];
+    } catch (e) {
+        if (String(e?.name) === "AbortError") return;
+        toast.add({ severity: "warn", summary: t("pos_screen.search_error"), detail: t("pos_screen.search_error_detail"), life: 2000 });
+    } finally {
+        customerLoading.value = false;
+    }
+}
+
+// -----------------------------
+// Warranty
+// -----------------------------
+const warranty_info = ref(props.order ? props.order.warranty_info || "" : props.lastWarrantyInfo || "");
+const showWarrantyDialog = ref(false);
+
+function selectWarrantyTemplate(template) {
+    warranty_info.value = template.description;
+    showWarrantyDialog.value = false;
+    toast.add({ severity: "info", summary: t("pos_screen.template_applied"), detail: template.name, life: 1500 });
+}
+
+// -----------------------------
+// Cart
+// -----------------------------
+const cartItems = ref([]);
+const discountMode = ref("none"); // none | percent | fixed
+const discountValue = ref(0);
+const discountOptions = computed(() => [
+    { label: t("pos_screen.discount_none"), value: "none" },
+    { label: t("pos_screen.discount_percent"), value: "percent" },
+    { label: t("pos_screen.discount_fixed"), value: "fixed" },
+]);
+
+const cartQuantity = computed(() => cartItems.value.reduce((s, i) => s + n(i.quantity), 0));
+
+/** Max quantity sellable for a cart line from the session warehouse (null = unknown / no session). */
+function lineMax(item) {
+    if (!posSession.value) return null;
+    const p = props.products.find((x) => x.id === item.product_id);
+    return p ? sessionStock(p, item.variation_id ?? null) : null;
+}
+
+function warnStock(name, available) {
     toast.add({
         severity: "warn",
-        summary: "No session",
-        detail: "Please open POS session first",
+        summary: t("pos_screen.stock_limit"),
+        detail: t("pos_screen.stock_limit_detail", { name, qty: available }),
         life: 2500,
     });
-    return false;
 }
 
-// -----------------------------
-// Add to cart
-// -----------------------------
+/** Adds one unit of a line, respecting the session warehouse stock. */
+function pushLine(line, product, variationId) {
+    const available = sessionStock(product, variationId);
+    const found = cartItems.value.find((i) => i.product_id === line.product_id && (i.variation_id ?? null) === variationId);
+    const nextQty = (found?.quantity || 0) + 1;
+    if (nextQty > available) {
+        warnStock(line.name, available);
+        return false;
+    }
+    if (found) found.quantity = nextQty;
+    else cartItems.value.push(line);
+    return true;
+}
+
+// Clamp manual quantity edits to stock
+watch(
+    () => cartItems.value.map((i) => i.quantity),
+    () => {
+        for (const item of cartItems.value) {
+            const max = lineMax(item);
+            if (max !== null && n(item.quantity) > max) {
+                warnStock(item.name, max);
+                item.quantity = Math.max(1, max);
+            }
+        }
+    }
+);
+
 function addProduct(product) {
     if (!ensureSession()) return;
-
     if (product.type === "variable") {
         dialogProduct.value = product;
         selectedVariationId.value = null;
         showVariationDialog.value = true;
         return;
     }
-
-    addSimpleToCart(product);
-}
-
-function addSimpleToCart(product) {
-    const sellPrice =
-        getProductDiscountPrice(product) ?? getProductUnitPrice(product);
-
-    const found = cartItems.value.find(
-        (i) => i.product_id === product.id && !i.variation_id
-    );
-
-    if (found) {
-        found.quantity += 1;
-        return;
-    }
-
-    cartItems.value.push({
-        product_id: product.id,
-        variation_id: null,
-        name: product.name,
-        sku: product.sku,
-        unit_price: getProductUnitPrice(product),
-        discount_price: getProductDiscountPrice(product),
-        sell_price: sellPrice,
-        quantity: 1,
-        line_discount_amount: 0,
-        tax_amount: 0,
-    });
-}
-
-function confirmAddVariation() {
-    const p = dialogProduct.value;
-    const v = selectedVariation.value;
-
-    if (!p || !v) {
-        toast.add({
-            severity: "warn",
-            summary: "Select variation",
-            detail: "Please select a variation first",
-            life: 2000,
-        });
-        return;
-    }
-
-    const sellPrice = getVariationDiscountPrice(v) ?? getVariationUnitPrice(v);
-
-    const found = cartItems.value.find(
-        (i) => i.product_id === p.id && i.variation_id === v.id
-    );
-
-    if (found) {
-        found.quantity += 1;
-    } else {
-        cartItems.value.push({
-            product_id: p.id,
-            variation_id: v.id,
-            name: `${p.name} (${v.sku})`,
-            sku: v.sku || p.sku,
-            unit_price: getVariationUnitPrice(v),
-            discount_price: getVariationDiscountPrice(v),
-            sell_price: sellPrice,
+    pushLine(
+        {
+            product_id: product.id,
+            variation_id: null,
+            name: product.name,
+            sku: product.sku,
+            unit_price: getProductUnitPrice(product),
+            discount_price: getProductDiscountPrice(product),
+            sell_price: getProductDiscountPrice(product) ?? getProductUnitPrice(product),
             quantity: 1,
             line_discount_amount: 0,
             tax_amount: 0,
-        });
-    }
+        },
+        product,
+        null
+    );
+}
 
-    showVariationDialog.value = false;
-    dialogProduct.value = null;
-    selectedVariationId.value = null;
+function addVariationToCart(product, variation) {
+    if (!ensureSession()) return false;
+    return pushLine(
+        {
+            product_id: product.id,
+            variation_id: variation.id,
+            name: `${product.name} (${variation.sku})`,
+            sku: variation.sku || product.sku,
+            unit_price: getVariationUnitPrice(variation),
+            discount_price: getVariationDiscountPrice(variation),
+            sell_price: getVariationDiscountPrice(variation) ?? getVariationUnitPrice(variation),
+            quantity: 1,
+            line_discount_amount: 0,
+            tax_amount: 0,
+        },
+        product,
+        variation.id
+    );
 }
 
 function removeFromCart(index) {
@@ -523,241 +328,238 @@ function removeFromCart(index) {
 }
 
 // -----------------------------
+// Variation picker
+// -----------------------------
+const showVariationDialog = ref(false);
+const dialogProduct = ref(null);
+const selectedVariationId = ref(null);
+
+const dialogVariations = computed(() =>
+    (dialogProduct.value?.variations || []).map((v) => ({ label: v.sku || `#${v.id}`, value: v.id, raw: v }))
+);
+const selectedVariation = computed(
+    () => (dialogProduct.value?.variations || []).find((v) => v.id === selectedVariationId.value) || null
+);
+
+function confirmAddVariation() {
+    if (!dialogProduct.value || !selectedVariation.value) {
+        toast.add({ severity: "warn", summary: t("pos_screen.select_variation"), life: 2000 });
+        return;
+    }
+    if (addVariationToCart(dialogProduct.value, selectedVariation.value)) {
+        showVariationDialog.value = false;
+        dialogProduct.value = null;
+        selectedVariationId.value = null;
+    }
+}
+
+// -----------------------------
+// Quick stock adjust
+// -----------------------------
+const showAdjustStockDialog = ref(false);
+const adjustProduct = ref(null);
+const adjustVariation = ref(null);
+const adjustmentForm = ref({}); // { warehouse_id: new_qty }
+
+function openAdjustStock(product, variation = null) {
+    adjustProduct.value = product;
+    adjustVariation.value = variation;
+    const form = {};
+    props.warehouses.forEach((wh) => {
+        form[wh.id] = stockRows(product, variation ? variation.id : null)
+            .filter((s) => s.warehouse_id === wh.id)
+            .reduce((s, r) => s + n(r.quantity), 0);
+    });
+    adjustmentForm.value = form;
+    showAdjustStockDialog.value = true;
+}
+
+function submitQuickAdjust(warehouseId) {
+    router.post(
+        route("pos.stock.adjust"),
+        {
+            product_id: adjustProduct.value.id,
+            variation_id: adjustVariation.value?.id || null,
+            warehouse_id: warehouseId,
+            branch_id: posSession.value?.branch_id || props.branches[0]?.id || 1,
+            quantity: adjustmentForm.value[warehouseId],
+            note: "Quick adjustment from POS catalog",
+        },
+        {
+            preserveScroll: true,
+            preserveState: true, // keep the cart while stock refreshes
+            onSuccess: () => toast.add({ severity: "success", summary: t("pos_screen.stock_updated"), life: 1500 }),
+        }
+    );
+}
+
+// -----------------------------
+// Populate when editing a draft
+// -----------------------------
+watch(
+    () => props.order,
+    (order) => {
+        if (!order) return;
+        if (order.customer) selectedCustomer.value = order.customer;
+        if (order.warranty_info) warranty_info.value = order.warranty_info;
+
+        let lineDiscounts = 0;
+        cartItems.value = (order.items || []).map((i) => {
+            const lineDisc = n(i.discount_amount);
+            lineDiscounts += lineDisc;
+            return {
+                product_id: i.product_id,
+                variation_id: i.variation_id,
+                name: i.name,
+                sku: i.sku,
+                unit_price: n(i.unit_price),
+                sell_price: n(i.unit_price),
+                quantity: n(i.quantity) || 1,
+                discount_price: 0,
+                line_discount_amount: lineDisc,
+                tax_amount: n(i.tax_amount),
+            };
+        });
+
+        // stored discount = line discounts + order discount
+        const orderDiscount = n(order.discount_amount) - lineDiscounts;
+        discountMode.value = orderDiscount > 0.01 ? "fixed" : "none";
+        discountValue.value = orderDiscount > 0.01 ? orderDiscount : 0;
+    },
+    { immediate: true }
+);
+
+// -----------------------------
 // Totals
 // -----------------------------
-const subtotal = computed(() =>
-    cartItems.value.reduce((sum, item) => {
-        const price = n(item.sell_price || item.unit_price);
-        return sum + price * n(item.quantity);
-    }, 0)
-);
-
-const lineDiscountTotal = computed(() =>
-    cartItems.value.reduce((sum, item) => sum + n(item.line_discount_amount), 0)
-);
-
+const subtotal = computed(() => cartItems.value.reduce((s, i) => s + n(i.sell_price || i.unit_price) * n(i.quantity), 0));
+const lineDiscountTotal = computed(() => cartItems.value.reduce((s, i) => s + n(i.line_discount_amount), 0));
 const orderDiscount = computed(() => {
-    const base = subtotal.value;
     const val = n(discountValue.value);
-
-    if (discountMode.value === "percent") {
-        const p = Math.min(Math.max(val, 0), 100);
-        return (base * p) / 100;
-    }
-    if (discountMode.value === "fixed") {
-        return Math.min(Math.max(val, 0), base);
-    }
+    if (discountMode.value === "percent") return (subtotal.value * Math.min(Math.max(val, 0), 100)) / 100;
+    if (discountMode.value === "fixed") return Math.min(Math.max(val, 0), subtotal.value);
     return 0;
 });
-
-const discountTotal = computed(
-    () => lineDiscountTotal.value + orderDiscount.value
-);
-
-const taxTotal = computed(() =>
-    cartItems.value.reduce((sum, item) => sum + n(item.tax_amount), 0)
-);
-
-const total = computed(
-    () => subtotal.value - discountTotal.value + taxTotal.value
-);
+const discountTotal = computed(() => lineDiscountTotal.value + orderDiscount.value);
+const taxTotal = computed(() => cartItems.value.reduce((s, i) => s + n(i.tax_amount), 0));
+const total = computed(() => subtotal.value - discountTotal.value + taxTotal.value);
 
 // -----------------------------
-// Payments (✅ partial allowed)
+// Payments (partial allowed)
 // -----------------------------
 let paymentRowId = 1;
-
-function blankMeta() {
-    return {
-        customer_bank_name: null,
-        customer_account_no: null,
-        received_to_bank_account_id: null,
-        txn_ref: null,
-    };
-}
-
-function blankEmi() {
-    return { emi_bank_id: null, emi_bank_tenure_id: null, card_last4: "", approval_code: "", card_holder_name: "" };
-}
-
-function blankPaymentRow() {
-    return {
-        id: paymentRowId++,
-        payment_method_id: null,
-        amount: 0,
-        transaction_ref: null,
-        notes: null,
-        meta: blankMeta(),
-        emi: blankEmi(),
-    };
-}
-
+const blankMeta = () => ({ customer_bank_name: null, customer_account_no: null, received_to_bank_account_id: null, txn_ref: null });
+const blankEmi = () => ({ emi_bank_id: null, emi_bank_tenure_id: null, card_last4: "", approval_code: "", card_holder_name: "" });
+const blankPaymentRow = () => ({
+    id: paymentRowId++,
+    payment_method_id: null,
+    amount: 0,
+    transaction_ref: null,
+    notes: null,
+    meta: blankMeta(),
+    emi: blankEmi(),
+});
 const payments = ref([blankPaymentRow()]);
 
 function addPaymentRow() {
-    payments.value.push(blankPaymentRow());
+    const row = blankPaymentRow();
+    row.amount = Math.max(0, Number(due.value.toFixed(2)));
+    payments.value.push(row);
 }
-
 function removePaymentRow(index) {
-    if (payments.value.length === 1) {
-        payments.value = [blankPaymentRow()];
-        return;
-    }
-    payments.value.splice(index, 1);
+    if (payments.value.length === 1) payments.value = [blankPaymentRow()];
+    else payments.value.splice(index, 1);
+}
+function fillDue(row) {
+    row.amount = Number((n(row.amount) + due.value).toFixed(2));
 }
 
-// -----------------------------
-// Bank EMI rows: bank's customer charge is added on top of the row amount
-// -----------------------------
-function isEmiRow(row) {
-    return !!props.emiPaymentMethodId && row?.payment_method_id === props.emiPaymentMethodId;
-}
-
-function emiTenure(row) {
-    const bank = props.emiBanks.find((b) => b.id === row.emi?.emi_bank_id);
-    return bank?.tenures?.find((t) => t.id === row.emi?.emi_bank_tenure_id) || null;
-}
-
-function emiCharge(row) {
-    const t = isEmiRow(row) ? emiTenure(row) : null;
-    return t ? Math.round(n(row.amount) * n(t.customer_charge_percent)) / 100 : 0;
-}
-
-const emiChargeTotal = computed(() => payments.value.reduce((s, row) => s + emiCharge(row), 0));
-const grandTotal = computed(() => total.value + emiChargeTotal.value);
-
-const totalPaid = computed(() =>
-    payments.value.reduce((sum, row) => sum + n(row.amount) + emiCharge(row), 0)
+const bankMethodIds = computed(() =>
+    props.paymentMethods.filter((m) => (m.name || "").toLowerCase().includes("bank")).map((m) => m.id)
 );
-const due = computed(() => Math.max(0, grandTotal.value - totalPaid.value));
-const change = computed(() => Math.max(0, totalPaid.value - grandTotal.value));
+const isEmiRow = (row) => !!props.emiPaymentMethodId && row?.payment_method_id === props.emiPaymentMethodId;
+const isBankRow = (row) => !!row?.payment_method_id && !isEmiRow(row) && bankMethodIds.value.includes(row.payment_method_id);
 
-// -----------------------------
-// Sale type: regular (cash / due) or installment (hire purchase)
-// -----------------------------
-const saleMode = ref("regular");
-const saleModeOptions = [
-    { label: "Regular", value: "regular" },
-    { label: "Installment", value: "installment" },
-];
-const installmentConfig = ref(defaultInstallmentConfig());
-const installmentPreview = ref(null);
-const isInstallment = computed(() => saleMode.value === "installment");
-
-// --- helpers for Bank method detection ---
-const bankMethodIds = computed(() => {
-    // detect by name (adjust if your method name is different)
-    const list = props.paymentMethods || [];
-    return list
-        .filter((m) => (m.name || "").toLowerCase().includes("bank"))
-        .map((m) => m.id);
-});
-
-function isBankRow(row) {
-    if (!row?.payment_method_id) return false;
-    return bankMethodIds.value.includes(row.payment_method_id);
-}
-
-// keep meta only for Bank rows (and make sure Bank rows always have a meta object to bind to)
+// Keep meta only for Bank rows; make sure EMI rows have an emi object to bind to
 watch(
-    () => payments.value.map(p => p.payment_method_id),
+    () => payments.value.map((p) => p.payment_method_id),
     () => {
-        payments.value.forEach(row => {
-            row.meta = isBankRow(row) ? (row.meta || blankMeta()) : null;
+        payments.value.forEach((row) => {
+            row.meta = isBankRow(row) ? row.meta || blankMeta() : null;
             if (isEmiRow(row) && !row.emi) row.emi = blankEmi();
         });
     }
 );
 
+// Bank EMI rows: the bank's customer charge is added on top of the row amount
+function emiTenure(row) {
+    const bank = props.emiBanks.find((b) => b.id === row.emi?.emi_bank_id);
+    return bank?.tenures?.find((tn) => tn.id === row.emi?.emi_bank_tenure_id) || null;
+}
+function emiCharge(row) {
+    const tenure = isEmiRow(row) ? emiTenure(row) : null;
+    return tenure ? Math.round(n(row.amount) * n(tenure.customer_charge_percent)) / 100 : 0;
+}
+const emiChargeTotal = computed(() => payments.value.reduce((s, row) => s + emiCharge(row), 0));
+const grandTotal = computed(() => total.value + emiChargeTotal.value);
+const totalPaid = computed(() => payments.value.reduce((s, row) => s + n(row.amount) + emiCharge(row), 0));
+const due = computed(() => Math.max(0, grandTotal.value - totalPaid.value));
+const change = computed(() => Math.max(0, totalPaid.value - grandTotal.value));
+
+// -----------------------------
+// Sale type: regular (cash / due) or installment
+// -----------------------------
+const saleMode = ref("regular");
+const saleModeOptions = computed(() => [
+    { label: t("shared.sale_type.regular"), value: "regular", icon: "pi pi-wallet" },
+    { label: t("shared.sale_type.installment"), value: "installment", icon: "pi pi-calendar-clock" },
+]);
+const installmentConfig = ref(defaultInstallmentConfig());
+const installmentPreview = ref(null);
+const isInstallment = computed(() => saleMode.value === "installment");
 
 // -----------------------------
 // Submit
 // -----------------------------
+const submitting = ref(false);
+
+function warn(summary, detail) {
+    toast.add({ severity: "warn", summary, detail, life: 2500 });
+}
+
 function submitOrder(action = "complete") {
     if (!ensureSession()) return;
-
     if (branchMismatch.value) {
-        toast.add({
-            severity: "error",
-            summary: "Branch Mismatch",
-            detail: "Your current branch has changed. Please close this session and open a new one.",
-            life: 4000,
-        });
+        toast.add({ severity: "error", summary: t("pos_screen.branch_mismatch"), detail: t("pos_screen.branch_mismatch_detail"), life: 4000 });
         return;
     }
+    if (!cartItems.value.length) return warn(t("pos_screen.empty_cart"), t("pos_screen.add_items_first"));
 
-    if (!cartItems.value.length) {
-        toast.add({
-            severity: "warn",
-            summary: "Empty cart",
-            detail: "Add items first",
-            life: 2000,
-        });
-        return;
-    }
-
-    const validPayments = payments.value.filter(
-        (p) => p.payment_method_id && n(p.amount) > 0
-    );
-
+    const validPayments = payments.value.filter((p) => p.payment_method_id && n(p.amount) > 0);
     const installmentOn = action !== "draft" && isInstallment.value;
 
     if (installmentOn) {
-        if (!selectedCustomer.value?.id) {
-            toast.add({ severity: "warn", summary: "Customer required", detail: "Select a customer for an installment sale", life: 2500 });
-            return;
-        }
+        if (!selectedCustomer.value?.id) return warn(t("pos_screen.customer_required"), t("pos_screen.customer_required_installment"));
         const pv = installmentPreview.value;
-        if (!pv || pv.financed_amount <= 0) {
-            toast.add({ severity: "warn", summary: "Installment", detail: "Nothing left to pay in installments — check the down payment", life: 2500 });
-            return;
-        }
+        if (!pv || pv.financed_amount <= 0) return warn(t("shared.sale_type.installment"), t("pos_screen.nothing_to_finance"));
         if (pv.min_down_payment > 0 && totalPaid.value + 0.009 < pv.min_down_payment) {
-            toast.add({ severity: "warn", summary: "Down payment", detail: `Minimum down payment is ${pv.min_down_payment.toFixed(2)}`, life: 2500 });
-            return;
+            return warn(t("shared.terms.down_payment"), t("pos_screen.min_down_payment", { amount: money(pv.min_down_payment) }));
         }
     }
-
     for (const row of validPayments) {
-        if (isEmiRow(row) && !row.emi?.emi_bank_tenure_id) {
-            toast.add({ severity: "warn", summary: "Bank EMI", detail: "Select the bank and tenure for the EMI payment", life: 2500 });
-            return;
-        }
+        if (isEmiRow(row) && !row.emi?.emi_bank_tenure_id) return warn(t("shared.sale_type.emi"), t("pos_screen.emi_select_bank"));
     }
-
-    // ✅ payments required only for complete / complete_print (installment allows zero down payment)
-    if (action !== "draft" && !installmentOn) {
-        if (!validPayments.length) {
-            toast.add({
-                severity: "warn",
-                summary: "Payment required",
-                detail: "Add at least one payment",
-                life: 2200,
-            });
-            return;
-        }
-        if (totalPaid.value <= 0) {
-            toast.add({
-                severity: "warn",
-                summary: "Payment required",
-                detail: "Payment must be greater than 0",
-                life: 2200,
-            });
-            return;
-        }
-        // ✅ no "insufficient" block; partial is allowed
+    // payments required for complete (installment allows zero down payment)
+    if (action !== "draft" && !installmentOn && !validPayments.length) {
+        return warn(t("pos_screen.payment_required"), t("pos_screen.add_payment_hint"));
     }
 
     const payload = {
         action,
-
         pos_session_id: posSession.value.id,
         branch_id: currentBranchId.value,
         warehouse_id: posSession.value.warehouse_id,
-
-        // ✅ allow order without customer
         customer_id: selectedCustomer.value?.id ?? null,
-
         items: cartItems.value.map((item) => ({
             product_id: item.product_id,
             variation_id: item.variation_id,
@@ -766,17 +568,14 @@ function submitOrder(action = "complete") {
             discount_amount: item.line_discount_amount || 0,
             tax_amount: item.tax_amount || 0,
         })),
-
         payments:
             action === "draft"
                 ? []
                 : validPayments.map((p) => ({
                     payment_method_id: p.payment_method_id,
                     amount: p.amount,
-
                     transaction_ref: p.transaction_ref || null,
                     notes: p.notes || null,
-
                     emi: isEmiRow(p)
                         ? {
                             emi_bank_tenure_id: p.emi.emi_bank_tenure_id,
@@ -785,61 +584,42 @@ function submitOrder(action = "complete") {
                             card_holder_name: p.emi.card_holder_name || null,
                         }
                         : null,
-
                     meta: isBankRow(p)
                         ? {
-                            customer_bank_name:
-                                p.meta?.customer_bank_name || null,
-                            customer_account_no:
-                                p.meta?.customer_account_no || null,
-                            received_to_bank_account_id:
-                                p.meta?.received_to_bank_account_id || null,
+                            customer_bank_name: p.meta?.customer_bank_name || null,
+                            customer_account_no: p.meta?.customer_account_no || null,
+                            received_to_bank_account_id: p.meta?.received_to_bank_account_id || null,
                             txn_ref: p.meta?.txn_ref || null,
                         }
                         : null,
                 })),
-
         order_discount_type: discountMode.value,
         order_discount_value: discountValue.value,
-
         notes: null,
         warranty_info: warranty_info.value,
-
         installment: installmentOn ? installmentPayload(installmentConfig.value) : null,
     };
 
     const options = {
         preserveScroll: true,
-        onSuccess: () => handleSuccess(action),
-        onError: (errors) => {
-            toast.add({ severity: "error", summary: "Could not save", detail: firstError(errors) || "Please check the order", life: 4000 });
+        onStart: () => (submitting.value = true),
+        onFinish: () => (submitting.value = false),
+        onSuccess: () => {
+            toast.add({ severity: "success", summary: t("pos_screen.order_saved"), life: 2000 });
+            resetSale();
         },
+        onError: (errors) =>
+            toast.add({ severity: "error", summary: t("pos_screen.could_not_save"), detail: firstError(errors) || t("pos_screen.check_order"), life: 4000 }),
     };
 
-    if (props.order?.id && props.order.status === 'draft') {
+    if (props.order?.id && props.order.status === "draft") {
         router.put(route("pos.orders.update", props.order.id), payload, options);
     } else {
         router.post(route("pos.orders.store"), payload, options);
     }
 }
 
-function handleSuccess(action) {
-    toast.add({
-        severity: "success",
-        summary: "Success",
-        detail: "Order saved",
-        life: 2000,
-    });
-
-    // Checking flash or prop? router.reload might clear flash.
-    // But usually we get the result.
-    // If action was complete_print, redirect happens in controller likely, or handled here.
-
-    // Logic handled in controller redirect usually.
-    // But if we stayed on page (draft save), clear cart.
-
-    // However, if we edited a draft, we might want to stay or go to keys?
-    // If user clicked "Save Draft", we stay?
+function resetSale() {
     cartItems.value = [];
     selectedCustomer.value = null;
     discountMode.value = "none";
@@ -849,620 +629,430 @@ function handleSuccess(action) {
     saleMode.value = "regular";
     installmentConfig.value = defaultInstallmentConfig();
     installmentPreview.value = null;
-
+    mobileView.value = "products";
 }
+
+// -----------------------------
+// Warranty template suggestions (cart categories first)
+// -----------------------------
+const suggestedTemplates = computed(() => {
+    const templates = props.warrantyTemplates || [];
+    const cartCategoryIds = [
+        ...new Set(cartItems.value.map((item) => props.products.find((p) => p.id === item.product_id)?.category_id).filter(Boolean)),
+    ];
+    if (!cartCategoryIds.length) return templates;
+    const rank = (tpl) => (cartCategoryIds.includes(tpl.category_id) ? 0 : tpl.category_id === null ? 1 : 2);
+    return [...templates].sort((a, b) => rank(a) - rank(b));
+});
+const isRelevantTemplate = (tpl) =>
+    cartItems.value.some((item) => props.products.find((p) => p.id === item.product_id)?.category_id === tpl.category_id);
+
+const canSubmit = computed(() => cartItems.value.length > 0 && !!posSession.value && !submitting.value);
 </script>
 
 <template>
+    <Head :title="t('pos_screen.title')" />
+
     <AuthenticatedLayout>
-        <div class="h-[95vh] flex overflow-y-auto">
-            <main
-                class="flex-1 flex flex-col overflow-hidden bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="flex flex-col lg:h-[calc(100vh-9rem)] min-h-0 pb-20 lg:pb-0">
+            <main class="flex-1 min-h-0 flex flex-col bg-white dark:bg-surface-900 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <!-- Header -->
-                <header class="h-14 bg-white border-b border-slate-100 flex items-center justify-between px-5">
-                    <div class="flex items-center gap-6">
-                        <div>
-                            <h1 class="text-base font-semibold text-slate-800">
-                                {{ t('menu.pos') }}
-                            </h1>
-                            <p class="text-xs text-slate-400">
-                                {{
-                                    posSession
-                                        ? `${t('pos.current_session')} #${posSession.id}`
-                                        : t('pos.no_customer')
-                                }}
-                            </p>
+                <header class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+                    <div class="flex flex-wrap items-center gap-3 min-w-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                <i class="pi pi-desktop" />
+                            </span>
+                            <div class="min-w-0">
+                                <h1 class="text-base font-semibold text-slate-800 leading-tight">{{ t("pos_screen.title") }}</h1>
+                                <p class="text-xs text-slate-500 truncate">
+                                    <template v-if="posSession">
+                                        <span class="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            {{ t("pos_screen.session_no", { id: posSession.id }) }}
+                                        </span>
+                                        <span v-if="sessionWarehouseName"> · <i class="pi pi-warehouse !text-[10px]" /> {{ sessionWarehouseName }}</span>
+                                    </template>
+                                    <span v-else>{{ t("pos_screen.no_session") }}</span>
+                                </p>
+                            </div>
                         </div>
-                        <SessionBar :currentSession="props.currentSession" :branches="props.branches"
-                                :warehouses="props.warehouses" />
-                        <div v-if="branchMismatch"
-                            class="px-3 py-1.5 rounded-lg text-sm bg-amber-50 text-amber-700 flex items-center gap-2 font-medium border border-amber-200">
-                            <i class="pi pi-exclamation-triangle text-sm" />
-                            Branch changed - close & reopen session
-                        </div>
+                        <SessionBar :currentSession="props.currentSession" :branches="props.branches" :warehouses="props.warehouses" />
                     </div>
 
-                    <div class="flex items-center gap-3 text-xs text-slate-500">
-                        <span
-                            class="px-3 py-1.5 rounded-lg text-sm bg-emerald-50 text-emerald-600 flex items-center gap-2 font-medium">
-                            <i class="pi pi-clock text-sm" />
-                            {{ now.toLocaleTimeString() }}
+                    <div class="flex items-center gap-2">
+                        <span v-if="order?.id" class="px-2.5 py-1 rounded-lg text-xs bg-sky-50 text-sky-700 font-medium flex items-center gap-1.5">
+                            <i class="pi pi-file-edit text-xs" /> {{ t("pos_screen.editing_draft", { id: order.id }) }}
+                        </span>
+                        <span class="px-3 py-1.5 rounded-lg text-sm bg-slate-100 text-slate-600 items-center gap-2 font-medium tabular-nums hidden sm:flex ltr-nums">
+                            <i class="pi pi-clock text-sm" /> {{ clock }}
                         </span>
                     </div>
                 </header>
 
-                <!-- BODY -->
-                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                    <!-- PRODUCTS -->
-                    <section class="flex-1 p-4 overflow-y-auto">
-                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-                            <div>
-                                <h2 class="text-lg font-semibold text-slate-800">
-                                    {{ t('menu.products') }}
-                                </h2>
-                                <p class="text-xs text-slate-400">
-                                    {{ t('pos.search_product') }}
-                                </p>
-                            </div>
+                <div v-if="branchMismatch" class="mx-4 mt-3 px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 flex items-center gap-2 border border-amber-200">
+                    <i class="pi pi-exclamation-triangle" /> {{ t("pos_screen.branch_mismatch_detail") }}
+                </div>
 
-                            <div class="flex items-center gap-3">
-                                <InputGroup class="w-full max-w-md">
-                                    <InputText type="search" v-model="search"
-                                        :placeholder="t('pos.search_product')"
-                                        class="w-full !w-[320px]" />
-                                    <InputGroupAddon><i class="pi pi-search"></i></InputGroupAddon>
-                                </InputGroup>
+                <div v-if="!posSession" class="mx-4 mt-3 px-3 py-2 rounded-lg text-sm bg-sky-50 text-sky-800 flex items-center gap-2 border border-sky-200">
+                    <i class="pi pi-info-circle" /> {{ t("pos_screen.no_session_hint") }}
+                </div>
+
+                <!-- Body -->
+                <div class="flex-1 min-h-0 flex flex-col lg:flex-row">
+                    <!-- PRODUCTS -->
+                    <section class="flex-1 min-h-0 p-4 overflow-y-auto" :class="mobileView === 'products' ? 'block' : 'hidden lg:block'">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h2 class="text-sm font-semibold text-slate-800">{{ t("menu.products") }}</h2>
+                                <p class="text-xs text-slate-500">{{ t("pos_screen.products_hint") }}</p>
+                            </div>
+                            <InputGroup class="w-full sm:max-w-sm">
+                                <InputGroupAddon><i class="pi pi-barcode" /></InputGroupAddon>
+                                <InputText ref="searchInput" v-model="search" type="search" :placeholder="t('pos_screen.search_placeholder')"
+                                    :aria-label="t('pos_screen.search_placeholder')" autofocus @keydown.enter.prevent="onSearchEnter" />
+                            </InputGroup>
+                        </div>
+
+                        <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                            <div v-for="product in filteredProducts" :key="product.id" role="button" tabindex="0"
+                                class="text-start rounded-xl border border-slate-200 bg-white p-3 flex flex-col h-full min-w-0 cursor-pointer hover:shadow-md hover:border-emerald-300 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                                @click="addProduct(product)" @keydown.enter.self.prevent="addProduct(product)" @keydown.space.self.prevent="addProduct(product)">
+                                <div class="relative w-full rounded-lg bg-slate-50 mb-2 h-24 flex items-center justify-center overflow-hidden">
+                                    <i v-if="!product.thumbnail" class="pi pi-image text-2xl text-slate-300" />
+                                    <img v-else :src="resolveImagePath(product.thumbnail)" :alt="product.name" class="h-full object-contain" loading="lazy" />
+
+                                    <Badge v-if="product.type === 'variable'" :value="t('pos_screen.variants')" severity="info"
+                                        class="!absolute top-1.5 start-1.5 !text-[10px]" />
+                                    <span v-if="getProductDiscountPrice(product)"
+                                        class="absolute top-1.5 end-1.5 bg-rose-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full ltr-nums">
+                                        -{{ productDiscountPercent(product) }}%
+                                    </span>
+
+                                    <div class="absolute bottom-1.5 end-1.5 flex items-center gap-1">
+                                        <Badge v-tooltip.top="stockTooltip(product)"
+                                            :value="product.type === 'variable' ? t('pos_screen.multi') : totalStock(product)"
+                                            :severity="product.type === 'variable' ? 'info' : totalStock(product) > 0 ? 'success' : 'danger'"
+                                            class="!text-[10px]" />
+                                        <Button v-if="product.type !== 'variable'" icon="pi pi-pencil" rounded size="small" severity="secondary"
+                                            class="!w-6 !h-6" :aria-label="t('pos_screen.quick_adjust')" v-tooltip.top="t('pos_screen.quick_adjust')"
+                                            @click.stop="openAdjustStock(product)" />
+                                    </div>
+                                </div>
+
+                                <div class="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">{{ product.name }}</div>
+                                <div class="text-xs text-slate-500 truncate ltr-nums">{{ product.sku }}</div>
+
+                                <div v-if="warehouseNames(product).length" class="mt-1.5 flex flex-wrap gap-1">
+                                    <span v-for="wh in warehouseNames(product).slice(0, 2)" :key="wh"
+                                        class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{{ wh }}</span>
+                                    <span v-if="warehouseNames(product).length > 2" class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">
+                                        +{{ warehouseNames(product).length - 2 }}
+                                    </span>
+                                </div>
+
+                                <div class="flex items-end justify-between mt-auto pt-2 gap-2">
+                                    <div class="min-w-0 ltr-nums">
+                                        <div class="text-base font-bold text-emerald-700">
+                                            {{ money(getProductDiscountPrice(product) ?? getProductUnitPrice(product)) }}
+                                        </div>
+                                        <div v-if="getProductDiscountPrice(product)" class="text-xs text-slate-400 line-through">
+                                            {{ money(getProductUnitPrice(product)) }}
+                                        </div>
+                                    </div>
+                                    <span class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0" aria-hidden="true">
+                                        <i class="pi pi-plus text-sm" />
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                            <div v-for="product in filteredProducts" :key="product.id"
-                                class="col-12 sm:col-6 md:col-4 xl:col-3">
-                                <div class="rounded-xl shadow-sm border border-slate-200 bg-white p-4 flex flex-col h-full cursor-pointer hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 transition-all"
-                                    @click="addProduct(product)">
-                                    <div
-                                        class="relative rounded-lg bg-slate-50 mb-3 h-24 flex items-center justify-center overflow-hidden">
-                                        <span v-if="!product.thumbnail"
-                                            class="text-slate-300 text-xs uppercase tracking-wide">Image</span>
-
-                                        <img v-else :src="resolveImagePath(
-                                            product.thumbnail
-                                        )
-                                            " alt="" class="h-full object-contain" />
-
-                                        <div class="absolute top-2 left-2">
-                                            <Badge :severity="product.type === 'variable'
-                                                ? 'info'
-                                                : 'secondary'
-                                                " :value="product.type" class="!text-[10px] !px-2 !py-0" />
-                                        </div>
-
-                                        <div v-if="
-                                            getProductDiscountPrice(product)
-                                        "
-                                            class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                            -{{
-                                                productDiscountPercent(product)
-                                            }}%
-                                        </div>
-
-                                        <!-- Stock Badge -->
-                                        <div class="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
-                                            <div :title="getStockTooltip(product.stocks, null)">
-                                                <Badge
-                                                    :value="product.type === 'variable' ? 'Multi' : getProductStockTotal(product)"
-                                                    :severity="product.type === 'variable' ? 'info' : (getProductStockTotal(product) > 0 ? 'success' : 'danger')"
-                                                    class="!text-[10px] !px-2 !py-0" />
-                                            </div>
-                                            <Button v-if="product.type !== 'variable'" icon="pi pi-pencil"
-                                                class="p-button-rounded p-button-xs p-button-secondary !h-5 !w-5"
-                                                @click.stop="openAdjustStock(product)"
-                                                v-tooltip.top="'Quick Adjust Stock'" type="button" />
-                                        </div>
-                                    </div>
-
-                                    <div class="flex-1 flex flex-col justify-between gap-2">
-                                        <div>
-                                            <div class="text-sm font-semibold text-slate-800 truncate">
-                                                {{ product.name }}
-                                            </div>
-                                            <div class="text-xs text-slate-400 mt-0.5 truncate">
-                                                {{ product.sku }}
-                                            </div>
-
-                                            <!-- Warehouse Info -->
-                                            <div v-if="getProductWarehouseNames(product.stocks, null).length" class="mt-2 flex flex-wrap gap-1">
-                                                <span v-for="whName in getProductWarehouseNames(product.stocks, null).slice(0, 3)" :key="whName"
-                                                    class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
-                                                    {{ whName }}
-                                                </span>
-                                                <span v-if="getProductWarehouseNames(product.stocks, null).length > 3"
-                                                    class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200">
-                                                    +{{ getProductWarehouseNames(product.stocks, null).length - 3 }}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-end justify-between mt-2 gap-2">
-                                            <div class="min-w-0">
-                                                <div class="text-base font-bold text-emerald-600">
-                                                    {{
-                                                        (
-                                                            getProductDiscountPrice(
-                                                                product
-                                                            ) ??
-                                                            getProductUnitPrice(
-                                                                product
-                                                            )
-                                                        ).toFixed(2)
-                                                    }}
-                                                </div>
-
-                                                <div v-if="
-                                                    getProductDiscountPrice(
-                                                        product
-                                                    )
-                                                " class="text-xs text-slate-400 flex items-center gap-1">
-                                                    <span class="line-through">{{
-                                                        getProductUnitPrice(
-                                                            product
-                                                        ).toFixed(2)
-                                                    }}</span>
-                                                    <span class="text-rose-600 font-semibold">-
-                                                        {{
-                                                            productDiscountPercent(
-                                                                product
-                                                            )
-                                                        }}%</span>
-                                                </div>
-                                            </div>
-
-                                            <Button icon="pi pi-plus"
-                                                class="p-button-rounded p-button-sm p-button-success" type="button" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div v-if="!filteredProducts.length"
-                                class="col-12 text-center text-slate-400 text-sm py-10">
-                                No products found
-                            </div>
+                        <div v-if="!filteredProducts.length" class="text-center text-slate-500 text-sm py-12">
+                            <i class="pi pi-search text-3xl text-slate-300 mb-2 block" />
+                            {{ t("pos_screen.no_products") }}
                         </div>
                     </section>
 
                     <!-- ORDER PANEL -->
-                    <aside
-                        class="w-full lg:w-[380px] bg-white border-l border-slate-200 p-4 flex flex-col overflow-y-auto h-1/2 lg:h-auto border-t lg:border-t-0">
-                        <div class="flex flex-col flex-1">
-                            <!-- header -->
-                            <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
-                                <div>
-                                    <h3 class="text-sm font-semibold text-slate-800">
-                                        {{ t('orders.order') }} {{ t('common.total') }}
-                                    </h3>
-                                    <p class="text-xs text-slate-400">
-                                        {{
-                                            selectedCustomer
-                                                ? selectedCustomer.name
-                                                : t('pos.no_customer')
-                                        }}
-                                    </p>
-                                </div>
-
-                                <span
-                                    class="px-2 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-600 font-medium">
-                                    {{ cartItems.length }} {{ t('common.quantity') }}
-                                </span>
+                    <aside class="w-full lg:w-[400px] min-h-0 lg:border-s border-slate-200 p-4 overflow-y-auto flex-col"
+                        :class="mobileView === 'cart' ? 'flex' : 'hidden lg:flex'">
+                        <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-800">{{ t("pos_screen.current_order") }}</h3>
+                                <p class="text-xs text-slate-500">{{ selectedCustomer ? selectedCustomer.name : t("shared.terms.walk_in") }}</p>
                             </div>
+                            <span class="px-2 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-700 font-medium">
+                                {{ t("pos_screen.items_count", { n: cartQuantity }) }}
+                            </span>
+                        </div>
 
-                            <!-- ✅ customer remote search -->
-                            <div class="mb-3">
-                                <p class="text-xs text-slate-500 mb-1.5">
-                                    {{ t('pos.customer') }}
-                                </p>
-                                <AutoComplete v-model="selectedCustomer" :suggestions="customerSuggestions"
-                                    :optionLabel="customerLabel" class="w-full" inputClass="w-full text-xs"
-                                    placeholder="Search by name or phone" :loading="customerLoading"
-                                    @complete="onCustomerComplete">
-                                    <template #option="slotProps">
+                        <!-- customer -->
+                        <div class="mb-3 space-y-3">
+                            <div>
+                                <label class="text-xs text-slate-600 mb-1 block font-medium">{{ t("shared.terms.customer") }}</label>
+                                <AutoComplete v-model="selectedCustomer" :suggestions="customerSuggestions" :optionLabel="customerLabel"
+                                    class="w-full" inputClass="w-full text-sm" :placeholder="t('pos_screen.customer_placeholder')"
+                                    :loading="customerLoading" @complete="onCustomerComplete">
+                                    <template #option="{ option }">
                                         <div class="flex flex-col">
-                                            <span class="font-medium">{{ slotProps.option.name }}</span>
-                                            <span class="text-xs text-gray-500">{{ slotProps.option.phone || 'No phone'
-                                                }}</span>
+                                            <span class="font-medium">{{ option.name }}</span>
+                                            <span class="text-xs text-slate-500 ltr-nums">{{ option.phone || t("pos_screen.no_phone") }}</span>
                                         </div>
                                     </template>
                                 </AutoComplete>
-                                <!-- warranty info -->
-                                <div class="mt-3">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <label class="text-xs text-slate-500">Warranty Info</label>
-                                        <Button label="Select Template" icon="pi pi-list"
-                                            class="p-button-text p-button-xs !py-0 !px-1 text-[10px]"
-                                            @click="showWarrantyDialog = true" type="button" />
-                                    </div>
-                                    <Textarea v-model="warranty_info" rows="2" class="w-full text-sm"
-                                        placeholder="Warranty details..." />
-                                </div>
                             </div>
 
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs text-slate-600 font-medium">{{ t("pos_screen.warranty_info") }}</label>
+                                    <Button :label="t('pos_screen.select_template')" icon="pi pi-list" text size="small"
+                                        class="!py-0 !px-1 !text-xs" @click="showWarrantyDialog = true" />
+                                </div>
+                                <Textarea v-model="warranty_info" rows="2" class="w-full text-sm" :placeholder="t('pos_screen.warranty_placeholder')" autoResize />
+                            </div>
+                        </div>
 
-                            <!-- cart items -->
-                            <div class="flex-1 overflow-y-auto space-y-2 pr-1 mb-3">
-                                <div v-for="(item, index) in cartItems" :key="`${item.product_id}-${item.variation_id || 'simple'
-                                    }`"
-                                    class="flex items-start justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
-                                    <div class="flex-1">
-                                        <div class="text-xs font-semibold text-slate-800 truncate">
-                                            {{ item.name }}
-                                        </div>
-                                        <div class="text-[10px] text-slate-400 mb-1.5">
-                                            {{ item.sku }}
-                                        </div>
-
-                                        <div class="text-[11px] text-slate-500 mb-1">
-                                            <span class="font-semibold text-slate-700">{{
-                                                Number(
-                                                    item.sell_price || 0
-                                                ).toFixed(2)
-                                            }}</span>
-                                            <span v-if="item.discount_price" class="ml-1 text-rose-600">
-                                                ({{
-                                                    Number(
-                                                        item.unit_price || 0
-                                                    ).toFixed(2)
-                                                }})
-                                            </span>
-                                        </div>
-
-                                        <div class="flex items-center gap-2">
-                                            <InputNumber v-model="item.quantity" :min="1" inputClass="!w-12 !text-xs"
-                                                showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus"
-                                                decrementButtonIcon="pi pi-minus"
-                                                incrementButtonClass="p-button-text p-button-sm"
-                                                decrementButtonClass="p-button-text p-button-sm" />
-
-                                            <span class="text-[10px] text-slate-400">
-                                                x
-                                                {{
-                                                    Number(
-                                                        item.sell_price || 0
-                                                    ).toFixed(2)
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="text-right ml-2">
-                                        <div class="text-xs font-semibold text-slate-800">
-                                            {{
-                                                (
-                                                    Number(
-                                                        item.sell_price || 0
-                                                    ) *
-                                                    Number(item.quantity || 0)
-                                                ).toFixed(2)
-                                            }}
-                                        </div>
-
-                                        <Button icon="pi pi-trash"
-                                            class="p-button-text p-button-danger p-button-sm mt-1"
-                                            @click="removeFromCart(index)" type="button" />
+                        <!-- cart items -->
+                        <div class="space-y-2 mb-3">
+                            <div v-for="(item, index) in cartItems" :key="`${item.product_id}-${item.variation_id || 'simple'}`"
+                                class="flex items-start justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs font-semibold text-slate-800 line-clamp-2">{{ item.name }}</div>
+                                    <div class="text-[10px] text-slate-500 mb-1.5 ltr-nums">{{ item.sku }}</div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <InputNumber v-model="item.quantity" :min="1" :max="lineMax(item) || undefined" showButtons buttonLayout="horizontal"
+                                            inputClass="!w-12 !text-xs !text-center" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus"
+                                            :aria-label="t('common.quantity')" size="small" />
+                                        <span class="text-[11px] text-slate-500 ltr-nums">
+                                            × {{ money(item.sell_price) }}
+                                            <span v-if="item.discount_price" class="line-through text-slate-400">{{ money(item.unit_price) }}</span>
+                                        </span>
                                     </div>
                                 </div>
-
-                                <div v-if="!cartItems.length" class="text-center text-xs text-slate-400 py-6">
-                                    No items in order yet
+                                <div class="text-end shrink-0">
+                                    <div class="text-sm font-semibold text-slate-800 ltr-nums">{{ money(n(item.sell_price) * n(item.quantity)) }}</div>
+                                    <Button icon="pi pi-trash" text severity="danger" size="small" class="mt-1" :aria-label="t('common.delete')"
+                                        @click="removeFromCart(index)" />
                                 </div>
                             </div>
 
-                            <!-- ORDER DISCOUNT -->
-                            <div class="mb-3 p-3 rounded-2xl bg-white border border-slate-200">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-slate-800">Order Discount</span>
-                                    <span v-if="orderDiscount > 0" class="text-sm font-semibold text-rose-600">
-                                        -{{ orderDiscount.toFixed(2) }}
-                                    </span>
-                                </div>
+                            <div v-if="!cartItems.length" class="text-center text-xs text-slate-500 py-8 border border-dashed border-slate-200 rounded-lg">
+                                <i class="pi pi-shopping-cart text-2xl text-slate-300 block mb-2" />
+                                {{ t("pos_screen.empty_cart_hint") }}
+                            </div>
+                        </div>
 
-                                <div class="flex items-center gap-2 mb-1 min-w-0">
-                                    <Select v-model="discountMode" :options="[
-                                        { label: 'None', value: 'none' },
-                                        {
-                                            label: 'Percent %',
-                                            value: 'percent',
-                                        },
-                                        { label: 'Fixed', value: 'fixed' },
-                                    ]" optionLabel="label" optionValue="value" class="flex-1 min-w-0 text-xs" />
-                                    <InputNumber v-model="discountValue" :min="0" class="w-24 shrink-0"
-                                        inputClass="!text-xs !w-full" :suffix="discountMode === 'percent'
-                                            ? '%'
-                                            : ''
-                                            " :disabled="discountMode === 'none'" />
-                                </div>
+                        <!-- order discount -->
+                        <div class="mb-3 p-3 rounded-xl border border-slate-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-slate-800">{{ t("pos_screen.order_discount") }}</span>
+                                <span v-if="orderDiscount > 0" class="text-sm font-semibold text-rose-600 ltr-nums">-{{ money(orderDiscount) }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 min-w-0">
+                                <Select v-model="discountMode" :options="discountOptions" optionLabel="label" optionValue="value"
+                                    class="flex-1 min-w-0" size="small" />
+                                <InputNumber v-model="discountValue" :min="0" class="w-28 shrink-0" inputClass="!w-full" size="small"
+                                    :suffix="discountMode === 'percent' ? '%' : ''" :disabled="discountMode === 'none'" :aria-label="t('pos.discount')" />
+                            </div>
+                        </div>
+
+                        <!-- totals -->
+                        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-1 text-sm">
+                            <div class="flex justify-between text-slate-600"><span>{{ t("orders.subtotal") }}</span><span class="ltr-nums">{{ money(subtotal) }}</span></div>
+                            <div class="flex justify-between text-slate-600"><span>{{ t("pos.discount") }}</span><span class="text-rose-600 ltr-nums">-{{ money(discountTotal) }}</span></div>
+                            <div class="flex justify-between text-slate-600"><span>{{ t("pos.tax") }}</span><span class="ltr-nums">{{ money(taxTotal) }}</span></div>
+                            <div v-if="emiChargeTotal > 0" class="flex justify-between text-slate-600">
+                                <span>{{ t("pos_screen.emi_charge") }}</span><span class="ltr-nums">+{{ money(emiChargeTotal) }}</span>
+                            </div>
+                            <div class="flex justify-between items-baseline pt-2 mt-1 border-t border-slate-200">
+                                <span class="font-semibold text-slate-800">{{ t("orders.grand_total") }}</span>
+                                <span class="text-xl font-bold text-emerald-700 ltr-nums">{{ money(grandTotal) }}</span>
+                            </div>
+                        </div>
+
+                        <!-- sale type -->
+                        <div class="mt-3">
+                            <SelectButton v-model="saleMode" :options="saleModeOptions" optionLabel="label" optionValue="value"
+                                :allowEmpty="false" class="w-full [&>*]:flex-1" size="small">
+                                <template #option="{ option }">
+                                    <i :class="option.icon" class="text-xs" /> <span>{{ option.label }}</span>
+                                </template>
+                            </SelectButton>
+                            <p v-if="!isInstallment" class="text-[11px] text-slate-500 mt-1">{{ t("pos_screen.partial_hint") }}</p>
+                        </div>
+
+                        <!-- payments -->
+                        <div class="mt-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-semibold text-slate-800">
+                                    {{ isInstallment ? t("shared.terms.down_payment") : t("pos_screen.payments") }}
+                                </span>
+                                <Button icon="pi pi-plus" text size="small" :label="t('pos_screen.add_payment')" @click="addPaymentRow" />
                             </div>
 
-                            <!-- totals -->
-                            <div class="border-t border-slate-200 pt-3 space-y-1">
-                                <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ t('orders.subtotal') }}</span>
-                                    <span class="font-medium text-slate-700">{{
-                                        subtotal.toFixed(2)
-                                        }}</span>
+                            <div v-for="(row, index) in payments" :key="row.id" class="border border-slate-200 rounded-xl p-3 space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <Select v-model="row.payment_method_id" :options="paymentMethods" optionLabel="name" optionValue="id"
+                                        :placeholder="t('shared.terms.method')" filter class="flex-1 min-w-0" size="small" />
+                                    <InputNumber v-model="row.amount" :min="0" :maxFractionDigits="2" class="w-28 shrink-0" inputClass="!w-full"
+                                        size="small" :aria-label="t('shared.terms.amount')" />
+                                    <Button icon="pi pi-times" text severity="danger" size="small" :aria-label="t('common.delete')" @click="removePaymentRow(index)" />
                                 </div>
-
-                                <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ t('pos.discount') }}</span>
-                                    <span class="font-medium text-rose-600">-{{ discountTotal.toFixed(2) }}</span>
+                                <div class="flex gap-2">
+                                    <InputText v-model="row.transaction_ref" :placeholder="t('pos_screen.txn_ref')" class="flex-1 min-w-0 text-xs" size="small" />
+                                    <Button v-if="due > 0" :label="t('pos_screen.fill_due')" text size="small" class="!px-2 !text-xs shrink-0" @click="fillDue(row)" />
                                 </div>
+                                <InputText v-model="row.notes" :placeholder="t('pos_screen.notes_optional')" class="w-full text-xs" size="small" />
 
-                                <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ t('pos.tax') }}</span>
-                                    <span class="font-medium text-slate-700">{{
-                                        taxTotal.toFixed(2)
-                                        }}</span>
-                                </div>
+                                <EmiPaymentFields v-if="isEmiRow(row) && row.emi" v-model="row.emi" :banks="emiBanks" :amount="n(row.amount)" />
 
-                                <div v-if="emiChargeTotal > 0" class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>Bank EMI charge</span>
-                                    <span class="font-medium text-slate-700">+{{ emiChargeTotal.toFixed(2) }}</span>
-                                </div>
-
-                                <div class="flex items-center justify-between text-sm mt-2">
-                                    <span class="font-semibold text-slate-800">{{ t('orders.grand_total') }}</span>
-                                    <span class="text-lg font-bold text-emerald-600">{{ grandTotal.toFixed(2) }}</span>
-                                </div>
-                            </div>
-
-                            <!-- sale type -->
-                            <div class="mt-3">
-                                <SelectButton v-model="saleMode" :options="saleModeOptions" optionLabel="label" optionValue="value"
-                                    :allowEmpty="false" class="w-full [&>*]:flex-1" size="small" />
-                                <p v-if="!isInstallment" class="text-[11px] text-slate-400 mt-1">
-                                    Partial payment is allowed — the rest stays as due and can be collected later from Orders.
-                                </p>
-                            </div>
-
-                            <!-- payments -->
-                            <div class="mt-3 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-slate-500">{{ isInstallment ? 'Down payment' : t('pos.payment') }}</span>
-                                    <Button icon="pi pi-plus" class="p-button-text p-button-sm" :label="t('common.create')"
-                                        @click="addPaymentRow" type="button" />
-                                </div>
-
-                                <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
-                                    <div v-for="(row, index) in payments" :key="row.id"
-                                        class="bg-white border border-slate-200 rounded-xl p-3">
-                                        <div class="flex items-center gap-2">
-                                            <Select v-model="row.payment_method_id" :options="paymentMethods"
-                                                optionLabel="name" optionValue="id" placeholder="Method" filter
-                                                class="flex-1 text-xs" />
-                                            <InputNumber v-model="row.amount" :min="0" class="w-28"
-                                                inputClass="!text-xs" />
-                                            <Button icon="pi pi-times" class="p-button-text p-button-danger p-button-sm"
-                                                @click="removePaymentRow(index)" type="button" />
-                                        </div>
-
-                                        <!-- common extra fields -->
-                                        <div class="grid grid-cols-1 gap-2 mt-2">
-                                            <InputText v-model="row.transaction_ref"
-                                                placeholder="Transaction ref (optional)" class="w-full text-xs" />
-                                            <InputText v-model="row.notes" placeholder="Notes (optional)"
-                                                class="w-full text-xs" />
-                                        </div>
-
-                                        <!-- Bank card EMI -->
-                                        <EmiPaymentFields v-if="isEmiRow(row) && row.emi" v-model="row.emi" :banks="emiBanks" :amount="Number(row.amount || 0)" />
-
-                                        <!-- ✅ BANK META FIELDS -->
-                                        <div v-if="isBankRow(row) && row.meta"
-                                            class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
-                                            <div
-                                                class="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                                                <i class="pi pi-building"></i>
-                                                Bank Details
-                                            </div>
-
-                                            <div class="grid grid-cols-1 gap-2">
-                                                <InputText v-model="row.meta
-                                                    .customer_bank_name
-                                                    " placeholder="Customer bank name" class="w-full text-xs" />
-                                                <InputText v-model="row.meta
-                                                    .customer_account_no
-                                                    " placeholder="Customer account no" class="w-full text-xs" />
-
-                                                <!-- If you don't have bank accounts list yet, keep it as InputText or InputNumber -->
-                                                <InputNumber v-model="row.meta
-                                                    .received_to_bank_account_id
-                                                    " :min="1" placeholder="Received to bank account ID" class="w-full"
-                                                    inputClass="!text-xs" />
-
-                                                <InputText v-model="row.meta.txn_ref"
-                                                    placeholder="Bank txn ref / cheque no" class="w-full text-xs" />
-                                            </div>
-
-                                        </div>
+                                <div v-if="isBankRow(row) && row.meta" class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                                    <div class="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                                        <i class="pi pi-building-columns" /> {{ t("pos_screen.bank_details") }}
                                     </div>
-                                </div>
-
-                                <div class="flex items-center justify-between text-xs text-slate-500 mt-1">
-                                    <span>{{ t('pos.payment') }} {{ t('common.total') }}</span>
-                                    <span class="font-semibold text-slate-800">{{ totalPaid.toFixed(2) }}</span>
-                                </div>
-                                <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ t('pos.change') }}</span>
-                                    <span class="font-semibold text-slate-800">{{ change.toFixed(2) }}</span>
-                                </div>
-                                <div class="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ isInstallment ? 'Remaining (installments)' : 'Due' }}</span>
-                                    <span class="font-semibold text-rose-600">{{
-                                        due.toFixed(2)
-                                        }}</span>
+                                    <InputText v-model="row.meta.customer_bank_name" :placeholder="t('pos_screen.customer_bank_name')" class="w-full text-xs" size="small" />
+                                    <InputText v-model="row.meta.customer_account_no" :placeholder="t('pos_screen.customer_account_no')" class="w-full text-xs" size="small" />
+                                    <InputNumber v-model="row.meta.received_to_bank_account_id" :min="1" :placeholder="t('pos_screen.received_bank_account')"
+                                        class="w-full" inputClass="!text-xs" size="small" :useGrouping="false" />
+                                    <InputText v-model="row.meta.txn_ref" :placeholder="t('pos_screen.bank_txn_ref')" class="w-full text-xs" size="small" />
                                 </div>
                             </div>
 
-                            <!-- installment plan -->
-                            <div v-if="isInstallment" class="mt-3 p-3 rounded-2xl border border-violet-200 bg-white">
-                                <div class="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                                    <i class="pi pi-calendar-clock text-violet-600" /> Installment plan
+                            <div class="rounded-lg px-3 py-2 space-y-1 text-xs">
+                                <div class="flex justify-between text-slate-600"><span>{{ t("pos_screen.payment_total") }}</span><span class="font-semibold text-slate-800 ltr-nums">{{ money(totalPaid) }}</span></div>
+                                <div class="flex justify-between text-slate-600"><span>{{ t("pos.change") }}</span><span class="font-semibold text-slate-800 ltr-nums">{{ money(change) }}</span></div>
+                                <div class="flex justify-between text-slate-600">
+                                    <span>{{ isInstallment ? t("pos_screen.remaining_installments") : t("shared.terms.due") }}</span>
+                                    <span class="font-semibold ltr-nums" :class="due > 0 ? 'text-rose-600' : 'text-slate-800'">{{ money(due) }}</span>
                                 </div>
-                                <p v-if="!selectedCustomer" class="text-[11px] text-rose-600 mb-2">Select a customer above — required for installments.</p>
-                                <InstallmentConfigurator v-model="installmentConfig" :saleAmount="grandTotal" :downPayment="totalPaid"
-                                    :plans="installmentPlans" compact @preview="installmentPreview = $event" />
                             </div>
+                        </div>
 
-                            <div class="grid grid-cols-1 gap-2 mt-4">
-                                <Button label="Save Draft" icon="pi pi-save" class="w-full" severity="war"
-                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('draft')"
-                                    type="button" />
-
-                                <Button :label="isInstallment ? 'Complete installment sale' : 'Complete'" icon="pi pi-check" class="w-full" severity="info"
-                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('complete')"
-                                    type="button" />
-
-                                <Button label="Complete & Print" icon="pi pi-print" class="w-full"
-                                    :disabled="!cartItems.length || !posSession" @click="submitOrder('complete_print')"
-                                    type="button" severity="success" />
+                        <!-- installment plan -->
+                        <div v-if="isInstallment" class="mt-3 p-3 rounded-xl border border-violet-200">
+                            <div class="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                                <i class="pi pi-calendar-clock text-violet-600" /> {{ t("pos_screen.installment_plan") }}
                             </div>
+                            <p v-if="!selectedCustomer" class="text-[11px] text-rose-600 mb-2">{{ t("pos_screen.customer_required_installment") }}</p>
+                            <InstallmentConfigurator v-model="installmentConfig" :saleAmount="grandTotal" :downPayment="totalPaid"
+                                :plans="installmentPlans" compact @preview="installmentPreview = $event" />
+                        </div>
+
+                        <!-- actions -->
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <Button :label="t('pos_screen.save_draft')" icon="pi pi-save" severity="secondary" outlined
+                                :disabled="!canSubmit" @click="submitOrder('draft')" />
+                            <Button :label="isInstallment ? t('pos_screen.complete_installment') : t('pos_screen.complete')" icon="pi pi-check"
+                                severity="info" :disabled="!canSubmit" @click="submitOrder('complete')" />
+                            <Button :label="t('pos_screen.complete_print')" icon="pi pi-print" class="col-span-2" size="large"
+                                :loading="submitting" :disabled="!canSubmit" @click="submitOrder('complete_print')" />
                         </div>
                     </aside>
                 </div>
             </main>
         </div>
 
-        <!-- Variation Dialog -->
-        <Dialog v-model:visible="showVariationDialog" modal header="Select Variation" :style="{ width: '420px' }">
-            <div v-if="dialogProduct" class="space-y-3">
-                <div class="text-sm font-semibold text-slate-800">
-                    {{ dialogProduct.name }}
-                </div>
-                <div class="text-xs text-slate-500">
-                    Choose a variation to add to cart.
-                </div>
+        <!-- Mobile bottom bar: switch between products and cart -->
+        <div class="lg:hidden fixed bottom-0 inset-x-0 z-[900] bg-white dark:bg-surface-900 border-t border-slate-200 px-3 py-2 flex items-center gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+            <Button v-if="mobileView === 'cart'" :label="t('pos_screen.view_products')" icon="pi pi-th-large" severity="secondary" outlined
+                class="flex-1" @click="mobileView = 'products'" />
+            <Button v-else class="flex-1 !justify-between" @click="mobileView = 'cart'">
+                <span class="flex items-center gap-2"><i class="pi pi-shopping-cart" /> {{ t("pos_screen.view_cart") }}
+                    <Badge :value="cartQuantity" severity="contrast" /></span>
+                <span class="font-bold ltr-nums">{{ money(grandTotal) }}</span>
+            </Button>
+        </div>
 
-                <Select v-model="selectedVariationId" :options="dialogVariations" optionLabel="label"
-                    optionValue="value" placeholder="Select variation" class="w-full" showClear filter>
-                    <template #option="slotProps">
-                        <div class="flex justify-between items-center w-full">
-                            <span>{{ slotProps.option.label }}</span>
+        <!-- Variation Dialog -->
+        <Dialog v-model:visible="showVariationDialog" modal :header="t('pos_screen.select_variation')" :style="{ width: '440px' }" :breakpoints="dialogBreakpoints">
+            <div v-if="dialogProduct" class="space-y-3">
+                <div class="text-sm font-semibold text-slate-800">{{ dialogProduct.name }}</div>
+                <div class="text-xs text-slate-500">{{ t("pos_screen.variation_hint") }}</div>
+
+                <Select v-model="selectedVariationId" :options="dialogVariations" optionLabel="label" optionValue="value"
+                    :placeholder="t('pos_screen.variation_placeholder')" class="w-full" showClear filter>
+                    <template #option="{ option }">
+                        <div class="flex justify-between items-center w-full gap-2">
+                            <span class="ltr-nums">{{ option.label }}</span>
                             <div class="flex items-center gap-2">
-                                <Badge :value="getVariationStockTotal(slotProps.option.raw, dialogProduct)"
-                                    :severity="getVariationStockTotal(slotProps.option.raw, dialogProduct) > 0 ? 'success' : 'danger'" />
-                                <Button icon="pi pi-pencil"
-                                    class="p-button-text p-button-secondary p-button-xs !w-6 !h-6"
-                                    @click.stop="openAdjustStock(dialogProduct, slotProps.option.raw)"
-                                    v-tooltip.top="'Quick Adjust Stock'" type="button" />
+                                <Badge :value="totalStock(dialogProduct, option.value)" :severity="totalStock(dialogProduct, option.value) > 0 ? 'success' : 'danger'" />
+                                <Button icon="pi pi-pencil" text severity="secondary" size="small" class="!w-6 !h-6" :aria-label="t('pos_screen.quick_adjust')"
+                                    @click.stop="openAdjustStock(dialogProduct, option.raw)" />
                             </div>
                         </div>
                     </template>
                 </Select>
 
                 <div v-if="selectedVariation" class="p-3 rounded-xl border border-slate-200 bg-slate-50">
-                    <div class="text-xs text-slate-500">Price</div>
-                    <div class="flex items-end gap-2">
-                        <div class="text-lg font-bold text-emerald-600">
-                            {{
-                                (
-                                    getVariationDiscountPrice(
-                                        selectedVariation
-                                    ) ??
-                                    getVariationUnitPrice(selectedVariation)
-                                ).toFixed(2)
-                            }}
+                    <div class="text-xs text-slate-500">{{ t("common.price") }}</div>
+                    <div class="flex items-end gap-2 ltr-nums">
+                        <div class="text-lg font-bold text-emerald-700">
+                            {{ money(getVariationDiscountPrice(selectedVariation) ?? getVariationUnitPrice(selectedVariation)) }}
                         </div>
-
-                        <div v-if="getVariationDiscountPrice(selectedVariation)"
-                            class="text-sm text-slate-400 line-through">
-                            {{
-                                getVariationUnitPrice(
-                                    selectedVariation
-                                ).toFixed(2)
-                            }}
-                        </div>
-
-                        <div v-if="getVariationDiscountPrice(selectedVariation)"
-                            class="text-xs text-rose-600 font-semibold">
-                            -{{ variationDiscountPercent(selectedVariation) }}%
-                        </div>
+                        <template v-if="getVariationDiscountPrice(selectedVariation)">
+                            <div class="text-sm text-slate-400 line-through">{{ money(getVariationUnitPrice(selectedVariation)) }}</div>
+                            <div class="text-xs text-rose-600 font-semibold">-{{ variationDiscountPercent(selectedVariation) }}%</div>
+                        </template>
                     </div>
 
-                    <!-- Warehouse breakdown for variation -->
                     <div class="mt-2 pt-2 border-t border-slate-200">
-                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Stock by
-                            Warehouse</div>
+                        <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">{{ t("pos_screen.stock_by_warehouse") }}</div>
                         <div class="grid grid-cols-2 gap-1">
-                            <div v-for="s in dialogProduct.stocks.filter(s => s.variation_id === selectedVariation.id)"
-                                :key="s.id"
+                            <div v-for="s in stockRows(dialogProduct, selectedVariation.id)" :key="s.id"
                                 class="flex items-center justify-between bg-white p-1.5 rounded-lg border border-slate-100">
                                 <span class="text-[11px] text-slate-600 truncate">{{ s.warehouse?.name }}</span>
-                                <span class="text-xs font-bold text-slate-800">{{ Number(s.quantity).toFixed(0)
-                                }}</span>
+                                <span class="text-xs font-bold text-slate-800">{{ n(s.quantity).toFixed(0) }}</span>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
             <template #footer>
-                <Button label="Close" icon="pi pi-times" @click="showVariationDialog = false" class="p-button-text" />
-                <Button label="Add to Cart" icon="pi pi-shopping-cart" @click="confirmAddVariation"
-                    :disabled="!selectedVariationId" />
+                <Button :label="t('shared.terms.close')" icon="pi pi-times" text severity="secondary" @click="showVariationDialog = false" />
+                <Button :label="t('pos_screen.add_to_cart')" icon="pi pi-cart-plus" :disabled="!selectedVariationId" @click="confirmAddVariation" />
             </template>
         </Dialog>
 
         <!-- Quick Stock Adjust Dialog -->
-        <Dialog v-model:visible="showAdjustStockDialog" modal :header="'Quick Stock Adjust: ' + (adjustSku || '')"
-            :style="{ width: '400px' }" class="stock-adjust-dialog">
-            <div class="space-y-4">
-                <div class="text-xs text-slate-400 mb-2">
+        <Dialog v-model:visible="showAdjustStockDialog" modal :header="t('pos_screen.adjust_title')" :style="{ width: '420px' }" :breakpoints="dialogBreakpoints">
+            <div class="space-y-3">
+                <div class="text-xs text-slate-500">
                     {{ adjustProduct?.name }}
-                    <span v-if="adjustVariation" class="font-semibold text-slate-600">
-                        ({{ adjustVariation.sku }})
-                    </span>
+                    <span v-if="adjustVariation" class="font-semibold text-slate-600 ltr-nums">({{ adjustVariation.sku }})</span>
                 </div>
-
+                <p class="text-[11px] text-slate-500">{{ t("pos_screen.adjust_hint") }}</p>
                 <div v-for="wh in props.warehouses" :key="wh.id"
-                    class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span class="text-sm font-medium text-slate-700">{{ wh.name }}</span>
-                    <div class="flex items-center gap-2">
-                        <InputNumber v-model="adjustmentForm[wh.id]" :min="0" inputClass="!w-20 !text-sm text-center" />
-                        <Button icon="pi pi-save" class="p-button-sm p-button-success h-8 w-8"
-                            @click="submitQuickAdjust(wh.id)" />
+                    class="flex items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="text-sm font-medium text-slate-700 truncate">{{ wh.name }}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <InputNumber v-model="adjustmentForm[wh.id]" :min="0" inputClass="!w-20 !text-sm !text-center" size="small" />
+                        <Button icon="pi pi-save" severity="success" size="small" :aria-label="t('shared.terms.save')" @click="submitQuickAdjust(wh.id)" />
                     </div>
                 </div>
             </div>
             <template #footer>
-                <Button label="Done" icon="pi pi-check" @click="showAdjustStockDialog = false" />
+                <Button :label="t('pos_screen.done')" icon="pi pi-check" @click="showAdjustStockDialog = false" />
             </template>
         </Dialog>
 
-        <!-- Warranty Selection Dialog -->
-        <Dialog v-model:visible="showWarrantyDialog" modal header="Select Warranty Template"
-            :style="{ width: '450px' }">
+        <!-- Warranty Template Dialog -->
+        <Dialog v-model:visible="showWarrantyDialog" modal :header="t('pos_screen.warranty_dialog')" :style="{ width: '480px' }" :breakpoints="dialogBreakpoints">
             <div class="space-y-3">
-                <p class="text-xs text-slate-500 mb-2 italic">
-                    * Suggested templates based on your cart are shown first.
-                </p>
-                <div v-for="template in suggestedTemplates" :key="template.id"
-                    class="p-3 border rounded-xl hover:bg-slate-50 cursor-pointer transition flex flex-col gap-1"
+                <p class="text-xs text-slate-500 italic">{{ t("pos_screen.warranty_suggest") }}</p>
+                <button v-for="template in suggestedTemplates" :key="template.id" type="button"
+                    class="w-full text-start p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition flex flex-col gap-1"
                     @click="selectWarrantyTemplate(template)">
-                    <div class="flex items-center justify-between">
+                    <span class="flex items-center justify-between gap-2">
                         <span class="text-sm font-bold text-slate-800">{{ template.name }}</span>
-                        <Badge v-if="template.category_id" value="Relevant" severity="info" class="!text-[10px]" />
-                    </div>
-                    <p class="text-xs text-slate-600">{{ template.description }}</p>
-                </div>
+                        <Badge v-if="isRelevantTemplate(template)" :value="t('pos_screen.relevant')" severity="info" class="!text-[10px]" />
+                    </span>
+                    <span class="text-xs text-slate-600">{{ template.description }}</span>
+                </button>
+                <div v-if="!suggestedTemplates.length" class="text-center text-sm text-slate-500 py-6">{{ t("pos_screen.no_templates") }}</div>
             </div>
             <template #footer>
-                <Button label="Cancel" icon="pi pi-times" @click="showWarrantyDialog = false" class="p-button-text" />
+                <Button :label="t('shared.terms.cancel')" icon="pi pi-times" text severity="secondary" @click="showWarrantyDialog = false" />
             </template>
         </Dialog>
     </AuthenticatedLayout>
 </template>
-
-<style scoped>
-.stock-adjust-dialog :deep(.p-dialog-content) {
-    padding-top: 0.5rem;
-}
-</style>

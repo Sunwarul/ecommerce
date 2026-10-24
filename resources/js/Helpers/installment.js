@@ -18,6 +18,11 @@ export const FEE_TYPES = [
     { label: "Percent %", value: "percent" },
 ];
 
+/** Translated option lists (labels come from the shared namespace). */
+export const frequencyOptions = (t) => FREQUENCIES.map((o) => ({ ...o, label: t(`shared.frequency.${o.value}`) }));
+export const interestTypeOptions = (t) => INTEREST_TYPES.map((o) => ({ ...o, label: t(`shared.interest.${o.value}`) }));
+export const feeTypeOptions = (t) => FEE_TYPES.map((o) => ({ ...o, label: t(`shared.fee_type.${o.value}`) }));
+
 export function defaultInstallmentConfig() {
     const first = new Date();
     first.setMonth(first.getMonth() + 1);

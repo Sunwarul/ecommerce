@@ -63,11 +63,11 @@ class EmiService
 
             $tenure = EmiBankTenure::with('bank')->where('is_active', true)->find($p['emi']['emi_bank_tenure_id']);
             if (! $tenure || ! $tenure->bank?->is_active) {
-                throw ValidationException::withMessages(['payments' => ['Selected EMI bank / tenure is not available.']]);
+                throw ValidationException::withMessages(['payments' => [__('Selected EMI bank / tenure is not available.')]]);
             }
             if ((float) $p['amount'] < (float) $tenure->min_amount) {
                 throw ValidationException::withMessages([
-                    'payments' => ["Minimum amount for {$tenure->bank->name} {$tenure->months} months EMI is ".number_format($tenure->min_amount, 2).'.'],
+                    'payments' => [__('Minimum amount for :bank :months months EMI is :amount.', ['bank' => $tenure->bank->name, 'months' => $tenure->months, 'amount' => number_format($tenure->min_amount, 2)])],
                 ]);
             }
 

@@ -82,6 +82,6 @@ class CustomerController extends Controller
         }
         $res = $model->update($validatedData);
 
-        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', __('Updated successfully'));
     }
 }

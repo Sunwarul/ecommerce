@@ -1,383 +1,106 @@
 <script setup>
 import useAuth from "@/Composables/useAuth";
-import { PERMISSIONS } from "@/constants/permissions";
-import { computed, watch } from "vue";
-import { useI18n } from 'vue-i18n';
+import { PERMISSIONS as P } from "@/constants/permissions";
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import AppMenuItem from "./AppMenuItem.vue";
-import { useLocale } from '@/Composables/useLocale';
 
-const { t, locale } = useI18n();
-const { initLocale } = useLocale();
+const { t } = useI18n();
+const { hasAnyPermission, hasRole } = useAuth();
 
-initLocale();
-
-// Use a reactive trigger that changes when locale changes
-const localeTrigger = computed(() => locale.value);
-
-const model = computed(() => {
-    // Access localeTrigger to make this computed depend on locale
-    const _ = localeTrigger.value;
-
-    return [
-
-        // ================= PRODUCTS =================
-        {
-            label: t('menu.products'),
-            icon: "pi pi-box",
-            permissionMode: "any",
-            permissions: [
-                PERMISSIONS.CATEGORY.INDEX,
-                PERMISSIONS.BRAND.INDEX,
-                PERMISSIONS.TAG.INDEX,
-                PERMISSIONS.TAX.INDEX,
-                PERMISSIONS.PAYMENT_METHOD.INDEX,
-                PERMISSIONS.PRODUCT.INDEX,
-            ],
-            items: [
-                {
-                    label: t('menu.categories'),
-                    icon: "pi pi-list",
-                    permissionMode: "any",
-                    permissions: [
-                        PERMISSIONS.CATEGORY.INDEX,
-                        PERMISSIONS.BRAND.INDEX,
-                        PERMISSIONS.TAG.INDEX,
-                        PERMISSIONS.TAX.INDEX,
-                        PERMISSIONS.PAYMENT_METHOD.INDEX,
-                    ],
-                    items: [
-                        {
-                            label: t('menu.attributes'),
-                            icon: "pi pi-id-card",
-                            to: route("product-attributes.index"),
-                            permissions: [PERMISSIONS.CATEGORY.INDEX],
-                        },
-                        {
-                            label: t('menu.attribute_values'),
-                            icon: "pi pi-id-card",
-                            to: route("product-attribute-values.index"),
-                            permissions: [PERMISSIONS.CATEGORY.INDEX],
-                        },
-                        {
-                            label: t('menu.categories'),
-                            icon: "pi pi-id-card",
-                            to: route("categories.index"),
-                            permissions: [PERMISSIONS.CATEGORY.INDEX],
-                        },
-                        {
-                            label: t('menu.brands'),
-                            icon: "pi pi-check-square",
-                            to: route("brands.index"),
-                            permissions: [PERMISSIONS.BRAND.INDEX],
-                        },
-                        {
-                            label: t('menu.tags'),
-                            icon: "pi pi-check-square",
-                            to: route("tags.index"),
-                            permissions: [PERMISSIONS.TAG.INDEX],
-                        },
-                        {
-                            label: t('menu.taxes'),
-                            icon: "pi pi-check-square",
-                            to: route("taxes.index"),
-                            permissions: [PERMISSIONS.TAX.INDEX],
-                        },
-                        {
-                            label: t('menu.payment_methods'),
-                            icon: "pi pi-credit-card",
-                            to: route("payment-methods.index"),
-                            permissions: [PERMISSIONS.PAYMENT_METHOD.INDEX],
-                        },
-                    ],
-                },
-                {
-                    label: t('menu.products'),
-                    icon: "pi pi-shopping-bag",
-                    to: route("products.index"),
-                    permissions: [PERMISSIONS.PRODUCT.INDEX],
-                },
-            ],
-        },
-
-        // ================= SALES =================
-        {
-            label: t('pos.sales'),
-            icon: "pi pi-shopping-cart",
-            permissionMode: "any",
-            permissions: [PERMISSIONS.POS.INDEX, PERMISSIONS.ORDER.INDEX, PERMISSIONS.INSTALLMENT.INDEX, PERMISSIONS.EMI.INDEX],
-            items: [
-                {
-                    label: t('menu.pos'),
-                    icon: "pi pi-desktop",
-                    to: route("pos.index"),
-                    permissions: [PERMISSIONS.POS.INDEX],
-                },
-                {
-                    label: t('menu.orders'),
-                    icon: "pi pi-receipt",
-                    to: route("pos.orders.index"),
-                    permissions: [PERMISSIONS.ORDER.INDEX],
-                },
-                {
-                    label: t('menu.customers'),
-                    icon: "pi pi-users",
-                    to: route("customers.index"),
-                    permissions: [PERMISSIONS.CUSTOMER.INDEX],
-                },
-                {
-                    label: t('menu.installments'),
-                    icon: "pi pi-calendar-clock",
-                    to: route("installments.index"),
-                    permissions: [PERMISSIONS.INSTALLMENT.INDEX],
-                },
-                {
-                    label: t('menu.installment_plans'),
-                    icon: "pi pi-sliders-h",
-                    to: route("installment-plans.index"),
-                    permissions: [PERMISSIONS.INSTALLMENT.PLAN_MANAGE],
-                },
-                {
-                    label: t('menu.bank_emi'),
-                    icon: "pi pi-credit-card",
-                    to: route("emi.index"),
-                    permissions: [PERMISSIONS.EMI.INDEX],
-                },
-            ],
-        },
-
-        // ================= REPORTS =================
-        {
-            label: t('menu.reports'),
-            icon: "pi pi-chart-bar",
-            permissionMode: "any",
-            permissions: [PERMISSIONS.REPORT.INDEX],
-            items: [
-                {
-                    label: t('menu.sales_report'),
-                    icon: "pi pi-chart-line",
-                    to: route("reports.sales"),
-                    permissions: [PERMISSIONS.REPORT.INDEX],
-                },
-            ],
-        },
-
-        // ================= SMS =================
-        {
-            label: t('menu.sms'),
-            icon: "pi pi-comment",
-            permissionMode: "any",
-            permissions: [PERMISSIONS.SMS.INDEX, PERMISSIONS.SMS.SEND, PERMISSIONS.SMS.SETTINGS],
-            items: [
-                {
-                    label: t('menu.sms_dashboard'),
-                    icon: "pi pi-chart-pie",
-                    to: route("sms.dashboard"),
-                    permissions: [PERMISSIONS.SMS.INDEX],
-                },
-                {
-                    label: t('menu.sms_send'),
-                    icon: "pi pi-send",
-                    to: route("sms.compose"),
-                    permissions: [PERMISSIONS.SMS.SEND],
-                },
-                {
-                    label: t('menu.sms_history'),
-                    icon: "pi pi-history",
-                    to: route("sms.logs"),
-                    permissions: [PERMISSIONS.SMS.INDEX],
-                },
-                {
-                    label: t('menu.sms_settings'),
-                    icon: "pi pi-cog",
-                    to: route("sms.settings"),
-                    permissions: [PERMISSIONS.SMS.SETTINGS],
-                },
-            ],
-        },
-
-        // ================= USER MANAGEMENT =================
-        {
-            label: t('menu.users'),
-            icon: "pi pi-users",
-            permissionMode: "any",
-            permissions: [
-                PERMISSIONS.ROLE.INDEX,
-                PERMISSIONS.PERMISSION.INDEX,
-                PERMISSIONS.USER.INDEX,
-            ],
-            items: [
-                {
-                    label: t('menu.permissions'),
-                    icon: "pi pi-shield",
-                    permissionMode: "any",
-                    permissions: [
-                        PERMISSIONS.ROLE.INDEX,
-                        PERMISSIONS.PERMISSION.INDEX,
-                    ],
-                    items: [
-                        {
-                            label: t('menu.roles'),
-                            icon: "pi pi-id-card",
-                            to: route("roles.index"),
-                            permissions: [PERMISSIONS.ROLE.INDEX],
-                        },
-                        {
-                            label: t('menu.permissions'),
-                            icon: "pi pi-lock",
-                            to: route("permissions.index"),
-                            permissions: [PERMISSIONS.PERMISSION.INDEX],
-                        },
-                    ],
-                },
-                {
-                    label: t('menu.users'),
-                    icon: "pi pi-user",
-                    to: route("users.index"),
-                    permissions: [PERMISSIONS.USER.INDEX],
-                },
-            ],
-        },
-
-        // ================= SETUP =================
-        {
-            label: t('menu.settings'),
-            icon: "pi pi-cog",
-            permissionMode: "any",
-            permissions: [
-                PERMISSIONS.BRANCH.INDEX,
-                PERMISSIONS.WAREHOUSE.INDEX,
-                PERMISSIONS.BASE_UNIT.INDEX,
-                PERMISSIONS.UNIT.INDEX,
-                PERMISSIONS.SUPPLIER.INDEX,
-                PERMISSIONS.CUSTOMER.INDEX,
-                PERMISSIONS.EXPENSE_CATEGORY.INDEX,
-                PERMISSIONS.EXPENSE.INDEX,
-                PERMISSIONS.COUNTRY.INDEX,
-                PERMISSIONS.SETTING.INDEX,
-            ],
-            items: [
-                {
-                    label: t('branches.branches'),
-                    icon: "pi pi-building",
-                    permissionMode: "any",
-                    permissions: [
-                        PERMISSIONS.BRANCH.INDEX,
-                        PERMISSIONS.WAREHOUSE.INDEX,
-                    ],
-                    items: [
-                        {
-                            label: t('menu.branches'),
-                            icon: "pi pi-building",
-                            to: route("branches.index"),
-                            permissions: [PERMISSIONS.BRANCH.INDEX],
-                        },
-                        {
-                            label: t('menu.warehouses'),
-                            icon: "pi pi-warehouse",
-                            to: route("warehouses.index"),
-                            permissions: [PERMISSIONS.WAREHOUSE.INDEX],
-                        },
-                    ],
-                },
-                {
-                    label: t('menu.units'),
-                    icon: "pi pi-clone",
-                    permissionMode: "any",
-                    permissions: [
-                        PERMISSIONS.BASE_UNIT.INDEX,
-                        PERMISSIONS.UNIT.INDEX,
-                        PERMISSIONS.SUPPLIER.INDEX,
-                    ],
-                    items: [
-                        {
-                            label: t('menu.base_units'),
-                            icon: "pi pi-clone",
-                            to: route("base-units.index"),
-                            permissions: [PERMISSIONS.BASE_UNIT.INDEX],
-                        },
-                        {
-                            label: t('menu.units'),
-                            icon: "pi pi-clone",
-                            to: route("units.index"),
-                            permissions: [PERMISSIONS.UNIT.INDEX],
-                        },
-                        {
-                            label: t('menu.suppliers'),
-                            icon: "pi pi-truck",
-                            to: route("suppliers.index"),
-                            permissions: [PERMISSIONS.SUPPLIER.INDEX],
-                        },
-                        {
-                            label: t('menu.warranty_guarantees'),
-                            icon: "pi pi-clone",
-                            to: route("warranty-guarantees.index"),
-                            permissions: [PERMISSIONS.SUPPLIER.INDEX],
-                        },
-                    ],
-                },
-                {
-                    label: t('settings.settings'),
-                    icon: "pi pi-wallet",
-                    permissionMode: "any",
-                    permissions: [
-                        PERMISSIONS.EXPENSE_CATEGORY.INDEX,
-                        PERMISSIONS.EXPENSE.INDEX,
-                    ],
-                    items: [
-                        {
-                            label: t('menu.expense_categories'),
-                            icon: "pi pi-list",
-                            to: route("expense-categories.index"),
-                            permissions: [PERMISSIONS.EXPENSE_CATEGORY.INDEX],
-                        },
-                        {
-                            label: t('menu.expenses'),
-                            icon: "pi pi-wallet",
-                            to: route("expenses.index"),
-                            permissions: [PERMISSIONS.EXPENSE.INDEX],
-                        },
-                        {
-                            label: t('menu.currencies'),
-                            icon: "pi pi-money-bill",
-                            to: route("currencies.index"),
-                            permissions: [PERMISSIONS.COUNTRY.INDEX],
-                        },
-                    ],
-                },
-                {
-                    label: t('menu.settings'),
-                    icon: "pi pi-cog",
-                    to: route("settings.general"),
-                    permissions: [PERMISSIONS.SETTING.INDEX],
-                },
-            ],
-        }
-    ];
+const leaf = (key, icon, routeName, permission) => ({
+    label: t(`menu.${key}`),
+    icon: `pi pi-fw ${icon}`,
+    to: route().has(routeName) ? route(routeName) : null,
+    permissions: [permission],
 });
 
-const { hasAnyPermission, permissions } = useAuth();
+const group = (key, icon, items) => ({ label: t(`menu.${key}`), icon: `pi pi-fw ${icon}`, items });
 
-// console.log(permissions.value);
+// Re-computed when the locale changes because t() is reactive
+const model = computed(() => [
+    group("sales", "pi-shopping-cart", [
+        leaf("pos", "pi-desktop", "pos.index", P.POS.INDEX),
+        leaf("orders", "pi-receipt", "pos.orders.index", P.ORDER.INDEX),
+        leaf("customers", "pi-users", "customers.index", P.CUSTOMER.INDEX),
+        leaf("installments", "pi-calendar-clock", "installments.index", P.INSTALLMENT.INDEX),
+        leaf("installment_plans", "pi-sliders-h", "installment-plans.index", P.INSTALLMENT.PLAN_MANAGE),
+        leaf("bank_emi", "pi-credit-card", "emi.index", P.EMI.INDEX),
+    ]),
+
+    group("reports", "pi-chart-bar", [
+        leaf("sales_report", "pi-chart-line", "reports.sales", P.REPORT.INDEX),
+    ]),
+
+    group("catalog", "pi-box", [
+        leaf("products", "pi-shopping-bag", "products.index", P.PRODUCT.INDEX),
+        group("product_setup", "pi-th-large", [
+            leaf("categories", "pi-sitemap", "categories.index", P.CATEGORY.INDEX),
+            leaf("sub_categories", "pi-list", "sub-categories.index", P.SUB_CATEGORY.INDEX),
+            leaf("brands", "pi-star", "brands.index", P.BRAND.INDEX),
+            leaf("tags", "pi-tags", "tags.index", P.TAG.INDEX),
+            leaf("attributes", "pi-sliders-v", "product-attributes.index", P.PRODUCT_ATTRIBUTE.INDEX),
+            leaf("attribute_values", "pi-list-check", "product-attribute-values.index", P.PRODUCT_ATTRIBUTE.INDEX),
+            leaf("units", "pi-calculator", "units.index", P.UNIT.INDEX),
+            leaf("base_units", "pi-objects-column", "base-units.index", P.BASE_UNIT.INDEX),
+            leaf("taxes", "pi-percentage", "taxes.index", P.TAX.INDEX),
+            leaf("warranty_guarantees", "pi-verified", "warranty-guarantees.index", P.WARRANTY.INDEX),
+        ]),
+        leaf("suppliers", "pi-truck", "suppliers.index", P.SUPPLIER.INDEX),
+    ]),
+
+    group("sms", "pi-comments", [
+        leaf("sms_dashboard", "pi-chart-pie", "sms.dashboard", P.SMS.INDEX),
+        leaf("sms_send", "pi-send", "sms.compose", P.SMS.SEND),
+        leaf("sms_history", "pi-history", "sms.logs", P.SMS.INDEX),
+        leaf("sms_settings", "pi-cog", "sms.settings", P.SMS.SETTINGS),
+    ]),
+
+    group("finance", "pi-wallet", [
+        leaf("expenses", "pi-money-bill", "expenses.index", P.EXPENSE.INDEX),
+        leaf("expense_categories", "pi-folder", "expense-categories.index", P.EXPENSE_CATEGORY.INDEX),
+        leaf("payment_methods", "pi-credit-card", "payment-methods.index", P.PAYMENT_METHOD.INDEX),
+        leaf("currencies", "pi-dollar", "currencies.index", P.COUNTRY.INDEX),
+    ]),
+
+    group("organization", "pi-building", [
+        leaf("branches", "pi-building", "branches.index", P.BRANCH.INDEX),
+        leaf("warehouses", "pi-warehouse", "warehouses.index", P.WAREHOUSE.INDEX),
+    ]),
+
+    group("user_management", "pi-shield", [
+        leaf("users", "pi-user", "users.index", P.USER.INDEX),
+        leaf("roles", "pi-id-card", "roles.index", P.ROLE.INDEX),
+        leaf("permissions", "pi-lock", "permissions.index", P.PERMISSION.INDEX),
+    ]),
+
+    group("tools", "pi-briefcase", [
+        leaf("todos", "pi-check-square", "todos.index", P.TODO.INDEX),
+        leaf("tasks", "pi-list-check", "tasks.index", P.TASK.INDEX),
+    ]),
+
+    group("settings", "pi-cog", [
+        leaf("general_settings", "pi-sliders-h", "settings.general", P.SETTING.INDEX),
+    ]),
+]);
+
+// Super Admin passes every server-side check (Gate::before), so show everything
+const isSuperAdmin = computed(() => hasRole("Super Admin"));
+
+const allowed = (item) => isSuperAdmin.value || hasAnyPermission(item.permissions || []);
 
 const filteredMenu = computed(() => {
-    const filterItems = (items = []) => {
-        return items
+    const filterItems = (items = []) =>
+        items
             .map((item) => {
-                const children = item.items ? filterItems(item.items) : [];
-
-                const allowedSelf = hasAnyPermission(item.permissions || []);
-                const allowedByChildren = children.length > 0;
-
-                // keep item if itself allowed OR has any allowed children
-                if (!allowedSelf && !allowedByChildren) return null;
-
-                return {
-                    ...item,
-                    items: item.items ? children : undefined,
-                };
+                if (item.items) {
+                    // a group is shown only when at least one child is visible
+                    const children = filterItems(item.items);
+                    return children.length ? { ...item, items: children } : null;
+                }
+                return item.to && allowed(item) ? item : null;
             })
             .filter(Boolean);
-    };
 
     return filterItems(model.value);
 });

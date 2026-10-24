@@ -63,6 +63,6 @@ class SettingController extends Controller
             return response()->json(['success' => true, 'message' => 'Settings saved.']);
         }
 
-        return redirect()->route('settings.general')->with('success', 'Settings saved.');
+        return redirect()->route('settings.general')->with('success', __('Settings saved.'));
     }
 }

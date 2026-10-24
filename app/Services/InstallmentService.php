@@ -176,10 +176,10 @@ class InstallmentService
     public function createForOrder(PosOrder $order, array $c, ?int $userId = null): InstallmentSale
     {
         if (! $order->customer_id) {
-            throw ValidationException::withMessages(['customer_id' => ['A customer is required for installment sales.']]);
+            throw ValidationException::withMessages(['customer_id' => [__('A customer is required for installment sales.')]]);
         }
         if ($order->installmentSale()->exists()) {
-            throw ValidationException::withMessages(['installment' => ['This order already has an installment agreement.']]);
+            throw ValidationException::withMessages(['installment' => [__('This order already has an installment agreement.')]]);
         }
 
         $c = $this->withPlanDefaults($c);
@@ -189,13 +189,13 @@ class InstallmentService
         $minPercent = (float) ($c['_min_down_payment_percent'] ?? 0);
         if ($minPercent > 0 && $downPayment + 0.009 < $saleAmount * $minPercent / 100) {
             throw ValidationException::withMessages([
-                'installment' => ['Minimum down payment for this plan is '.$minPercent.'% ('.number_format($saleAmount * $minPercent / 100, 2).').'],
+                'installment' => [__('Minimum down payment for this plan is :percent% (:amount).', ['percent' => $minPercent, 'amount' => number_format($saleAmount * $minPercent / 100, 2)])],
             ]);
         }
 
         $calc = $this->calculate($saleAmount, $downPayment, $c);
         if ($calc['financed_amount'] <= 0) {
-            throw ValidationException::withMessages(['installment' => ['Nothing left to pay in installments.']]);
+            throw ValidationException::withMessages(['installment' => [__('Nothing left to pay in installments.')]]);
         }
 
         $sale = InstallmentSale::create([
@@ -324,7 +324,7 @@ class InstallmentService
     public function collect(InstallmentSale $sale, array $payments, ?int $userId = null): array
     {
         if ($sale->status !== 'active') {
-            throw ValidationException::withMessages(['payments' => ['This agreement is not active.']]);
+            throw ValidationException::withMessages(['payments' => [__('This agreement is not active.')]]);
         }
 
         $this->applyLateFees($sale);
@@ -332,10 +332,10 @@ class InstallmentService
 
         $total = round(collect($payments)->sum(fn ($p) => (float) $p['amount']), 2);
         if ($total <= 0) {
-            throw ValidationException::withMessages(['payments' => ['Enter an amount to collect.']]);
+            throw ValidationException::withMessages(['payments' => [__('Enter an amount to collect.')]]);
         }
         if ($total > $sale->balance + 0.009) {
-            throw ValidationException::withMessages(['payments' => ['Amount exceeds the outstanding balance of '.number_format($sale->balance, 2).'.']]);
+            throw ValidationException::withMessages(['payments' => [__('Amount exceeds the outstanding balance of :amount.', ['amount' => number_format($sale->balance, 2)])]]);
         }
 
         $order = $sale->order;

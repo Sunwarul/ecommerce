@@ -382,7 +382,7 @@ class ProductController extends Controller
 
             return redirect()
                 ->route('products.index')
-                ->with('success', 'Product created successfully.');
+                ->with('success', __('Product created successfully.'));
         });
     }
 
@@ -500,7 +500,7 @@ class ProductController extends Controller
 
                 return redirect()
                     ->route('products.index')
-                    ->with('success', 'Product updated successfully.');
+                    ->with('success', __('Product updated successfully.'));
             }
 
             // -----------------------------
@@ -594,7 +594,7 @@ class ProductController extends Controller
 
             return redirect()
                 ->route('products.index')
-                ->with('success', 'Product updated successfully.');
+                ->with('success', __('Product updated successfully.'));
         });
     }
 
@@ -611,6 +611,11 @@ class ProductController extends Controller
                 ->whereIn('id', $request->ids)
                 ->get();
 
+            // Order lines cascade on product delete: never erase products that appear on invoices
+            $sold = \App\Models\PosOrderItem::whereIn('product_id', $products->pluck('id'))->distinct()->pluck('product_id');
+            $skipped = $products->whereIn('id', $sold)->count();
+            $products = $products->whereNotIn('id', $sold);
+
             foreach ($products as $product) {
 
                 // 🧹 Delete thumbnail file
@@ -619,7 +624,7 @@ class ProductController extends Controller
                 }
 
                 // 🧹 Variations + pivots + stocks
-                $product->variations()->withTrashed()->each(function ($variation) {
+                $product->variations()->get()->each(function ($variation) {
 
                     // pivot table
                     $variation->attributeValues()->detach();
@@ -640,8 +645,12 @@ class ProductController extends Controller
                 $product->forceDelete();
             }
 
-            return Inertia::render('Admin/Products/Index')
-                ->with('success', 'Selected products permanently deleted.');
+            $message = __(':count product(s) permanently deleted.', ['count' => $products->count()]);
+            if ($skipped) {
+                $message .= ' '.__(':count product(s) kept because they appear on sales invoices.', ['count' => $skipped]);
+            }
+
+            return back()->with($skipped && ! $products->count() ? 'error' : 'success', $message);
         });
     }
 
@@ -654,7 +663,7 @@ class ProductController extends Controller
 
         Product::whereIn('id', $request->ids)->delete();
 
-        return back()->with('success', 'Selected products moved to trash.');
+        return back()->with('success', __('Selected products moved to trash.'));
     }
 
     public function bulkRestore(Request $request)
@@ -673,7 +682,7 @@ class ProductController extends Controller
         // If standard Laravel, we might need to manually restore relations if they were soft deleted.
         // Let's assume user just wants the product back for now.
 
-        return back()->with('success', 'Selected products restored successfully.');
+        return back()->with('success', __('Selected products restored successfully.'));
     }
 
     public function restore($id)
@@ -681,14 +690,14 @@ class ProductController extends Controller
         $product = Product::onlyTrashed()->findOrFail($id);
         $product->restore();
 
-        return back()->with('success', 'Product restored successfully.');
+        return back()->with('success', __('Product restored successfully.'));
     }
 
     public function destroy(Product $product)
     {
         $product->delete();
 
-        return back()->with('success', 'Product moved to trash.');
+        return back()->with('success', __('Product moved to trash.'));
     }
 
     public function updateStock(Request $request, Product $product)
@@ -710,7 +719,7 @@ class ProductController extends Controller
                 'product_id' => $product->id,
                 'warehouse_id' => $request->warehouse_id,
                 'variation_id' => null,
-                'branch_id' => 1,
+                'branch_id' => session('current_branch_id') ?? $request->user()->branch_id ?? \App\Models\Branch::value('id'),
                 'quantity' => $request->quantity,
             ]);
         }

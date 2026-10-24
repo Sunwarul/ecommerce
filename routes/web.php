@@ -33,7 +33,7 @@ use App\Http\Controllers\WarehouseController;
 use App\Utils\CrudRouter;
 use Illuminate\Support\Facades\Route;
 
-require_once __DIR__.'/auth.php';
+require __DIR__.'/auth.php';
 
 Route::get('locale', [LocaleController::class, 'get'])->name('locale.get');
 Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
@@ -43,10 +43,19 @@ Route::get('/', WelcomePageController::class)->name('welcome');
 
 // AUTH & VERIFIED
 
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'verified', 'route.permission'])->prefix('admin')->group(function () {
     // =======================
     // Products - Custom routes first (before CrudRouter)
     // =======================
+    // static paths first so "bulk-destroy" etc. are never captured as a {product} id
+    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulk-restore');
+    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
+    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulk-force-delete');
+    Route::get('/products/action/export-excel', [ProductController::class, 'export'])->name('products.export');
+    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
+    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.update-stock');
+
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
@@ -54,15 +63,6 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-
-    // Custom product routes
-    Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
-    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
-    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulk-restore');
-    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
-    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulk-force-delete');
-    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.update-stock');
-    Route::get('/products/action/export-excel', [ProductController::class, 'export'])->name('products.export');
 
     CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);
     CrudRouter::setFor('categories', CategoryController::class);
@@ -223,9 +223,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         });
         Route::middleware('can:SMS Send')->group(function () {
             Route::get('/send', [SmsController::class, 'compose'])->name('compose');
-            Route::post('/send', [SmsController::class, 'send'])->name('send');
+            Route::post('/send', [SmsController::class, 'send'])->name('send')->middleware('throttle:sms');
             Route::get('/customers', [SmsController::class, 'customers'])->name('customers');
-            Route::post('/resend', [SmsController::class, 'resend'])->name('resend');
+            Route::post('/resend', [SmsController::class, 'resend'])->name('resend')->middleware('throttle:sms');
             Route::post('/retry-stuck', [SmsController::class, 'retryStuck'])->name('retry-stuck');
         });
         Route::middleware('can:SMS Settings')->group(function () {
@@ -238,7 +238,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
             Route::put('/gateways/{gateway}', [SmsSettingController::class, 'updateGateway'])->name('gateways.update');
             Route::delete('/gateways/{gateway}', [SmsSettingController::class, 'destroyGateway'])->name('gateways.destroy');
             Route::post('/gateways/{gateway}/balance', [SmsSettingController::class, 'balance'])->name('gateways.balance');
-            Route::post('/gateways/{gateway}/test', [SmsSettingController::class, 'test'])->name('gateways.test');
+            Route::post('/gateways/{gateway}/test', [SmsSettingController::class, 'test'])->name('gateways.test')->middleware('throttle:sms');
         });
     });
 });

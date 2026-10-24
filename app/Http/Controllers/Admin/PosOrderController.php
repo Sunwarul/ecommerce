@@ -163,7 +163,7 @@ class PosOrderController extends Controller
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
 
         if ($order->status !== 'draft') {
-            return back()->with('error', 'Cannot update non-draft order.');
+            return back()->with('error', __('Cannot update non-draft order.'));
         }
 
         return $this->saveSale($request, $stockService, $order);
@@ -207,7 +207,7 @@ class PosOrderController extends Controller
         $installment = $isDraft ? null : $this->validateInstallment($request);
 
         if ($installment && empty($data['customer_id'])) {
-            throw ValidationException::withMessages(['customer_id' => ['Select a customer for installment sales.']]);
+            throw ValidationException::withMessages(['customer_id' => [__('Select a customer for installment sales.')]]);
         }
 
         $userId = Auth::id();
@@ -230,7 +230,7 @@ class PosOrderController extends Controller
 
             if (! $isDraft && empty($payments) && ! $installment) {
                 throw ValidationException::withMessages([
-                    'payments' => ['At least one payment is required to complete the order.'],
+                    'payments' => [__('At least one payment is required to complete the order.')],
                 ]);
             }
 
@@ -309,7 +309,7 @@ class PosOrderController extends Controller
             }
 
             if ($isDraft) {
-                return redirect()->back()->with('success', 'Order saved as draft successfully');
+                return redirect()->back()->with('success', __('Order saved as draft successfully'));
             }
 
             $this->savePayments($order, $payments);
@@ -341,13 +341,13 @@ class PosOrderController extends Controller
         foreach ($items as $item) {
             $product = $products->get($item['product_id']);
             if (! $product) {
-                throw ValidationException::withMessages(['items' => ['Invalid product.']]);
+                throw ValidationException::withMessages(['items' => [__('Invalid product.')]]);
             }
 
             // variable => variation required
             if ($product->type === 'variable' && empty($item['variation_id'])) {
                 throw ValidationException::withMessages([
-                    'items' => ["Variation is required for: {$product->name}"],
+                    'items' => [__('Variation is required for: :name', ['name' => $product->name])],
                 ]);
             }
 
@@ -356,7 +356,7 @@ class PosOrderController extends Controller
                 $variation = $product->variations->firstWhere('id', (int) $item['variation_id']);
                 if (! $variation) {
                     throw ValidationException::withMessages([
-                        'items' => ["Invalid variation for: {$product->name}"],
+                        'items' => [__('Invalid variation for: :name', ['name' => $product->name])],
                     ]);
                 }
             }
@@ -635,7 +635,7 @@ class PosOrderController extends Controller
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
 
         if ($order->status === 'void') {
-            return back()->with('success', 'Already voided');
+            return back()->with('success', __('Already voided'));
         }
 
         DB::transaction(function () use ($order, $stockService) {
@@ -668,7 +668,7 @@ class PosOrderController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Order voided');
+        return back()->with('success', __('Order voided'));
     }
 
     public function completeDraft(Request $request, $orderId, StockService $stockService)
@@ -676,7 +676,7 @@ class PosOrderController extends Controller
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
 
         if ($order->status !== 'draft') {
-            return back()->with('success', 'Order already completed/void.');
+            return back()->with('success', __('Order already completed/void.'));
         }
 
         $data = $request->validate([
@@ -692,14 +692,14 @@ class PosOrderController extends Controller
             $order->customer_id = $data['customer_id'];
         }
         if ($installment && ! $order->customer_id) {
-            throw ValidationException::withMessages(['customer_id' => ['Select a customer for installment sales.']]);
+            throw ValidationException::withMessages(['customer_id' => [__('Select a customer for installment sales.')]]);
         }
 
         return DB::transaction(function () use ($order, $data, $stockService, $installment) {
             [$payments, $emiCharge] = $this->emi->preparePayments($this->filterPayments($data['payments'] ?? []));
 
             if (empty($payments) && ! $installment) {
-                throw ValidationException::withMessages(['payments' => ['At least one payment is required to complete the order.']]);
+                throw ValidationException::withMessages(['payments' => [__('At least one payment is required to complete the order.')]]);
             }
 
             $invoiceNo = $order->invoice_no ?: PosOrder::generateInvoiceNo($order->id);
@@ -733,7 +733,7 @@ class PosOrderController extends Controller
 
             return redirect()
                 ->route('pos.orders.invoice', $order->id)
-                ->with('success', 'Draft completed successfully');
+                ->with('success', __('Draft completed successfully'));
         });
     }
 
@@ -742,7 +742,7 @@ class PosOrderController extends Controller
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
 
         if ($order->status === 'void') {
-            return back()->with('error', 'Cannot take payment for void order.');
+            return back()->with('error', __('Cannot take payment for void order.'));
         }
 
         // Accept { payments: [...] } or a single payment payload
@@ -761,7 +761,7 @@ class PosOrderController extends Controller
         if ($order->installmentSale && $order->installmentSale->status === 'active') {
             DB::transaction(fn () => $this->installments->collect($order->installmentSale, $data['payments'], Auth::id()));
 
-            return back()->with('success', 'Installment payment collected.');
+            return back()->with('success', __('Installment payment collected.'));
         }
 
         DB::transaction(function () use ($order, $data) {
@@ -786,7 +786,7 @@ class PosOrderController extends Controller
             ], $order));
         });
 
-        return back()->with('success', 'Payment added successfully.');
+        return back()->with('success', __('Payment added successfully.'));
     }
 
     public function edit($orderId)
@@ -795,7 +795,7 @@ class PosOrderController extends Controller
             ->findOrFail($orderId);
 
         if ($order->status !== 'draft') {
-            return to_route('pos.index')->with('error', 'Only draft orders can be edited.');
+            return to_route('pos.index')->with('error', __('Only draft orders can be edited.'));
         }
 
         $order->load(['items.product.variations', 'items.product.stocks.warehouse', 'customer']);
@@ -812,7 +812,7 @@ class PosOrderController extends Controller
         $order = PosOrder::withoutGlobalScope('branch')->findOrFail($orderId);
         $order->delete();
 
-        return back()->with('success', 'Order moved to trash.');
+        return back()->with('success', __('Order moved to trash.'));
     }
 
     public function restore($orderId)
@@ -820,7 +820,7 @@ class PosOrderController extends Controller
         $order = PosOrder::onlyTrashed()->withoutGlobalScope('branch')->findOrFail($orderId);
         $order->restore();
 
-        return back()->with('success', 'Order restored.');
+        return back()->with('success', __('Order restored.'));
     }
 
     public function forceDelete($orderId)
@@ -833,7 +833,7 @@ class PosOrderController extends Controller
             $order->forceDelete();
         });
 
-        return back()->with('success', 'Order permanently deleted.');
+        return back()->with('success', __('Order permanently deleted.'));
     }
 
     public function bulkAction(Request $request)
@@ -850,13 +850,13 @@ class PosOrderController extends Controller
         if ($action === 'trash') {
             PosOrder::withoutGlobalScope('branch')->whereIn('id', $ids)->delete();
 
-            return back()->with('success', count($ids).' orders moved to trash.');
+            return back()->with('success', __(':count orders moved to trash.', ['count' => count($ids)]));
         }
 
         if ($action === 'restore') {
             PosOrder::onlyTrashed()->withoutGlobalScope('branch')->whereIn('id', $ids)->restore();
 
-            return back()->with('success', count($ids).' orders restored.');
+            return back()->with('success', __(':count orders restored.', ['count' => count($ids)]));
         }
 
         if ($action === 'force_delete') {
@@ -868,7 +868,7 @@ class PosOrderController extends Controller
                 });
             });
 
-            return back()->with('success', count($ids).' orders permanently deleted.');
+            return back()->with('success', __(':count orders permanently deleted.', ['count' => count($ids)]));
         }
 
         return back();
@@ -890,7 +890,7 @@ class PosOrderController extends Controller
             ->get();
 
         if ($orders->isEmpty()) {
-            return back()->with('error', 'No orders found.');
+            return back()->with('error', __('No orders found.'));
         }
 
         $completedCount = 0;
@@ -911,9 +911,9 @@ class PosOrderController extends Controller
             }
         }
 
-        $message = "{$completedCount} order(s) transferred to selected branch.";
+        $message = __(':count order(s) transferred to the selected branch.', ['count' => $completedCount]);
         if ($skippedCount > 0) {
-            $message .= " {$skippedCount} order(s) skipped (not completed).";
+            $message .= ' '.__(':count order(s) skipped (not completed).', ['count' => $skippedCount]);
         }
 
         return back()->with('success', $message);
@@ -927,7 +927,7 @@ class PosOrderController extends Controller
         $isAdmin = $user->hasRole('admin') || $user->hasRole('Super Admin') || $user->hasRole('manager');
 
         if (! $isAdmin) {
-            return back()->with('error', 'Only admins can edit order date.');
+            return back()->with('error', __('Only admins can edit order date.'));
         }
 
         $data = $request->validate([
@@ -950,6 +950,6 @@ class PosOrderController extends Controller
             'user_name' => Auth::user()->name,
         ]);
 
-        return back()->with('success', 'Order date updated successfully.');
+        return back()->with('success', __('Order date updated successfully.'));
     }
 }

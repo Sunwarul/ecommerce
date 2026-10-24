@@ -10,12 +10,16 @@ import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import SelectButton from "primevue/selectbutton";
 import Textarea from "primevue/textarea";
+import Tooltip from "primevue/tooltip";
 import { useToast } from "primevue/usetoast";
 import { useFlashToast } from "@/Composables/useFlashToast";
+import { useI18n } from "vue-i18n";
 import { firstError } from "@/Helpers/format";
 
 useFlashToast();
 const toast = useToast();
+const { t } = useI18n();
+const vTooltip = Tooltip;
 
 const props = defineProps({
     templates: { type: Array, default: () => [] },
@@ -25,10 +29,11 @@ const props = defineProps({
 });
 
 // ---------------- Recipients ----------------
-const modeOptions = [
-    { label: "Pick customers", value: "pick" },
-    { label: "Whole audience", value: "audience" },
-];
+const modeOptions = computed(() => [
+    { label: t("sms.send.pick_customers"), value: "pick" },
+    { label: t("sms.send.whole_audience"), value: "audience" },
+]);
+const audienceOptions = computed(() => props.audiences.map((a) => ({ ...a, label: t(`sms.audience.${a.value}`) })));
 const mode = ref("pick");
 const audience = ref("all");
 const search = ref("");
@@ -55,7 +60,7 @@ async function load(reset = true) {
         lastPage.value = data.last_page;
         total.value = data.total;
     } catch (e) {
-        toast.add({ severity: "warn", summary: "Search error", detail: "Could not load customers", life: 2500 });
+        toast.add({ severity: "warn", summary: t("shared.terms.error"), detail: t("sms.send.load_failed"), life: 2500 });
     } finally {
         if (mine === seq) loading.value = false;
     }
@@ -88,7 +93,7 @@ function clearSelected() {
 }
 
 const manualNumbers = computed(() => numbers.value.split(/[\s,;]+/).map((x) => x.trim()).filter((x) => x.replace(/\D/g, "").length >= 8));
-const audienceInfo = computed(() => props.audiences.find((a) => a.value === audience.value));
+const audienceInfo = computed(() => audienceOptions.value.find((a) => a.value === audience.value));
 const recipientEstimate = computed(() =>
     (mode.value === "audience" ? audienceInfo.value?.count || 0 : selectedList.value.length) + manualNumbers.value.length
 );
@@ -136,8 +141,8 @@ const totalParts = computed(() => parts.value * recipientEstimate.value);
 const previewText = computed(() => {
     const first = mode.value === "pick" ? selectedList.value[0] : null;
     return message.value
-        .replaceAll("{customer_name}", first?.name || "Customer")
-        .replaceAll("{name}", first?.name || "Customer")
+        .replaceAll("{customer_name}", first?.name || t("shared.terms.customer"))
+        .replaceAll("{name}", first?.name || t("shared.terms.customer"))
         .replaceAll("{phone}", first?.phone || "01XXXXXXXXX")
         .replaceAll("{date}", new Date().toLocaleDateString("en-GB").replaceAll("/", "-"));
 });
@@ -148,11 +153,11 @@ const sending = ref(false);
 
 function openConfirm() {
     if (!message.value.trim()) {
-        toast.add({ severity: "warn", summary: "Message required", detail: "Write a message first", life: 2500 });
+        toast.add({ severity: "warn", summary: t("sms.send.message_required"), detail: t("sms.send.write_first"), life: 2500 });
         return;
     }
     if (!recipientEstimate.value) {
-        toast.add({ severity: "warn", summary: "No recipients", detail: "Select customers or enter numbers", life: 2500 });
+        toast.add({ severity: "warn", summary: t("sms.send.no_recipients"), detail: t("sms.send.select_recipients"), life: 2500 });
         return;
     }
     showConfirm.value = true;
@@ -175,7 +180,7 @@ function send() {
             onSuccess: () => (showConfirm.value = false),
             onError: (errors) => {
                 showConfirm.value = false;
-                toast.add({ severity: "error", summary: "Not sent", detail: firstError(errors), life: 4000 });
+                toast.add({ severity: "error", summary: t("sms.send.not_sent"), detail: firstError(errors), life: 4000 });
             },
             onFinish: () => (sending.value = false),
         }
@@ -184,38 +189,38 @@ function send() {
 </script>
 
 <template>
-    <Head title="Send SMS" />
+    <Head :title="t('sms.send_sms')" />
     <AuthenticatedLayout>
         <div class="p-4 md:p-6 space-y-4">
             <div class="flex flex-wrap justify-between items-start gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold text-slate-800 flex items-center gap-2"><i class="pi pi-send text-primary" /> Send SMS</h2>
-                    <p class="text-sm text-slate-500">Festival greetings, offers and custom messages to your customers</p>
+                    <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2"><i class="pi pi-send text-primary" /> {{ t('sms.send_sms') }}</h1>
+                    <p class="text-sm text-slate-500">{{ t('sms.send.subtitle') }}</p>
                 </div>
                 <div class="flex gap-2">
-                    <Link :href="route('sms.dashboard')"><Button label="Dashboard" icon="pi pi-chart-bar" size="small" severity="secondary" outlined /></Link>
-                    <Link :href="route('sms.logs')"><Button label="History" icon="pi pi-history" size="small" severity="secondary" outlined /></Link>
+                    <Link :href="route('sms.dashboard')"><Button :label="t('sms.dashboard.title')" icon="pi pi-chart-pie" size="small" severity="secondary" outlined /></Link>
+                    <Link :href="route('sms.logs')"><Button :label="t('sms.history')" icon="pi pi-history" size="small" severity="secondary" outlined /></Link>
                 </div>
             </div>
 
             <div v-if="!enabled" class="p-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-900 text-sm flex flex-wrap items-center gap-2">
-                <i class="pi pi-exclamation-triangle" /> SMS sending is turned off.
-                <Link :href="route('sms.settings')" class="font-semibold underline">Enable in SMS Settings</Link>
+                <i class="pi pi-exclamation-triangle" /> {{ t('sms.disabled_banner') }}
+                <Link :href="route('sms.settings')" class="font-semibold underline">{{ t('sms.enable_in_settings') }}</Link>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Recipients -->
                 <div class="card p-4 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h3 class="font-semibold text-slate-700">Recipients</h3>
+                        <h2 class="font-semibold text-slate-700">{{ t('sms.recipients') }}</h2>
                         <SelectButton v-model="mode" :options="modeOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" />
                     </div>
 
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Audience</label>
-                        <Select v-model="audience" :options="audiences" optionValue="value" class="w-full">
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.send.audience') }}</label>
+                        <Select v-model="audience" :options="audienceOptions" optionValue="value" class="w-full">
                             <template #value="{ value }">
-                                <span>{{ audiences.find((a) => a.value === value)?.label }} ({{ audiences.find((a) => a.value === value)?.count ?? 0 }})</span>
+                                <span>{{ audienceOptions.find((a) => a.value === value)?.label }} ({{ audienceOptions.find((a) => a.value === value)?.count ?? 0 }})</span>
                             </template>
                             <template #option="{ option }">
                                 <div class="flex justify-between w-full gap-3"><span>{{ option.label }}</span><span class="text-slate-500">{{ option.count }}</span></div>
@@ -224,59 +229,59 @@ function send() {
                     </div>
 
                     <template v-if="mode === 'pick'">
-                        <InputText v-model="search" placeholder="Search name or phone (partial, * wildcard)" class="w-full" />
+                        <InputText v-model="search" type="search" :placeholder="t('sms.send.search_placeholder')" v-tooltip.bottom="t('shared.terms.search_hint')" class="w-full" />
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <Checkbox :modelValue="allOnPageSelected" binary @update:modelValue="toggleAllOnPage" />
-                                Select all shown ({{ customers.length }} of {{ total }})
+                                {{ t('sms.send.select_all_shown', { shown: customers.length, total }) }}
                             </label>
-                            <span v-if="loading"><i class="pi pi-spin pi-spinner" /> Loading…</span>
+                            <span v-if="loading"><i class="pi pi-spin pi-spinner" /> {{ t('common.loading') }}</span>
                         </div>
                         <div class="border border-slate-200 rounded-xl max-h-80 overflow-y-auto divide-y divide-slate-100">
                             <label v-for="c in customers" :key="c.id" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50">
                                 <Checkbox :modelValue="isSelected(c)" binary @update:modelValue="toggle(c)" />
                                 <div class="min-w-0">
                                     <div class="text-sm font-medium text-slate-800 truncate">{{ c.name }}</div>
-                                    <div class="text-xs text-slate-500">{{ c.phone }}</div>
+                                    <div class="text-xs text-slate-500 ltr-nums text-start">{{ c.phone }}</div>
                                 </div>
                             </label>
-                            <div v-if="!customers.length && !loading" class="p-4 text-center text-sm text-slate-400">No customers found</div>
+                            <div v-if="!customers.length && !loading" class="p-4 text-center text-sm text-slate-400">{{ t('sms.send.no_customers') }}</div>
                         </div>
-                        <Button v-if="page < lastPage" label="Load more" icon="pi pi-angle-down" text size="small" :loading="loading" @click="load(false)" />
+                        <Button v-if="page < lastPage" :label="t('sms.send.load_more')" icon="pi pi-angle-down" text size="small" :loading="loading" @click="load(false)" />
 
                         <div class="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
-                            <span class="text-sm text-slate-700 font-medium">{{ selectedList.length }} selected</span>
+                            <span class="text-sm text-slate-700 font-medium">{{ t('sms.send.selected_count', { n: selectedList.length }) }}</span>
                             <span v-for="c in selectedList.slice(0, 6)" :key="c.id"
                                 class="text-xs px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center gap-1">
-                                {{ c.name }} <i class="pi pi-times cursor-pointer !text-[10px]" @click="toggle(c)" />
+                                {{ c.name }} <button type="button" class="leading-none" :aria-label="t('common.delete')" @click="toggle(c)"><i class="pi pi-times !text-[10px]" /></button>
                             </span>
-                            <span v-if="selectedList.length > 6" class="text-xs text-slate-500">+{{ selectedList.length - 6 }} more</span>
-                            <Button v-if="selectedList.length" label="Clear" text size="small" class="ml-auto" @click="clearSelected" />
+                            <span v-if="selectedList.length > 6" class="text-xs text-slate-500">{{ t('sms.send.more', { n: selectedList.length - 6 }) }}</span>
+                            <Button v-if="selectedList.length" :label="t('sms.send.clear')" text size="small" class="ms-auto" @click="clearSelected" />
                         </div>
                     </template>
 
                     <div v-else class="p-3 rounded-xl bg-sky-50 border border-sky-200 text-sm text-slate-700">
-                        Message goes to <b>{{ audienceInfo?.count ?? 0 }}</b> customers in “{{ audienceInfo?.label }}”.
+                        {{ t('sms.send.audience_summary', { n: audienceInfo?.count ?? 0, audience: audienceInfo?.label }) }}
                     </div>
 
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Extra numbers (comma or new line separated)</label>
-                        <Textarea v-model="numbers" rows="3" class="w-full text-sm" placeholder="01712345678, 01812345678" />
-                        <div class="text-xs text-slate-500 mt-1">{{ manualNumbers.length }} number(s)</div>
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.send.extra_numbers') }}</label>
+                        <Textarea v-model="numbers" rows="3" class="w-full text-sm ltr-nums" dir="ltr" placeholder="01712345678, 01812345678" />
+                        <div class="text-xs text-slate-500 mt-1">{{ t('sms.send.numbers_count', { n: manualNumbers.length }) }}</div>
                     </div>
                 </div>
 
                 <!-- Message -->
                 <div class="card p-4 space-y-3">
-                    <h3 class="font-semibold text-slate-700">Message</h3>
+                    <h2 class="font-semibold text-slate-700">{{ t('sms.message') }}</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs text-slate-500 block mb-1">Campaign name (optional)</label>
-                            <InputText v-model="name" class="w-full" placeholder="Eid ul-Fitr greetings" />
+                            <label class="text-xs text-slate-500 block mb-1">{{ t('sms.send.campaign_name') }}</label>
+                            <InputText v-model="name" class="w-full" dir="auto" :placeholder="t('sms.send.campaign_placeholder')" />
                         </div>
                         <div>
-                            <label class="text-xs text-slate-500 block mb-1">Template</label>
-                            <Select v-model="templateId" :options="templates" optionLabel="name" optionValue="id" placeholder="Choose template" showClear class="w-full" />
+                            <label class="text-xs text-slate-500 block mb-1">{{ t('sms.template') }}</label>
+                            <Select v-model="templateId" :options="templates" optionLabel="name" optionValue="id" :placeholder="t('sms.send.choose_template')" showClear class="w-full" />
                         </div>
                     </div>
 
@@ -284,37 +289,37 @@ function send() {
                         <div class="flex flex-wrap gap-1 mb-1">
                             <Button v-for="ph in placeholders" :key="ph" :label="ph" size="small" severity="secondary" outlined class="!text-xs !py-0.5" @click="insert(ph)" />
                         </div>
-                        <Textarea ref="textareaRef" v-model="message" rows="6" class="w-full" placeholder="Type your message…" />
+                        <Textarea ref="textareaRef" v-model="message" rows="6" dir="auto" class="w-full" :placeholder="t('sms.send.type_message')" />
                         <div class="flex flex-wrap justify-between text-xs text-slate-500 mt-1 gap-2">
-                            <span>{{ charCount }} chars · {{ parts }} part(s) · {{ isUnicode ? "Unicode (70/67)" : "GSM (160/153)" }}</span>
-                            <span>Estimated: {{ recipientEstimate }} recipients × {{ parts }} = <b class="text-slate-700">{{ totalParts }}</b> parts</span>
+                            <span>{{ t('sms.counter', { chars: charCount, parts }) }} · {{ isUnicode ? "Unicode (70/67)" : "GSM (160/153)" }}</span>
+                            <span>{{ t('sms.send.estimate', { n: recipientEstimate, parts, total: totalParts }) }}</span>
                         </div>
                     </div>
 
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Preview</label>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap min-h-[3rem]">{{ previewText || "—" }}</div>
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.preview') }}</label>
+                        <div dir="auto" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap min-h-[3rem]">{{ previewText || "—" }}</div>
                     </div>
 
                     <div>
-                        <label class="text-xs text-slate-500 block mb-1">Gateway</label>
-                        <Select v-model="gatewayId" :options="gateways" optionLabel="name" optionValue="id" placeholder="Default gateway" showClear class="w-full" />
+                        <label class="text-xs text-slate-500 block mb-1">{{ t('sms.gateway') }}</label>
+                        <Select v-model="gatewayId" :options="gateways" optionLabel="name" optionValue="id" :placeholder="t('sms.send.default_gateway')" showClear class="w-full" />
                     </div>
 
-                    <Button label="Send SMS" icon="pi pi-send" class="w-full" :disabled="!enabled" @click="openConfirm" />
+                    <Button :label="t('sms.send_sms')" icon="pi pi-send" class="w-full" :disabled="!enabled || sending" @click="openConfirm" />
                 </div>
             </div>
         </div>
 
-        <Dialog v-model:visible="showConfirm" modal header="Confirm sending" :style="{ width: '440px' }" :breakpoints="{ '640px': '95vw' }">
+        <Dialog v-model:visible="showConfirm" modal :header="t('sms.send.confirm_title')" :style="{ width: '440px' }" :breakpoints="{ '640px': '95vw' }">
             <div class="space-y-2 text-sm text-slate-700">
-                <p>Send this message to about <b>{{ recipientEstimate }}</b> recipient(s)?</p>
-                <p class="text-slate-500">Estimated usage: {{ totalParts }} SMS part(s). Duplicate and invalid numbers are skipped.</p>
-                <div class="p-2 rounded-lg bg-slate-50 border border-slate-200 whitespace-pre-wrap">{{ previewText }}</div>
+                <p>{{ t('sms.send.confirm_text', { n: recipientEstimate }) }}</p>
+                <p class="text-slate-500">{{ t('sms.send.confirm_usage', { parts: totalParts }) }}</p>
+                <div dir="auto" class="p-2 rounded-lg bg-slate-50 border border-slate-200 whitespace-pre-wrap">{{ previewText }}</div>
             </div>
             <template #footer>
-                <Button label="Cancel" text @click="showConfirm = false" />
-                <Button label="Send now" icon="pi pi-send" :loading="sending" @click="send" />
+                <Button :label="t('shared.terms.cancel')" text @click="showConfirm = false" />
+                <Button :label="t('sms.send.send_now')" icon="pi pi-send" :loading="sending" @click="send" />
             </template>
         </Dialog>
     </AuthenticatedLayout>

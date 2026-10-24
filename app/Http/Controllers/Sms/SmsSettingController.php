@@ -82,7 +82,7 @@ class SmsSettingController extends Controller
             Setting::set("sms_event_{$key}", ! empty($data['events'][$key]) ? '1' : '0');
         }
 
-        return back()->with('success', 'SMS settings saved.');
+        return back()->with('success', __('SMS settings saved.'));
     }
 
     public function updateTemplate(Request $request, SmsTemplate $template)
@@ -93,7 +93,7 @@ class SmsSettingController extends Controller
             'is_active' => ['boolean'],
         ]));
 
-        return back()->with('success', 'Template saved.');
+        return back()->with('success', __('Template saved.'));
     }
 
     public function storeTemplate(Request $request)
@@ -104,7 +104,7 @@ class SmsSettingController extends Controller
         ]);
         SmsTemplate::create($data + ['key' => 'custom_'.uniqid(), 'is_active' => true]);
 
-        return back()->with('success', 'Template created.');
+        return back()->with('success', __('Template created.'));
     }
 
     public function destroyTemplate(SmsTemplate $template)
@@ -114,7 +114,7 @@ class SmsSettingController extends Controller
         }
         $template->delete();
 
-        return back()->with('success', 'Template deleted.');
+        return back()->with('success', __('Template deleted.'));
     }
 
     // ------------------------------------------------------------------
@@ -158,7 +158,7 @@ class SmsSettingController extends Controller
         $gateway = SmsGateway::create($this->gatewayData($request));
         $this->applyDefault($gateway);
 
-        return back()->with('success', 'Gateway added.');
+        return back()->with('success', __('Gateway added.'));
     }
 
     public function updateGateway(Request $request, SmsGateway $gateway)
@@ -166,7 +166,7 @@ class SmsSettingController extends Controller
         $gateway->update($this->gatewayData($request, $gateway));
         $this->applyDefault($gateway->fresh());
 
-        return back()->with('success', 'Gateway updated.');
+        return back()->with('success', __('Gateway updated.'));
     }
 
     public function destroyGateway(SmsGateway $gateway)
@@ -177,7 +177,7 @@ class SmsSettingController extends Controller
             $next->update(['is_default' => true]);
         }
 
-        return back()->with('success', 'Gateway removed.');
+        return back()->with('success', __('Gateway removed.'));
     }
 
     public function balance(SmsGateway $gateway)
@@ -185,10 +185,10 @@ class SmsSettingController extends Controller
         try {
             $balance = $this->sms->balance($gateway);
         } catch (\Throwable $e) {
-            return back()->with('error', 'Balance check failed: '.$e->getMessage());
+            return back()->with('error', __('Balance check failed: :error', ['error' => $e->getMessage()]));
         }
 
-        return back()->with('success', $balance === null ? 'Could not read balance from the response.' : 'Balance: '.number_format($balance, 2));
+        return back()->with('success', $balance === null ? __('Could not read balance from the response.') : __('Balance: :amount', ['amount' => number_format($balance, 2)]));
     }
 
     public function test(Request $request, SmsGateway $gateway)
@@ -210,7 +210,7 @@ class SmsSettingController extends Controller
         }
 
         return $log->status === 'sent'
-            ? back()->with('success', 'Test SMS sent to '.$log->phone.'.')
-            : back()->with('error', 'Test failed: '.($log->error ?: 'unknown error'));
+            ? back()->with('success', __('Test SMS sent to :phone.', ['phone' => $log->phone]))
+            : back()->with('error', __('Test failed: :error', ['error' => $log->error ?: __('unknown error')]));
     }
 }

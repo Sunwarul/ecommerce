@@ -32,7 +32,8 @@ class StockMovementController extends Controller
             'product_id' => ['required', 'exists:products,id'],
             'variation_id' => ['nullable', 'exists:product_variations,id'],
             'branch_id' => ['nullable', 'exists:branches,id'],
-            'quantity' => ['required', 'numeric', 'gt:0'],
+            // "adjust" sets the absolute quantity, so 0 is valid there
+            'quantity' => ['required', 'numeric', $request->input('type') === 'adjust' ? 'min:0' : 'gt:0'],
 
             'from_warehouse_id' => ['nullable', 'exists:warehouses,id'],
             'to_warehouse_id' => ['nullable', 'exists:warehouses,id'],
@@ -48,7 +49,7 @@ class StockMovementController extends Controller
 
         if ($data['type'] === 'in') {
             if (empty($data['to_warehouse_id'])) {
-                return back()->withErrors(['to_warehouse_id' => 'Required']);
+                return back()->withErrors(['to_warehouse_id' => __('validation.required', ['attribute' => __('warehouse')])]);
             }
             $stockService->stockIn($data);
         }
@@ -69,12 +70,12 @@ class StockMovementController extends Controller
 
         if ($data['type'] === 'adjust') {
             if (empty($data['to_warehouse_id'])) {
-                return back()->withErrors(['to_warehouse_id' => 'Required']);
+                return back()->withErrors(['to_warehouse_id' => __('validation.required', ['attribute' => __('warehouse')])]);
             }
             $stockService->adjust($data);
         }
 
-        $msg = 'Stock updated successfully.';
+        $msg = __('Stock updated successfully.');
 
         if (! empty($data['move'])) {
             return redirect()

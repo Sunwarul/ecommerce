@@ -1,177 +1,65 @@
 <?php
 
-namespace Tests\Feature\Controllers;
-
 use App\Models\Category;
+use App\Models\Role;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
-use Tests\TestCase;
 
-class CategoryControllerTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Super Admin', 'web'));
+    $this->actingAs($user);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        Storage::fake('public');
-        $this->actingAs(User::factory()->create());
-    }
+test('index lists categories', function () {
+    Category::factory(3)->create();
 
-    public function test_index_displays_categories()
-    {
-        // Arrange
+    $this->get(route('categories.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Admin/Categories/Index', false)->has('items.data', 3));
+});
 
-        // Act
-        $response = $this->get(route('categories.index'));
+test('store creates a category, optionally with a photo', function () {
+    $this->post(route('categories.store'), ['name' => 'Air Conditioners', 'is_active' => false])
+        ->assertRedirect(route('categories.index'))
+        ->assertSessionHas('success');
+    $this->assertDatabaseHas('categories', ['name' => 'Air Conditioners', 'is_active' => false]);
 
-        // Assert
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Categories/Index')
-            // ->has('categories.data', 15);
-        );
-    }
+    $this->post(route('categories.store'), ['name' => 'Fans', 'photo' => UploadedFile::fake()->image('fan.jpg')]);
+    Storage::disk('public')->assertExists(Category::where('name', 'Fans')->value('photo'));
+});
 
-    public function test_store_creates_new_category()
-    {
-        // Arrange
-        $categoryData = [
-            'name' => 'Test Category',
-            'is_active' => false,
-        ];
+test('update changes a category and replaces its photo', function () {
+    $category = Category::factory()->create(['photo' => 'categories/old.jpg']);
+    Storage::disk('public')->put('categories/old.jpg', 'x');
 
-        // Act
-        $response = $this->post(route('categories.store'), $categoryData);
+    $this->put(route('categories.update', $category), ['name' => 'Renamed', 'photo' => UploadedFile::fake()->image('new.jpg')])
+        ->assertRedirect(route('categories.index'))
+        ->assertSessionHas('success');
 
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
-        $this->assertDatabaseHas('categories', $categoryData);
-    }
+    $category->refresh();
+    expect($category->name)->toBe('Renamed');
+    Storage::disk('public')->assertMissing('categories/old.jpg');
+    Storage::disk('public')->assertExists($category->photo);
+});
 
-    public function test_store_creates_category_with_photo()
-    {
-        // Arrange
-        $photo = UploadedFile::fake()->image('category.jpg');
-        $categoryData = [
-            'name' => 'Test Category',
-            'photo' => $photo,
-        ];
+test('destroy soft deletes and bulk restore brings it back', function () {
+    $category = Category::factory()->create();
 
-        // Act
-        $response = $this->post(route('categories.store'), $categoryData);
+    $this->delete(route('categories.destroy', $category))->assertRedirect(route('categories.index'));
+    $this->assertSoftDeleted($category);
 
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
+    $this->post(route('categories.bulk-restore'), ['ids' => [$category->id]]);
+    $this->assertNotSoftDeleted($category);
+});
 
-        $category = Category::first();
-        $this->assertNotNull($category->photo);
-        Storage::disk('public')->assertExists($category->photo);
-    }
+test('bulk destroy validates ids', function () {
+    $this->post(route('categories.bulk-destroy'), ['ids' => 'not-an-array'])->assertSessionHasErrors('ids');
 
-    public function test_update_category()
-    {
-        // Arrange
-        $category = Category::factory()->create();
-        $updateData = [
-            'name' => 'Updated Name',
-            'is_active' => false,
-        ];
-
-        // Act
-        $response = $this->put(route('categories.update', $category), $updateData);
-
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
-        $this->assertDatabaseHas('categories', $updateData);
-    }
-
-    public function test_update_category_with_new_photo()
-    {
-        // Arrange
-        $category = Category::factory()->create([
-            'photo' => 'categories/old-photo.jpg',
-        ]);
-        Storage::put($category->photo, 'fake-old-image');
-
-        $newPhoto = UploadedFile::fake()->image('new-category.jpg');
-        $updateData = [
-            'name' => 'Updated Name',
-            'photo' => $newPhoto,
-        ];
-
-        // Act
-        $response = $this->put(route('categories.update', $category), $updateData);
-
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
-
-        $category->refresh();
-        Storage::assertMissing('categories/old-photo.jpg');
-        Storage::assertExists($category->photo);
-    }
-
-    public function test_destroy_category()
-    {
-        // Arrange
-        $category = Category::factory()->create([
-            'photo' => 'categories/test-photo.jpg',
-        ]);
-        Storage::put($category->photo, 'fake-image');
-
-        // Act
-        $response = $this->delete(route('categories.destroy', $category));
-
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
-        $this->assertDatabaseMissing('categories', [['id' => $category->id]]);
-        Storage::assertMissing($category->photo);
-    }
-
-    public function test_bulk_destroy_categories()
-    {
-        // Arrange
-        $categories = Category::factory(3)->create()->each(function ($category) {
-            $category->photo = 'categories/test-photo-'.$category->id.'.jpg';
-            $category->save();
-            Storage::put($category->photo, 'fake-image');
-        });
-
-        $categoryIds = $categories->pluck('id')->toArray();
-
-        // Act
-        $response = $this->post(route('categories.bulk-destroy'), [
-            'categoryIds' => $categoryIds,
-        ]);
-
-        // Assert
-        $response->assertRedirect(route('categories.index'));
-        $response->assertSessionHas('success');
-
-        foreach ($categories as $category) {
-            $this->assertDatabaseMissing('categories', [['id' => $category->id]]);
-            Storage::assertMissing($category->photo);
-        }
-    }
-
-    public function test_bulk_destroy_validates_category_ids()
-    {
-        // Act
-        $response = $this->delete(route('categories.bulk-destroy'), [
-            'categoryIds' => 'not-an-array',
-        ]);
-
-        // Assert
-        $response->assertStatus(302);
-        $response->assertSessionHasErrors(['categoryIds']);
-    }
-}
+    $categories = Category::factory(2)->create();
+    $this->post(route('categories.bulk-destroy'), ['ids' => $categories->pluck('id')->all()])->assertRedirect();
+    $categories->each(fn ($c) => $this->assertSoftDeleted($c));
+});

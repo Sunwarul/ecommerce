@@ -2,17 +2,14 @@
 @use "./layout/layout.scss";
 @use "primeicons/primeicons.css";
 @use "./demo/demo.scss";
+@use "./flags";
+// dark-mode remaps win by specificity (.app-dark .x), so they can load before Tailwind
+@use "./dark-utilities";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import "./flags.css";
-// @import "https://unpkg.com/primeicons/primeicons.css";
-
-.hello {
-    color: red;
-}
 
 :root {
     --body-bg: var(--p-surface-50);
@@ -24,7 +21,7 @@
     --overlay-background: #ffffff;
 }
 
-:root[class="p-dark"] {
+:root.app-dark {
     --body-bg: var(--p-surface-950);
     --body-text-color: var(--p-surface-50);
     --card-border: 1px solid transparent;
@@ -59,4 +56,97 @@ body {
 .border-bottom-2 {
     border-bottom: 2px solid var(--p-primary-500) !important;
     border-radius: 0px !important;
+}
+/* ------------------------------------------------------------------
+ * Layout polish
+ * ------------------------------------------------------------------ */
+.layout-wrapper {
+    background-color: var(--surface-ground);
+}
+
+/* Cards: tighter on phones */
+@media (max-width: 640px) {
+    .card {
+        padding: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    .layout-main {
+        padding: 0.5rem 0;
+    }
+
+    .layout-main-container {
+        padding-inline: 0.5rem !important;
+    }
+}
+
+/* Wide data tables scroll inside their card instead of stretching the page */
+.p-datatable-table-container {
+    overflow-x: auto;
+}
+
+/* Tabular figures for money columns */
+.tabular-nums,
+.p-datatable td {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------
+ * RTL helpers
+ * ------------------------------------------------------------------ */
+/* The off-canvas sidebar parks itself outside the viewport (past the right edge in RTL);
+   never let that create sideways scrolling */
+html {
+    overflow-x: clip;
+}
+
+/* Directional icons point the reading direction */
+[dir='rtl'] .pi-arrow-left,
+[dir='rtl'] .pi-arrow-right,
+[dir='rtl'] .pi-angle-left,
+[dir='rtl'] .pi-angle-right,
+[dir='rtl'] .pi-chevron-left,
+[dir='rtl'] .pi-chevron-right,
+[dir='rtl'] .pi-angle-double-left,
+[dir='rtl'] .pi-angle-double-right,
+[dir='rtl'] .pi-sign-out,
+[dir='rtl'] .pi-external-link,
+[dir='rtl'] .pi-send {
+    transform: scaleX(-1);
+}
+
+/* Numbers, phone numbers and codes stay left-to-right inside RTL text */
+/* Invoice numbers, dates, phones: keep their own order inside RTL text,
+   while alignment still follows the surrounding layout */
+[dir='rtl'] .ltr-nums {
+    unicode-bidi: plaintext;
+}
+
+[dir='rtl'] input[type='tel'],
+[dir='rtl'] input[type='email'],
+[dir='rtl'] .p-inputnumber-input {
+    direction: ltr;
+    text-align: end;
+}
+
+/* PrimeVue overlays follow the document direction */
+[dir='rtl'] .p-dialog-header-actions {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+}
+
+/* Print: never print app chrome */
+@media print {
+    .layout-topbar,
+    .layout-sidebar,
+    .layout-footer,
+    .layout-mask,
+    .p-toast {
+        display: none !important;
+    }
+
+    .layout-main-container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 }

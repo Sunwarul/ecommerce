@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\IgnoresStoredFilePaths;
 use App\Rules\FileUploadRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PaymentMethodUpdateRequest extends FormRequest
 {
+    use IgnoresStoredFilePaths;
+
     /**
      * Determine if the user is authorized to make this request.
      */

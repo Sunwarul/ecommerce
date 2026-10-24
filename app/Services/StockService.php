@@ -71,7 +71,7 @@ class StockService
                 $available = $stock ? $stock->quantity : 0;
                 $name = \App\Models\Product::whereKey($productId)->value('name') ?? "#{$productId}";
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'items' => ["Not enough stock for {$name}. Available: {$available}"],
+                    'items' => [__('Not enough stock for :name. Available: :available', ['name' => $name, 'available' => $available])],
                 ]);
             }
 

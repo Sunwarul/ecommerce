@@ -4,12 +4,12 @@
     position: fixed;
     height: 4rem;
     z-index: 997;
-    left: 0;
+    inset-inline-start: 0;
     top: 0;
     width: 100%;
     padding: 0 2rem;
     background-color: var(--surface-card);
-    transition: left var(--layout-section-transition-duration);
+    transition: inset-inline-start var(--layout-section-transition-duration);
     display: flex;
     align-items: center;
 
@@ -76,7 +76,7 @@
     }
 
     .layout-menu-button {
-        margin-right: 0.5rem;
+        margin-inline-end: 0.5rem;
     }
 
     .layout-topbar-menu-button {
@@ -84,7 +84,7 @@
     }
 
     .layout-topbar-actions {
-        margin-left: auto;
+        margin-inline-start: auto;
         display: flex;
         gap: 1rem;
     }
@@ -109,8 +109,8 @@
         }
 
         .layout-menu-button {
-            margin-left: 0;
-            margin-right: 0.5rem;
+            margin-inline-start: 0;
+            margin-inline-end: 0.5rem;
         }
 
         .layout-topbar-menu-button {
@@ -125,7 +125,7 @@
                 0px 0px 2px rgba(0, 0, 0, 0.05), 0px 1px 4px rgba(0, 0, 0, 0.08);
             border-radius: var(--content-border-radius);
             padding: 1rem;
-            right: 2rem;
+            inset-inline-end: 2rem;
             top: 4rem;
             min-width: 15rem;
             border: 1px solid var(--surface-border);
@@ -144,7 +144,7 @@
 
                 i {
                     font-size: 1rem;
-                    margin-right: 0.5rem;
+                    margin-inline-end: 0.5rem;
                 }
 
                 span {
@@ -199,5 +199,33 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+    }
+}
+
+// ---- Shell polish (production pass) ----
+.layout-topbar {
+    border-bottom: 1px solid var(--surface-border);
+
+    .layout-topbar-logo {
+        padding: 0.25rem 0.5rem;
+        font-size: 1rem;
+    }
+
+    .avatar-initials {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 700;
+        background-color: var(--p-primary-color);
+        color: var(--p-primary-contrast-color);
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .layout-topbar {
+        padding: 0 0.75rem;
     }
 }

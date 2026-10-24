@@ -43,6 +43,7 @@ class EmiController extends Controller
     public function index(Request $request)
     {
         if ($request->filled('export')) {
+            abort_unless($request->user()->can('Report Export'), 403);
             $rows = $this->query($request)->get()->map(fn ($t) => [
                 $t->created_at?->format('d-m-Y'),
                 $t->order?->invoice_no,
@@ -126,14 +127,14 @@ class EmiController extends Controller
                 ]));
         });
 
-        return back()->with('success', 'Settlement recorded.');
+        return back()->with('success', __('Settlement recorded.'));
     }
 
     public function unsettle(EmiTransaction $transaction)
     {
         $transaction->update(['settlement_status' => 'pending', 'settled_amount' => null, 'settled_at' => null, 'settlement_ref' => null]);
 
-        return back()->with('success', 'Settlement reverted.');
+        return back()->with('success', __('Settlement reverted.'));
     }
 
     protected function bankRules(): array
@@ -183,7 +184,7 @@ class EmiController extends Controller
             $this->syncTenures($bank, $data['tenures'] ?? []);
         });
 
-        return back()->with('success', 'Bank saved.');
+        return back()->with('success', __('Bank saved.'));
     }
 
     public function updateBank(Request $request, EmiBank $bank)
@@ -195,13 +196,13 @@ class EmiController extends Controller
             $this->syncTenures($bank, $data['tenures'] ?? []);
         });
 
-        return back()->with('success', 'Bank updated.');
+        return back()->with('success', __('Bank updated.'));
     }
 
     public function destroyBank(EmiBank $bank)
     {
         $bank->delete();
 
-        return back()->with('success', 'Bank removed.');
+        return back()->with('success', __('Bank removed.'));
     }
 }

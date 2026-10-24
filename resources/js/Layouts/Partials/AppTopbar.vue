@@ -3,74 +3,136 @@ import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import BranchSwitcher from "@/Components/BranchSwitcher.vue";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import useAuth from "@/Composables/useAuth";
-import { Link, router } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { useLocale } from "@/Composables/useLocale";
+import { LOCALE_NAMES } from "@/Stores/localeStore";
+import { Link, router, usePage } from "@inertiajs/vue3";
+import Button from "primevue/button";
+import Menu from "primevue/menu";
+import Popover from "primevue/popover";
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import AppConfigurator from "./AppConfigurator.vue";
 import { useLayout } from "./LayoutComposable";
-import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
+const page = usePage();
+const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
+const { user, hasAnyPermission, hasRole } = useAuth();
+const { changeLocale, currentLocale, supportedLocales } = useLocale();
 
-const { toggleMenu } = useLayout();
-const { user, roles, permissions, can } = useAuth();
+const userMenu = ref();
+const mobileMenu = ref();
+const appearance = ref();
 
-const current = computed(() => route().current());
+const can = (perm) => hasRole("Super Admin") || hasAnyPermission([perm]);
+const isActive = (name) => route().current(name);
+const initials = computed(() =>
+    (user.value?.name || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+);
 
-const isActive = (name) => current.value.startsWith(name);
+const logout = () => router.post(route("logout"));
+
+const userItems = computed(() => [
+    { label: user.value?.name, disabled: true, class: "font-semibold opacity-100" },
+    { separator: true },
+    ...(route().has("profile.edit")
+        ? [{ label: t("menu.profile"), icon: "pi pi-user-edit", command: () => router.visit(route("profile.edit")) }]
+        : []),
+    ...(can("Setting Index") && route().has("settings.general")
+        ? [{ label: t("menu.general_settings"), icon: "pi pi-cog", command: () => router.visit(route("settings.general")) }]
+        : []),
+    { label: t("auth.logout"), icon: "pi pi-sign-out", command: logout },
+]);
+
+// Phones: everything that does not fit goes into one overflow menu
+const mobileItems = computed(() => {
+    const branches = page.props.branches || [];
+    const branchId = page.props.auth?.user?.branch_id;
+    return [
+        ...(can("Order Index") ? [{ label: t("menu.orders"), icon: "pi pi-receipt", command: () => router.visit(route("pos.orders.index")) }] : []),
+        ...(branches.length
+            ? [{
+                label: t("layout.branch"),
+                icon: "pi pi-building",
+                items: branches.map((b) => ({
+                    label: b.name,
+                    icon: b.id === branchId ? "pi pi-check" : "pi pi-fw",
+                    command: () => b.id !== branchId && router.post(route("branch.switch"), { branch_id: b.id }, { preserveScroll: true }),
+                })),
+            }]
+            : []),
+        {
+            label: t("layout.language"),
+            icon: "pi pi-globe",
+            items: supportedLocales.value.map((loc) => ({
+                label: LOCALE_NAMES[loc] || loc,
+                icon: loc === currentLocale.value ? "pi pi-check" : "pi pi-fw",
+                command: () => changeLocale(loc),
+            })),
+        },
+        { label: isDarkTheme.value ? t("layout.light_mode") : t("layout.dark_mode"), icon: isDarkTheme.value ? "pi pi-sun" : "pi pi-moon", command: toggleDarkMode },
+        { separator: true },
+        ...userItems.value.slice(2),
+    ];
+});
 </script>
 
 <template>
-    <div class="layout-topbar flex items-center justify-between px-4 bg-white border-b shadow-sm">
-        <!-- LEFT SIDE: Menu Toggle + Logo -->
-        <div class="flex items-center gap-3">
-            <button class="layout-menu-button layout-topbar-action" @click="toggleMenu">
-                <i class="pi pi-bars text-xl"></i>
+    <div class="layout-topbar gap-2">
+        <!-- Start: menu toggle + brand -->
+        <div class="flex items-center gap-2 min-w-0">
+            <button type="button" class="layout-menu-button layout-topbar-action" :aria-label="t('layout.toggle_menu')" @click="toggleMenu">
+                <i class="pi pi-bars" />
             </button>
-
-            <Link href="/dashboard" class="layout-topbar-logo flex items-center gap-2">
-                <ApplicationLogo />
+            <Link :href="route('dashboard')" class="layout-topbar-logo min-w-0" :aria-label="t('menu.dashboard')">
+                <ApplicationLogo size="sm" class="max-w-[10rem] sm:max-w-[16rem]" />
             </Link>
         </div>
 
-        <!-- RIGHT SIDE: ACTIONS -->
-        <div class="flex items-center gap-4">
-            <LanguageSwitcher />
-            <BranchSwitcher />
-            <!-- POS BUTTON (TOPBAR BUTTON — NOT DROPDOWN) -->
-            <button @click="router.visit(route('pos.index'))"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg transition" :class="isActive('pos.index')
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'hover:bg-indigo-50 text-slate-700'
-                    ">
-                <i class="pi pi-desktop text-lg"></i>
-                <span class="text-sm font-medium">{{ t('menu.pos') }}</span>
-            </button>
+        <!-- End: actions -->
+        <div class="ms-auto flex items-center gap-2">
+            <!-- Primary shortcuts -->
+            <Button v-if="can('POS Index')" :label="t('menu.pos')" icon="pi pi-desktop" size="small"
+                :severity="isActive('pos.index') ? 'primary' : 'secondary'" :outlined="!isActive('pos.index')"
+                class="!hidden sm:!inline-flex" @click="router.visit(route('pos.index'))" />
+            <Button v-if="can('POS Index')" icon="pi pi-desktop" size="small" rounded :aria-label="t('menu.pos')"
+                :severity="isActive('pos.index') ? 'primary' : 'secondary'" :text="!isActive('pos.index')"
+                class="sm:!hidden" @click="router.visit(route('pos.index'))" />
+            <Button v-if="can('Order Index')" :label="t('menu.orders')" icon="pi pi-receipt" size="small"
+                :severity="isActive('pos.orders.index') ? 'primary' : 'secondary'" :outlined="!isActive('pos.orders.index')"
+                class="!hidden lg:!inline-flex" @click="router.visit(route('pos.orders.index'))" />
 
-            <!-- ORDERS BUTTON -->
-            <button @click="router.visit(route('pos.orders.index'))"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg transition" :class="isActive('pos.orders.index')
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'hover:bg-emerald-50 text-slate-700'
-                    ">
-                <i class="pi pi-receipt text-lg"></i>
-                <span class="text-sm font-medium">{{ t('menu.orders') }}</span>
-            </button>
+            <!-- Desktop only -->
+            <div class="hidden lg:flex items-center gap-2">
+                <BranchSwitcher />
+                <LanguageSwitcher />
+                <Button :icon="isDarkTheme ? 'pi pi-sun' : 'pi pi-moon'" severity="secondary" text rounded size="small"
+                    :aria-label="isDarkTheme ? t('layout.light_mode') : t('layout.dark_mode')"
+                    v-tooltip.bottom="isDarkTheme ? t('layout.light_mode') : t('layout.dark_mode')" @click="toggleDarkMode" />
+                <Button icon="pi pi-palette" severity="secondary" text rounded size="small" :aria-label="t('layout.appearance')"
+                    v-tooltip.bottom="t('layout.appearance')" @click="appearance.toggle($event)" />
+                <Button severity="secondary" outlined size="small" aria-haspopup="true" @click="userMenu.toggle($event)">
+                    <span class="avatar-initials w-6 h-6">{{ initials }}</span>
+                    <span class="max-w-[9rem] truncate">{{ user?.name }}</span>
+                    <i class="pi pi-angle-down text-xs" />
+                </Button>
+                <Menu ref="userMenu" :model="userItems" :popup="true" />
+            </div>
 
-            <!-- PROFILE DROPDOWN -->
-            <Menu ref="menu" :popup="true" id="top_profile_menu" :model="[
-                {
-                    label: t('menu.settings'),
-                    icon: 'pi pi-cog',
-                    command: () => router.visit(route('profile.edit')),
-                },
-                {
-                    label: t('auth.logout'),
-                    icon: 'pi pi-sign-out',
-                    command: () => router.post(route('logout')),
-                },
-            ]" />
+            <!-- Phones / tablets -->
+            <div class="flex lg:hidden items-center gap-1">
+                <Button icon="pi pi-palette" severity="secondary" text rounded size="small" :aria-label="t('layout.appearance')"
+                    @click="appearance.toggle($event)" />
+                <Button severity="secondary" text rounded size="small" :aria-label="t('layout.more')" aria-haspopup="true"
+                    @click="mobileMenu.toggle($event)">
+                    <span class="avatar-initials w-7 h-7">{{ initials }}</span>
+                </Button>
+                <Menu ref="mobileMenu" :model="mobileItems" :popup="true" class="min-w-[14rem]" />
+            </div>
 
-            <Button type="button" :label="user.name" icon="pi pi-user" class="layout-topbar-action1" variant="outlined"
-                @click="$refs.menu.toggle($event)" />
+            <Popover ref="appearance">
+                <AppConfigurator />
+            </Popover>
         </div>
     </div>
 </template>

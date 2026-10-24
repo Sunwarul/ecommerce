@@ -14,10 +14,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
 
-    if (config('app.user_registration_allowed')) {
+    // Always registered (works with route:cache); 404 unless USER_REGISTRATION_ALLOWED=true
+    Route::middleware('registration.enabled')->group(function () {
         Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
         Route::post('register', [RegisteredUserController::class, 'store']);
-    }
+    });
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -58,6 +59,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    // Every signed-in user manages their own profile (name, email, password)
+    Route::get('profile', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('profile', [\App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('profile', [\App\Http\Controllers\Admin\ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

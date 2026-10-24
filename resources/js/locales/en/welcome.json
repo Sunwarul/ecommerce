@@ -1,0 +1,22 @@
+{
+    "title": "Welcome",
+    "headline": "Modern point of sale for",
+    "headline_accent": "showrooms & retail",
+    "lead": "Sell faster, take partial payments and installments, accept bank EMI, keep stock in sync and message customers — all in one place.",
+    "open_pos": "Open POS",
+    "see_features": "See features",
+    "banner_alt": "POS dashboard preview",
+    "features_title": "Everything your counter needs",
+    "f_pos": "Fast checkout",
+    "f_pos_text": "Barcode-ready POS with drafts, split payments and A4 or thermal receipts.",
+    "f_installments": "Installments & EMI",
+    "f_installments_text": "Down payment, flexible schedules, late fees and bank EMI tracking.",
+    "f_inventory": "Multi-warehouse stock",
+    "f_inventory_text": "Branches, warehouses, variations and stock movements in real time.",
+    "f_reports": "Clear reports",
+    "f_reports_text": "Daily to yearly sales, charts and PDF, CSV or Excel exports.",
+    "f_sms": "Customer SMS",
+    "f_sms_text": "Sale receipts, due reminders and festival greetings with any SMS vendor.",
+    "f_languages": "Your language",
+    "f_languages_text": "English, বাংলা, العربية, Español and हिन्दी with right-to-left support."
+}

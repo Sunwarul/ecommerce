@@ -1,7 +1,7 @@
 import "primeicons/primeicons.css";
 import "../css/app.scss";
 import "./bootstrap";
-import Theme from "./Helpers/Theme";
+import Theme, { applyDarkClass, loadThemeConfig } from "./Helpers/Theme";
 
 import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
@@ -19,6 +19,9 @@ import i18n, { initI18n, setLocale } from "./Plugins/i18n";
 import { localeStore } from "./Stores/localeStore";
 
 const appName = import.meta.env.VITE_APP_NAME || "E-Commerce";
+
+// Apply the saved light/dark choice before the first render to avoid a flash of the wrong theme
+applyDarkClass(loadThemeConfig().darkTheme);
 
 function syncLocaleOnNavigation(visit) {
     const storedLocale = localeStore.current;
@@ -64,7 +67,9 @@ createInertiaApp({
                 },
             });
 
-        const serverLocale = props.locale?.current;
+        // setup() receives { initialPage, ... }: the shared props live on initialPage.props
+        const serverLocale = props.initialPage?.props?.locale?.current
+            || document.documentElement.dataset.locale;
         
         // Always initialize with server locale when available
         // This ensures page reloads after language switch work correctly
@@ -84,6 +89,7 @@ createInertiaApp({
     },
 
     progress: {
-        color: "#4B5563",
+        color: "#10b981",
+        showSpinner: false,
     },
 });

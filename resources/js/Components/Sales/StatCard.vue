@@ -1,4 +1,8 @@
 <script setup>
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
+
 defineProps({
     label: { type: String, required: true },
     value: { type: [String, Number], required: true },
@@ -26,14 +30,14 @@ const tones = {
                 <i :class="icon" class="text-sm" />
             </span>
         </div>
-        <div class="text-xl font-bold text-slate-800 truncate">{{ value }}</div>
+        <div class="text-xl font-bold text-slate-800 truncate ltr-nums text-start" :title="String(value)">{{ value }}</div>
         <div class="flex items-center gap-2 text-xs text-slate-500 min-h-[1rem]">
             <span v-if="growth !== undefined && growth !== null"
                 :class="growth >= 0 ? 'text-emerald-700' : 'text-rose-700'" class="font-semibold flex items-center gap-0.5">
                 <i :class="growth >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'" class="!text-[10px]" />
                 {{ Math.abs(growth) }}%
             </span>
-            <span v-else-if="growth === null" class="text-sky-700 font-semibold">new</span>
+            <span v-else-if="growth === null" class="text-sky-700 font-semibold">{{ t('reports.new') }}</span>
             <span v-if="hint" class="truncate">{{ hint }}</span>
         </div>
     </div>

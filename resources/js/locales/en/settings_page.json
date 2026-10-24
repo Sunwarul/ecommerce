@@ -1,0 +1,45 @@
+{
+    "title": "Settings",
+    "subtitle": "Business details, localization and email delivery",
+    "tabs": {
+        "general": "General",
+        "email": "Email (SMTP)",
+        "sms": "SMS"
+    },
+    "sections": {
+        "business": "Business",
+        "business_hint": "Shown on invoices, receipts and SMS",
+        "localization": "Language & time",
+        "localization_hint": "Defaults for new users and printed dates",
+        "smtp": "Outgoing mail server",
+        "smtp_hint": "Used for password reset and notification emails",
+        "sender": "Sender"
+    },
+    "fields": {
+        "app_name": "Business name",
+        "address": "Address",
+        "phone": "Phone",
+        "footer_text": "Invoice footer text",
+        "language": "Default language",
+        "timezone": "Timezone",
+        "date_format": "Date format",
+        "time_format": "Time format",
+        "h24": "24 hours",
+        "h12": "12 hours (AM/PM)",
+        "host": "Host",
+        "port": "Port",
+        "username": "Username",
+        "password": "Password",
+        "password_hint": "Leave as ****** to keep the saved password",
+        "encryption": "Encryption",
+        "none": "None",
+        "from_address": "From address",
+        "from_name": "From name"
+    },
+    "sms_moved_title": "SMS has its own module now",
+    "sms_moved_body": "Gateways, templates, on/off switches, history and reports are managed in SMS Settings.",
+    "open_sms_settings": "Open SMS settings",
+    "save": "Save settings",
+    "saved": "Settings saved",
+    "unsaved": "You have unsaved changes"
+}

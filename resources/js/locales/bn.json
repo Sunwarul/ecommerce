@@ -116,7 +116,14 @@
         "sms_dashboard": "এসএমএস ড্যাশবোর্ড",
         "sms_send": "এসএমএস পাঠান",
         "sms_history": "এসএমএস ইতিহাস",
-        "sms_settings": "এসএমএস সেটিংস"
+        "sms_settings": "এসএমএস সেটিংস",
+        "sales": "বিক্রয়",
+        "catalog": "ক্যাটালগ",
+        "product_setup": "পণ্য সেটআপ",
+        "finance": "আর্থিক",
+        "organization": "প্রতিষ্ঠান",
+        "user_management": "ব্যবহারকারী ও অ্যাক্সেস",
+        "tools": "টুলস"
     },
     "dashboard": {
         "welcome": "স্বাগতম",

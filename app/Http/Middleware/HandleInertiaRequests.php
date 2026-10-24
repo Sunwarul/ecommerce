@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'configs' => [
                 'app_name' => config('app.name'),
+                'shop_name' => \App\Models\Setting::get('general_application_name') ?: config('app.name'),
                 'logo' => asset('images/logo.jpeg'),
                 'currency' => config('app.currency'),
                 'currency_symbol' => config('app.currency_symbol'),

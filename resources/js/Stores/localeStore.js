@@ -3,6 +3,15 @@ import { reactive, watch } from 'vue';
 const STORAGE_KEY = 'app_locale';
 const SUPPORTED_LOCALES = ['en', 'bn', 'ar', 'es', 'hi'];
 
+/** Native names, shown in the language switcher. */
+export const LOCALE_NAMES = {
+    en: 'English',
+    bn: 'বাংলা',
+    ar: 'العربية',
+    es: 'Español',
+    hi: 'हिन्दी',
+};
+
 function getStoredLocale() {
     try {
         return localStorage.getItem(STORAGE_KEY);
@@ -15,7 +24,7 @@ function setStoredLocale(locale) {
     try {
         localStorage.setItem(STORAGE_KEY, locale);
     } catch (e) {
-        console.warn('Failed to store locale:', e);
+        // storage unavailable (private mode): the cookie/session still carry the locale
     }
 }
 
@@ -84,5 +93,5 @@ export const localeStore = reactive({
 });
 
 export function isRtlLocale(locale) {
-    return locale === 'ar';
+    return ['ar'].includes(locale);
 }

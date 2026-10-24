@@ -1,0 +1,21 @@
+{
+    "403": {
+        "title": "Acceso denegado",
+        "description": "No tiene permiso para abrir esta página. Pida a un administrador que le dé acceso a su rol."
+    },
+    "404": {
+        "title": "Página no encontrada",
+        "description": "La página que busca no existe o se ha movido."
+    },
+    "500": {
+        "title": "Algo salió mal",
+        "description": "Se produjo un error inesperado. Se ha registrado; inténtelo de nuevo en un momento."
+    },
+    "503": {
+        "title": "En mantenimiento",
+        "description": "Estamos actualizando el sistema. Vuelva en unos minutos."
+    },
+    "go_back": "Volver",
+    "dashboard": "Panel",
+    "sign_in": "Iniciar sesión"
+}

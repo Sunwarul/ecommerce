@@ -27,7 +27,8 @@ class UserStoreRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'branch_id' => ['nullable', 'exists:branches,id'],
             'password' => ['required', 'confirmed', Password::default()],
-            'roles' => ['nullable', 'array', 'exists:roles,id'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['integer', 'exists:roles,id'],
             'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
         ];
     }

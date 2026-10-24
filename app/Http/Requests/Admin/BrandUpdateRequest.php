@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\IgnoresStoredFilePaths;
 use App\Rules\FileUploadRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BrandUpdateRequest extends FormRequest
 {
+    use IgnoresStoredFilePaths;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -25,7 +28,7 @@ class BrandUpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|max:255|unique:categories,name,'.$this->id,
+            'name' => 'required|string|max:255|unique:brands,name,'.$this->route('brand'),
             'description' => 'nullable|string',
             'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
             'is_active' => 'nullable|boolean',

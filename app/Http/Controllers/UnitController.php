@@ -30,11 +30,7 @@ class UnitController extends Controller
     protected function addProps(): array
     {
         return [
-            'baseUnits' => [
-                ['id' => 1, 'name' => 'Unit 1'],
-                ['id' => 2, 'name' => 'Unit 2'],
-                ['id' => 3, 'name' => 'Unit 3'],
-            ],
+            'baseUnits' => \App\Models\BaseUnit::select('id', 'name')->orderBy('name')->get(),
         ];
     }
 }

@@ -1,0 +1,38 @@
+{
+    "title": "Stock movement",
+    "simple_product": "Simple product",
+    "variable_product": "Product with variations",
+    "movement_type": "Movement type",
+    "types": {
+        "in": "Stock in",
+        "out": "Stock out",
+        "transfer": "Transfer",
+        "adjust": "Set quantity"
+    },
+    "type_hints": {
+        "in": "Add received stock to a warehouse (purchase, return).",
+        "out": "Remove stock from a warehouse (damage, internal use).",
+        "transfer": "Move stock from one warehouse to another.",
+        "adjust": "Correct the count after a stock take: the warehouse quantity becomes the number you enter."
+    },
+    "variation": "Variation",
+    "variation_n": "Variation #{id}",
+    "select_variation": "Select variation",
+    "variation_required": "Select which variation this movement is for",
+    "new_quantity": "New quantity",
+    "adjust_hint": "The current stock in this warehouse will be replaced by this number.",
+    "quantity_required": "Enter a quantity greater than 0",
+    "select_branch": "Select branch (optional)",
+    "from_warehouse": "From warehouse",
+    "to_warehouse": "To warehouse",
+    "warehouse": "Warehouse",
+    "select_warehouse": "Select warehouse",
+    "warehouse_required": "Select a warehouse",
+    "reference": "Reference (optional)",
+    "reference_placeholder": "e.g. PO-102, INV-55, TRF-09",
+    "note": "Note (optional)",
+    "same_warehouse": "The source and destination warehouses must be different.",
+    "fix_errors": "Please fix the highlighted fields.",
+    "save_and_add": "Save & add another",
+    "save_and_back": "Save & back to product"
+}

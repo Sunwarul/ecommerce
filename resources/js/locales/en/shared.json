@@ -1,0 +1,83 @@
+{
+    "status": {
+        "completed": "Completed",
+        "draft": "Draft",
+        "void": "Void",
+        "paid": "Paid",
+        "partial": "Partial",
+        "unpaid": "Unpaid",
+        "pending": "Pending",
+        "overdue": "Overdue",
+        "active": "Active",
+        "inactive": "Inactive",
+        "cancelled": "Cancelled",
+        "defaulted": "Defaulted",
+        "settled": "Settled",
+        "sent": "Sent",
+        "failed": "Failed",
+        "queued": "Queued",
+        "open": "Open",
+        "closed": "Closed"
+    },
+    "sale_type": {
+        "regular": "Regular",
+        "installment": "Installment",
+        "emi": "Bank EMI"
+    },
+    "frequency": {
+        "monthly": "Monthly",
+        "weekly": "Weekly",
+        "biweekly": "Every 2 weeks",
+        "custom": "Custom (days)"
+    },
+    "interest": {
+        "none": "No interest",
+        "flat": "Flat % (whole term)",
+        "reducing": "Reducing balance (annual %)"
+    },
+    "fee_type": {
+        "fixed": "Fixed",
+        "percent": "Percent %"
+    },
+    "terms": {
+        "walk_in": "Walk-in customer",
+        "due": "Due",
+        "paid": "Paid",
+        "total": "Total",
+        "balance": "Balance",
+        "change": "Change",
+        "down_payment": "Down payment",
+        "invoice": "Invoice",
+        "customer": "Customer",
+        "phone": "Phone",
+        "cashier": "Cashier",
+        "branch": "Branch",
+        "date": "Date",
+        "amount": "Amount",
+        "method": "Method",
+        "notes": "Notes",
+        "reference": "Reference",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "reset": "Reset",
+        "export": "Export",
+        "print": "Print",
+        "search": "Search",
+        "search_hint": "Partial match works: 1712345 finds 01712-345678. Use * as a wildcard.",
+        "no_data": "No data for this period",
+        "previous": "Previous",
+        "next": "Next",
+        "showing": "Showing {from}–{to} of {total}",
+        "confirm_title": "Please confirm",
+        "yes": "Yes",
+        "cancel": "Cancel",
+        "save": "Save",
+        "close": "Close",
+        "back": "Back",
+        "table": "Table",
+        "chart": "Chart",
+        "success": "Success",
+        "error": "Error"
+    }
+}

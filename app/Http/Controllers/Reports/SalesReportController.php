@@ -25,6 +25,8 @@ class SalesReportController extends Controller
         $query = $this->reports->ordersQuery($request, $from, $to);
 
         if ($request->filled('export')) {
+            abort_unless($request->user()->can('Report Export'), 403);
+
             return $this->export($request, $query, $from, $to, $groupBy);
         }
 

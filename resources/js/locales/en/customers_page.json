@@ -1,0 +1,32 @@
+{
+    "subtitle": "People you sell to, with their contact and credit details",
+    "search_hint": "Search by name, phone, email or WhatsApp — partial numbers work (1712345 finds 01712-345678).",
+    "customer": "Customer",
+    "type": "Customer type",
+    "select_type": "Select a customer type",
+    "types": {
+        "retailer": "Retail",
+        "wholesaler": "Wholesale"
+    },
+    "since": "Customer since",
+    "section_basic": "Contact details",
+    "section_account": "Account & credit",
+    "section_documents": "Photo & documents",
+    "whatsapp": "WhatsApp number",
+    "active_customer": "Active customer",
+    "currency": "Preferred currency",
+    "select_currency": "Select a currency",
+    "opening_balance": "Opening balance",
+    "opening_balance_date": "Opening balance date",
+    "opening_balance_is": "Opening balance is",
+    "to_pay": "Payable (we owe)",
+    "to_receive": "Receivable (they owe)",
+    "has_credit_limit": "Set a credit limit",
+    "credit_limit": "Credit limit",
+    "photo": "Photo",
+    "choose_photo": "Choose photo",
+    "photo_hint": "JPG or PNG, up to 7 MB",
+    "document": "ID document (NID, passport, driving licence)",
+    "document_on_file": "A document is already on file",
+    "document_hint": "PDF, Word, JPG or PNG, up to 7 MB"
+}

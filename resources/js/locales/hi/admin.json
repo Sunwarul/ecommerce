@@ -1,0 +1,40 @@
+{
+    "users": {
+        "name": "पूरा नाम",
+        "email": "ईमेल",
+        "phone": "फ़ोन",
+        "password": "पासवर्ड",
+        "password_confirmation": "पासवर्ड की पुष्टि करें",
+        "password_edit_note": "मौजूदा पासवर्ड रखने के लिए पासवर्ड फ़ील्ड खाली छोड़ें।",
+        "roles": "भूमिकाएँ",
+        "select_roles": "भूमिकाएँ चुनें",
+        "no_role": "कोई भूमिका नहीं",
+        "branch": "शाखा",
+        "select_branch": "शाखा चुनें",
+        "avatar": "प्रोफ़ाइल फ़ोटो",
+        "account": "खाता",
+        "access": "पहुँच"
+    },
+    "roles": {
+        "name": "भूमिका का नाम",
+        "name_placeholder": "उदा. कैशियर",
+        "permissions": "अनुमतियाँ",
+        "permissions_count": "{count} अनुमतियाँ",
+        "selected_count": "{total} में से {selected} चयनित",
+        "search_permissions": "अनुमतियाँ खोजें…",
+        "select_all": "सभी चुनें",
+        "clear_all": "सभी हटाएँ",
+        "group_all": "सभी",
+        "no_match": "इस फ़िल्टर से कोई अनुमति मेल नहीं खाती।",
+        "super_admin_note": "सुपर एडमिन के पास हमेशा सभी अनुमतियाँ होती हैं और इसे हटाया नहीं जा सकता।"
+    },
+    "permissions": {
+        "name": "अनुमति का नाम",
+        "name_hint": "प्रारूप: मॉड्यूल क्रिया, जैसे \"Product Export\"। सिस्टम इसी सटीक नाम से अनुमति जाँचता है।",
+        "locked_note": "कोड में अनुमतियाँ नाम से उपयोग होती हैं, इसलिए उन्हें संपादित या हटाया नहीं जा सकता।",
+        "module": "मॉड्यूल"
+    },
+    "expenses": {
+        "receipt_hint": "रसीद की छवि या PDF (वैकल्पिक)"
+    }
+}

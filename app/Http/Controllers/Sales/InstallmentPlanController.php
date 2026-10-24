@@ -53,20 +53,20 @@ class InstallmentPlanController extends Controller
     {
         InstallmentPlan::create($this->normalize($request->validate($this->rules())));
 
-        return back()->with('success', 'Plan created.');
+        return back()->with('success', __('Plan created.'));
     }
 
     public function update(Request $request, InstallmentPlan $plan)
     {
         $plan->update($this->normalize($request->validate($this->rules())));
 
-        return back()->with('success', 'Plan updated.');
+        return back()->with('success', __('Plan updated.'));
     }
 
     public function destroy(InstallmentPlan $plan)
     {
         $plan->delete();
 
-        return back()->with('success', 'Plan deleted.');
+        return back()->with('success', __('Plan deleted.'));
     }
 }

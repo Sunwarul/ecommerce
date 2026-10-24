@@ -1,67 +1,41 @@
 <template>
-  <div>
-    <div class="mb-4">
-        <label for="name" class="">Name</label>
-        <InputText id="name" v-model="form.name" class="mt-1 block w-full" />
-        <div v-if="form?.errors?.name" class="text-red-500 text-sm mt-1">{{ form?.errors?.name }}</div>
-    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label for="name" class="text-sm font-medium text-slate-700">{{ t('crud.fields.name') }} <span class="text-red-500">*</span></label>
+            <InputText id="name" v-model.trim="form.name" fluid autofocus :invalid="!!form.errors.name" />
+            <small v-if="form.errors.name" class="text-red-600">{{ form.errors.name }}</small>
+        </div>
 
-    <div class="mb-4">
-        <label for="rate_type" class="">Rate Type</label>
-        <InputText id="rate_type" v-model="form.rate_type" class="mt-1 block w-full" />
-        <div v-if="form?.errors?.rate_type" class="text-red-500 text-sm mt-1">{{ form?.errors?.rate_type }}</div>
-    </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="rate_type" class="text-sm font-medium text-slate-700">{{ t('crud.fields.rate_type') }} <span class="text-red-500">*</span></label>
+            <Select inputId="rate_type" v-model="form.rate_type" :options="rateTypes" optionLabel="label" optionValue="value"
+                fluid :invalid="!!form.errors.rate_type" />
+            <small v-if="form.errors.rate_type" class="text-red-600">{{ form.errors.rate_type }}</small>
+        </div>
 
-    <div class="mb-4">
-        <label for="rate_value" class="">Rate Value</label>
-        <InputNumber id="rate_value" v-model="form.rate_value" class="mt-1 block w-full" />
-        <div v-if="form?.errors?.rate_value" class="text-red-500 text-sm mt-1">{{ form?.errors?.rate_value }}</div>
-    </div>
-
-    <!--
-    <div class="flex flex-col gap-6">
-        <div>
-            <label for="name" class="block font-bold mb-2">Name</label>
-            <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                :invalid="submitted && !form.name" fluid />
-            <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
+        <div class="flex flex-col gap-1.5">
+            <label for="rate_value" class="text-sm font-medium text-slate-700">{{ t('crud.fields.rate_value') }} <span class="text-red-500">*</span></label>
+            <InputNumber inputId="rate_value" v-model="form.rate_value" :minFractionDigits="0" :maxFractionDigits="2"
+                :suffix="form.rate_type === 'percent' ? ' %' : ''" fluid :invalid="!!form.errors.rate_value" />
+            <small v-if="form.errors.rate_value" class="text-red-600">{{ form.errors.rate_value }}</small>
         </div>
     </div>
-    -->
-    <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    -->
-
-  </div>
 </template>
 
 <script setup>
-import { resolveImagePath } from '@/Helpers/imageHelper.js';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
 
 defineProps({
-  form: {
-    type: Object,
-    required: true
-  }
+    form: { type: Object, required: true },
 });
+
+const { t } = useI18n();
+const rateTypes = computed(() => [
+    { label: t('crud.fields.percent'), value: 'percent' },
+    { label: t('crud.fields.flat'), value: 'flat' },
+]);
 </script>

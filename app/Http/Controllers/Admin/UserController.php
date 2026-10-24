@@ -12,7 +12,6 @@ use App\Traits\HasCrud;
 use App\Utils\CrudConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
@@ -53,13 +52,57 @@ class UserController extends Controller
         }
         $model = new $this->modelClass;
         $validatedData['branch_id'] = $validatedData['branch_id'] ?? 1;
-        $model->fill($validatedData);
+        $model->fill(collect($validatedData)->except('roles')->all());
+        $model->email_verified_at = now(); // created by an admin
         $model->save();
 
-        // Assign roles if provided
         if (isset($validatedData['roles'])) {
-            $model->roles()->sync($validatedData['roles']);
+            $this->syncRoles($model, $validatedData['roles']);
         }
+
+        return to_route('users.index')->with('success', __('Created successfully'));
+    }
+
+    /**
+     * Only Super Admins may grant or revoke the Super Admin role, and nobody may change their own roles
+     * (prevents privilege escalation by anyone who only has "User Update").
+     */
+    protected function syncRoles(User $user, array $roleIds): void
+    {
+        $actor = Auth::user();
+        $superAdminId = Role::where('name', 'Super Admin')->value('id');
+        $actorIsSuper = $actor->hasRole('Super Admin');
+
+        if ($user->is($actor) && ! $actorIsSuper) {
+            abort(403, __('You cannot change your own roles.'));
+        }
+
+        $requested = collect($roleIds)->map(fn ($id) => (int) $id);
+        $hadSuper = $user->roles()->whereKey($superAdminId)->exists();
+        if (! $actorIsSuper && ($requested->contains($superAdminId) || $hadSuper)) {
+            abort(403, __('Only a Super Admin can assign or remove the Super Admin role.'));
+        }
+        if ($hadSuper && ! $requested->contains($superAdminId)
+            && Role::findById($superAdminId)->users()->count() <= 1) {
+            abort(422, __('At least one Super Admin must remain.'));
+        }
+
+        $user->roles()->sync($requested->all());
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        cache()->forever('auth_version', time());
+    }
+
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        abort_if($user->is(Auth::user()), 422, __('You cannot delete your own account here.'));
+        abort_if($user->hasRole('Super Admin') && ! Auth::user()->hasRole('Super Admin'), 403);
+        if ($user->hasRole('Super Admin') && Role::findByName('Super Admin')->users()->count() <= 1) {
+            abort(422, __('At least one Super Admin must remain.'));
+        }
+        $user->delete();
+
+        return to_route('users.index')->with('success', __('Deleted successfully'));
     }
 
     public function update(Request $request, $id)
@@ -72,14 +115,18 @@ class UserController extends Controller
                 Storage::delete($model->photo);
             }
         }
-        $res = $model->update($validatedData);
+        abort_if($model->hasRole('Super Admin') && ! Auth::user()->hasRole('Super Admin'), 403);
 
-        // Update roles if provided
-        if (isset($validatedData['roles'])) {
-            $model->roles()->sync($validatedData['roles']);
+        if (empty($validatedData['password'])) {
+            unset($validatedData['password']);
+        }
+        $model->update(collect($validatedData)->except('roles')->all());
+
+        if (array_key_exists('roles', $validatedData)) {
+            $this->syncRoles($model, $validatedData['roles'] ?? []);
         }
 
-        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', 'Updated successfully');
+        return to_route(str_replace('_', '-', $this->resource).'.index')->with('success', __('Updated successfully'));
     }
 
     public function switch(Request $request)
@@ -94,14 +141,12 @@ class UserController extends Controller
         // Automatically close any open POS session for this user
         \App\Models\PosSession::where('user_id', $user->id)
             ->where('status', 'open')
-            ->update([
+            ->get()
+            ->each(fn ($session) => $session->update([
                 'status' => 'closed',
                 'closed_at' => now(),
-                'note' => DB::raw("CONCAT(IFNULL(note, ''), ' [Auto-closed on branch switch]')"),
-            ]);
-
-        // Optional: permission check
-        // abort_if(!$user->branches()->where('id', $request->branch_id)->exists(), 403);
+                'note' => trim(($session->note ?? '').' [Auto-closed on branch switch]'),
+            ]));
 
         $user->update([
             'branch_id' => $branchId,

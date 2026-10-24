@@ -37,6 +37,6 @@ class PosStockController extends Controller
             'created_by' => Auth::id(),
         ]);
 
-        return back()->with('success', 'Stock adjusted successfully.');
+        return back()->with('success', __('Stock adjusted successfully.'));
     }
 }
