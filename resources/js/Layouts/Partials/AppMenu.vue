@@ -56,6 +56,13 @@ const model = computed(() => [
         leaf("sms_settings", "pi-cog", "sms.settings", P.SMS.SETTINGS),
     ]),
 
+    group("website", "pi-globe", [
+        leaf("contact_messages", "pi-inbox", "contact-messages.index", P.CONTACT_MESSAGE.INDEX),
+        leaf("website_settings", "pi-palette", "website.settings", P.WEBSITE.MANAGE),
+        leaf("blog_posts", "pi-book", "website.posts.index", P.WEBSITE.MANAGE),
+        leaf("faqs", "pi-question-circle", "website.faqs.index", P.WEBSITE.MANAGE),
+    ]),
+
     group("finance", "pi-wallet", [
         leaf("expenses", "pi-money-bill", "expenses.index", P.EXPENSE.INDEX),
         leaf("expense_categories", "pi-folder", "expense-categories.index", P.EXPENSE_CATEGORY.INDEX),
@@ -81,6 +88,10 @@ const model = computed(() => [
 
     group("settings", "pi-cog", [
         leaf("general_settings", "pi-sliders-h", "settings.general", P.SETTING.INDEX),
+    ]),
+
+    group("help", "pi-question-circle", [
+        { ...leaf("user_manual", "pi-book", "docs.index", null), permissions: [] },
     ]),
 ]);
 

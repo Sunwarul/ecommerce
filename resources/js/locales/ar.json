@@ -123,7 +123,14 @@
         "finance": "المالية",
         "organization": "المؤسسة",
         "user_management": "المستخدمون والصلاحيات",
-        "tools": "الأدوات"
+        "tools": "الأدوات",
+        "website": "الموقع",
+        "contact_messages": "رسائل التواصل",
+        "website_settings": "إعدادات الموقع",
+        "blog_posts": "المدونة",
+        "faqs": "الأسئلة الشائعة",
+        "help": "مساعدة",
+        "user_manual": "دليل المستخدم"
     },
     "dashboard": {
         "welcome": "مرحباً بعودتك",

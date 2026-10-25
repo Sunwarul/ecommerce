@@ -2,13 +2,16 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { money, date } from "@/Helpers/format";
+import { amountInWords } from "@/Helpers/amountInWords";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
     order: { type: Object, required: true },
     shop: { type: Object, default: () => ({}) },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const page = usePage();
 
 const due = computed(() =>
     props.order?.status === "completed"
@@ -19,28 +22,9 @@ const due = computed(() =>
 const hasCharges = (key) => Number(props.order?.[key] || 0) > 0;
 const statusLabel = (s) => t(`shared.status.${s}`);
 
-/* Amount in words, South-Asian grouping (lakh / crore), with paisa. */
-const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
-    "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-function words(num) {
-    if (num === 0) return "";
-    if (num < 20) return ONES[num];
-    if (num < 100) return `${TENS[Math.floor(num / 10)]} ${ONES[num % 10]}`.trim();
-    if (num < 1000) return `${ONES[Math.floor(num / 100)]} Hundred ${words(num % 100)}`.trim();
-    if (num < 100000) return `${words(Math.floor(num / 1000))} Thousand ${words(num % 1000)}`.trim();
-    if (num < 10000000) return `${words(Math.floor(num / 100000))} Lakh ${words(num % 100000)}`.trim();
-    return `${words(Math.floor(num / 10000000))} Crore ${words(num % 10000000)}`.trim();
-}
-
-const amountInWords = computed(() => {
-    const total = Math.round(Number(props.order?.total_amount || 0) * 100);
-    const whole = Math.floor(total / 100);
-    const paisa = total % 100;
-    if (!whole && !paisa) return "Zero only";
-    return `${words(whole) || "Zero"}${paisa ? ` and ${words(paisa)} Paisa` : ""} only`;
-});
+// Bangla wording ("... টাকা মাত্র") while the interface is in Bangla
+const amountWords = computed(() => amountInWords(props.order?.total_amount, locale.value));
+const logo = computed(() => page.props.configs?.logo);
 </script>
 
 <template>
@@ -57,7 +41,7 @@ const amountInWords = computed(() => {
                 <p v-if="shop?.phone" class="text-xs ltr-nums">{{ shop.phone }}</p>
             </div>
             <div class="absolute top-0 end-2 hidden sm:block">
-                <img src="../../../assets/images/logo.jpeg" alt="" class="h-[58px] object-contain" />
+                <img v-if="logo" :src="logo" alt="" class="h-[58px] object-contain" />
             </div>
             <div v-if="order.status && order.status !== 'completed'"
                 class="mx-auto mt-1 w-fit text-[10px] font-bold uppercase px-2 py-0.5 rounded border"
@@ -124,7 +108,7 @@ const amountInWords = computed(() => {
                 </p>
                 <p v-if="order?.notes"><span class="font-semibold">{{ t("shared.terms.notes") }}:</span> {{ order.notes }}</p>
                 <p class="italic">
-                    {{ t("invoice.amount_in_words") }}: <strong dir="ltr">{{ amountInWords }}</strong>
+                    {{ t("invoice.amount_in_words") }}: <strong :dir="locale === 'bn' ? 'auto' : 'ltr'">{{ amountWords }}</strong>
                 </p>
             </div>
 
@@ -239,6 +223,7 @@ const amountInWords = computed(() => {
         </div>
 
         <div class="text-center mt-6 text-xs text-gray-600">{{ t("invoice.thank_you") }}</div>
+        <div v-if="shop?.footer" class="text-center mt-1 text-[11px] text-gray-500 whitespace-pre-line">{{ shop.footer }}</div>
     </div>
 </template>
 

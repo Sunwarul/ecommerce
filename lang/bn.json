@@ -96,5 +96,19 @@
     "You cannot edit a role you belong to.": "আপনি যে রোলের অন্তর্ভুক্ত তা সম্পাদনা করতে পারবেন না।",
     "Your session expired. Please try again.": "আপনার সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
     "unknown error": "অজানা ত্রুটি",
-    "warehouse": "গুদাম"
+    "warehouse": "গুদাম",
+    "Website settings saved.": "ওয়েবসাইট সেটিংস সংরক্ষিত হয়েছে।",
+    "FAQ added.": "প্রশ্ন যোগ করা হয়েছে।",
+    "FAQ updated.": "প্রশ্ন হালনাগাদ করা হয়েছে।",
+    "FAQ deleted.": "প্রশ্ন মুছে ফেলা হয়েছে।",
+    "Post saved.": "পোস্ট সংরক্ষিত হয়েছে।",
+    "Post moved to trash.": "পোস্ট ট্র্যাশে সরানো হয়েছে।",
+    "Post restored.": "পোস্ট ফিরিয়ে আনা হয়েছে।",
+    "Post deleted permanently.": "পোস্ট স্থায়ীভাবে মুছে ফেলা হয়েছে।",
+    "Message updated.": "বার্তা হালনাগাদ করা হয়েছে।",
+    "Done.": "সম্পন্ন হয়েছে।",
+    "Thank you! Your message has been sent. We will get back to you soon.": "ধন্যবাদ! আপনার বার্তা পাঠানো হয়েছে। আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।",
+    "Please remove some links from your message.": "অনুগ্রহ করে বার্তা থেকে কিছু লিংক সরিয়ে দিন।",
+    "Too many messages. Please wait a while before sending another one.": "অনেকগুলো বার্তা পাঠানো হয়েছে। আরেকটি পাঠানোর আগে কিছুক্ষণ অপেক্ষা করুন।",
+    "Use the Google Maps \"Share > Embed a map\" code, a google.com/maps link, an address or coordinates. Short maps.app.goo.gl links cannot be embedded.": "গুগল ম্যাপের \"Share > Embed a map\" কোড, google.com/maps লিংক, ঠিকানা বা কোঅর্ডিনেট দিন। maps.app.goo.gl ছোট লিংক এমবেড করা যায় না।"
 }

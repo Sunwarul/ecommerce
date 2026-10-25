@@ -123,7 +123,14 @@
         "finance": "Finanzas",
         "organization": "Organización",
         "user_management": "Usuarios y acceso",
-        "tools": "Herramientas"
+        "tools": "Herramientas",
+        "website": "Sitio web",
+        "contact_messages": "Mensajes de contacto",
+        "website_settings": "Ajustes del sitio",
+        "blog_posts": "Entradas del blog",
+        "faqs": "Preguntas frecuentes",
+        "help": "Ayuda",
+        "user_manual": "Manual de usuario"
     },
     "dashboard": {
         "welcome": "Bienvenido de nuevo",

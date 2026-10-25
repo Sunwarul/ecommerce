@@ -17,8 +17,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                // Figtree for Latin; Noto fills in Bangla, Arabic and Devanagari glyphs
-                sans: ['Figtree', 'Noto Sans Bengali', 'Noto Sans Arabic', 'Noto Sans Devanagari', ...defaultTheme.fontFamily.sans],
+                // The stack is a CSS variable (app.scss) so the fonts picked in Settings apply without a rebuild
+                sans: ['var(--app-font-stack)', ...defaultTheme.fontFamily.sans],
             },
         },
     },

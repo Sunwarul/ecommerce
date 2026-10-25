@@ -3,7 +3,8 @@ import "../css/app.scss";
 import "./bootstrap";
 import Theme, { applyDarkClass, loadThemeConfig } from "./Helpers/Theme";
 
-import { createInertiaApp } from "@inertiajs/vue3";
+import { createInertiaApp, router } from "@inertiajs/vue3";
+import { configureNumbers } from "./Helpers/format";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, h } from "vue";
 import { ZiggyVue } from "../../vendor/tightenco/ziggy";
@@ -84,6 +85,10 @@ createInertiaApp({
         }
 
         app.config.globalProperties.$resolveImagePath = resolveImagePath;
+
+        // Bangla digits / lakh grouping follow the shop settings on every visit
+        configureNumbers(props.initialPage?.props?.configs);
+        router.on("navigate", (event) => configureNumbers(event.detail.page.props.configs));
 
         return app.mount(el);
     },

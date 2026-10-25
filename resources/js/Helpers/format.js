@@ -1,26 +1,59 @@
 // Shared formatting helpers for sales / reports / SMS pages.
+import { reactive } from "vue";
+import i18n from "@/Plugins/i18n";
+
 export const n = (v) => Number(v || 0);
 
+/*
+ * Number display preferences from Settings > Bangla & appearance (shared as page.props.configs):
+ *  - bnDigits: Bangla digits (১২,৩৪৫.০০) while the interface language is Bangla
+ *  - grouping: "international" (1,234,567) or "indian" lakh/crore (12,34,567)
+ */
+const prefs = reactive({ bnDigits: false, grouping: "international" });
+
+export function configureNumbers(configs = {}) {
+    prefs.bnDigits = !!configs.bn_digits;
+    prefs.grouping = configs.number_grouping === "indian" ? "indian" : "international";
+}
+
+const isBangla = () => i18n.global.locale.value === "bn";
+
+export function numberLocale() {
+    const base = prefs.grouping === "indian" ? "en-IN" : "en-US";
+    return prefs.bnDigits && isBangla() ? `${base}-u-nu-beng` : base;
+}
+
+/** Bangla month names while the UI is Bangla; digits follow the Bangla-digits setting. */
+function dateLocale() {
+    if (!isBangla()) return "en-GB";
+    return prefs.bnDigits ? "bn-BD" : "bn-BD-u-nu-latn";
+}
+
 export function money(v, digits = 2) {
-    return n(v).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return n(v).toLocaleString(numberLocale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+/** Plain number (quantities, counts) with the same digit / grouping rules as money(). */
+export function num(v, digits = 0) {
+    return n(v).toLocaleString(numberLocale(), { maximumFractionDigits: digits });
 }
 
 export function compact(v) {
-    return n(v).toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
+    return n(v).toLocaleString(numberLocale(), { notation: "compact", maximumFractionDigits: 1 });
 }
 
 export function date(d) {
     if (!d) return "-";
     const dt = d instanceof Date ? d : new Date(String(d).replace(" ", "T"));
     if (isNaN(dt)) return String(d);
-    return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return dt.toLocaleDateString(dateLocale(), { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function dateTime(d) {
     if (!d) return "-";
     const dt = d instanceof Date ? d : new Date(String(d).replace(" ", "T"));
     if (isNaN(dt)) return String(d);
-    return dt.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    return dt.toLocaleString(dateLocale(), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 /** Date -> "YYYY-MM-DD" in local time (never toISOString, which shifts to UTC). */

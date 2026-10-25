@@ -123,7 +123,14 @@
         "finance": "Finance",
         "organization": "Organization",
         "user_management": "Users & access",
-        "tools": "Tools"
+        "tools": "Tools",
+        "website": "Website",
+        "contact_messages": "Contact messages",
+        "website_settings": "Website settings",
+        "blog_posts": "Blog posts",
+        "faqs": "FAQs",
+        "help": "Help",
+        "user_manual": "User manual"
     },
     "dashboard": {
         "welcome": "Welcome back",

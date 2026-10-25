@@ -468,6 +468,7 @@ class PosOrderController extends Controller
                 'name' => Setting::get('general_application_name'),
                 'address' => Setting::get('general_address'),
                 'phone' => Setting::get('general_phone'),
+                'footer' => Setting::get('general_footer_text'),
             ],
         ]);
     }
@@ -617,6 +618,7 @@ class PosOrderController extends Controller
                 'name' => Setting::get('general_application_name'),
                 'address' => Setting::get('general_address'),
                 'phone' => Setting::get('general_phone'),
+                'footer' => Setting::get('general_footer_text'),
             ],
         ])->setPaper('a4', 'landscape');
 

@@ -31,6 +31,7 @@ const initials = computed(() =>
 );
 
 const logout = () => router.post(route("logout"));
+const unread = computed(() => page.props.unread_contact_messages || 0);
 
 const userItems = computed(() => [
     { label: user.value?.name, disabled: true, class: "font-semibold opacity-100" },
@@ -101,6 +102,22 @@ const mobileItems = computed(() => {
             <Button v-if="can('Order Index')" :label="t('menu.orders')" icon="pi pi-receipt" size="small"
                 :severity="isActive('pos.orders.index') ? 'primary' : 'secondary'" :outlined="!isActive('pos.orders.index')"
                 class="!hidden lg:!inline-flex" @click="router.visit(route('pos.orders.index'))" />
+
+            <!-- Help: the user manual is open to every signed-in user -->
+            <Button v-if="route().has('docs.index')" :label="t('menu.user_manual')" icon="pi pi-book" size="small"
+                :severity="isActive('docs.index') ? 'primary' : 'secondary'" :outlined="!isActive('docs.index')"
+                class="!hidden md:!inline-flex" @click="router.visit(route('docs.index'))" />
+            <Button v-if="route().has('docs.index')" icon="pi pi-book" size="small" rounded :aria-label="t('menu.user_manual')"
+                severity="secondary" text class="md:!hidden" @click="router.visit(route('docs.index'))" />
+
+            <!-- Website contact messages waiting to be read -->
+            <Link v-if="can('Contact Message Index')" :href="route('contact-messages.index', { filter: unread ? 'unread' : undefined })"
+                class="relative inline-flex" :aria-label="t('menu.contact_messages')" v-tooltip.bottom="t('menu.contact_messages')">
+                <Button icon="pi pi-inbox" severity="secondary" text rounded size="small" tabindex="-1" />
+                <span v-if="unread" class="absolute -top-0.5 -end-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {{ unread > 99 ? "99+" : unread }}
+                </span>
+            </Link>
 
             <!-- Desktop only -->
             <div class="hidden lg:flex items-center gap-2">

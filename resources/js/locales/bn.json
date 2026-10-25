@@ -123,7 +123,14 @@
         "finance": "আর্থিক",
         "organization": "প্রতিষ্ঠান",
         "user_management": "ব্যবহারকারী ও অ্যাক্সেস",
-        "tools": "টুলস"
+        "tools": "টুলস",
+        "website": "ওয়েবসাইট",
+        "contact_messages": "যোগাযোগ বার্তা",
+        "website_settings": "ওয়েবসাইট সেটিংস",
+        "blog_posts": "ব্লগ পোস্ট",
+        "faqs": "সাধারণ জিজ্ঞাসা",
+        "help": "সহায়তা",
+        "user_manual": "ব্যবহার নির্দেশিকা"
     },
     "dashboard": {
         "welcome": "স্বাগতম",

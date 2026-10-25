@@ -123,7 +123,14 @@
         "finance": "वित्त",
         "organization": "संगठन",
         "user_management": "उपयोगकर्ता और पहुँच",
-        "tools": "टूल्स"
+        "tools": "टूल्स",
+        "website": "वेबसाइट",
+        "contact_messages": "संपर्क संदेश",
+        "website_settings": "वेबसाइट सेटिंग्स",
+        "blog_posts": "ब्लॉग पोस्ट",
+        "faqs": "सामान्य प्रश्न",
+        "help": "सहायता",
+        "user_manual": "उपयोगकर्ता मार्गदर्शिका"
     },
     "dashboard": {
         "welcome": "वापसी पर स्वागत है",

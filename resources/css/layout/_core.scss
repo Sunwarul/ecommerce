@@ -4,7 +4,7 @@ html {
 }
 
 body {
-    font-family: 'Figtree', 'Noto Sans Bengali', 'Noto Sans Arabic', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--app-font-stack);
     color: var(--text-color);
     background-color: var(--surface-ground);
     margin: 0;

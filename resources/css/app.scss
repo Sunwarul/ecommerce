@@ -31,8 +31,28 @@
     --overlay-background: var(--p-surface-900);
 }
 
+/*
+ * Interface fonts. --font-latin / --font-bengali / --bn-font-scale are printed by app.blade.php from
+ * Settings > Bangla & appearance. Latin text uses the Latin font and Bangla glyphs fall through to the
+ * Bangla font; while the UI is in Bangla the Bangla font goes first so digits and punctuation match.
+ */
+:root {
+    --app-font-fallback: 'Noto Sans Arabic', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
+    --app-font-stack: var(--font-latin, 'Figtree'), var(--font-bengali, 'Noto Sans Bengali'), var(--app-font-fallback);
+}
+
+html[data-locale="bn"] {
+    --app-font-stack: var(--font-bengali, 'Noto Sans Bengali'), var(--font-latin, 'Figtree'), var(--app-font-fallback);
+}
+
 html {
     font-size: 14px;
+}
+
+html[data-locale="bn"] {
+    font-size: calc(14px * var(--bn-font-scale, 1));
+    // Bangla conjuncts and vowel signs need a little more room
+    line-height: 1.6;
 }
 
 body {

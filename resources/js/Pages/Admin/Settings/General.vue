@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "primevue/usetoast";
 import Button from "primevue/button";
@@ -15,9 +15,12 @@ import TabPanel from "primevue/tabpanel";
 import TabPanels from "primevue/tabpanels";
 import Tabs from "primevue/tabs";
 import Textarea from "primevue/textarea";
+import Slider from "primevue/slider";
+import ToggleSwitch from "primevue/toggleswitch";
+import SelectButton from "primevue/selectbutton";
 import { firstError } from "@/Helpers/format";
 
-const props = defineProps({ settings: Object });
+const props = defineProps({ settings: Object, fonts: { type: Object, default: () => ({ bengali: [], latin: [] }) } });
 const toast = useToast();
 const { t } = useI18n();
 
@@ -80,11 +83,33 @@ const encryptions = computed(() => [
 
 const err = (key) => form.errors[`settings.${key}`];
 
+// ---- Bangla & appearance ----
+const fontFamily = (list, value) => list.find((f) => f.value === value)?.family;
+const bnFamily = computed(() => fontFamily(props.fonts.bengali, form.settings.appearance_font_bn));
+const latinFamily = computed(() => fontFamily(props.fonts.latin, form.settings.appearance_font_latin));
+const groupings = computed(() => [
+    { label: t("settings_page.fields.grouping_international"), value: "international" },
+    { label: t("settings_page.fields.grouping_indian"), value: "indian" },
+]);
+const sampleNumber = computed(() => {
+    const base = form.settings.locale_number_grouping === "indian" ? "en-IN" : "en-US";
+    const loc = form.settings.locale_bn_digits ? `${base}-u-nu-beng` : base;
+    return `${form.settings.general_currency_symbol || ""} ${(1234567.5).toLocaleString(loc, { minimumFractionDigits: 2 })}`.trim();
+});
+// fonts are printed into the page <head> by the server, so a font change needs a full reload to show everywhere
+const FONT_KEYS = ["appearance_font_bn", "appearance_font_latin", "appearance_bn_font_scale"];
+const savedFonts = ref(FONT_KEYS.map((k) => form.settings[k]).join("|"));
+
 function save() {
     form.put(route("settings.update"), {
         preserveScroll: true,
         onSuccess: () => {
             form.defaults();
+            const now = FONT_KEYS.map((k) => form.settings[k]).join("|");
+            if (now !== savedFonts.value) {
+                window.location.reload();
+                return;
+            }
             toast.add({ severity: "success", summary: t("shared.terms.success"), detail: t("settings_page.saved"), life: 3000 });
         },
         onError: (errors) => {
@@ -123,6 +148,7 @@ const labelCls = "text-sm font-medium text-slate-700";
                 <Tabs value="general" scrollable>
                     <TabList>
                         <Tab value="general"><i class="pi pi-building me-2" />{{ t('settings_page.tabs.general') }}</Tab>
+                        <Tab value="appearance"><i class="pi pi-language me-2" />{{ t('settings_page.tabs.appearance') }}</Tab>
                         <Tab value="email"><i class="pi pi-envelope me-2" />{{ t('settings_page.tabs.email') }}</Tab>
                         <Tab value="sms"><i class="pi pi-comment me-2" />{{ t('settings_page.tabs.sms') }}</Tab>
                     </TabList>
@@ -185,6 +211,82 @@ const labelCls = "text-sm font-medium text-slate-700";
                                             <label for="time_format" :class="labelCls">{{ t('settings_page.fields.time_format') }}</label>
                                             <Select inputId="time_format" :options="timeFormats" optionLabel="label" optionValue="value"
                                                 v-model="form.settings.general_time_format" fluid />
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </TabPanel>
+
+                        <!-- Bangla & appearance -->
+                        <TabPanel value="appearance">
+                            <Head><link v-if="fonts.preview_stylesheet" rel="stylesheet" :href="fonts.preview_stylesheet" /></Head>
+                            <div class="space-y-8">
+                                <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    <div>
+                                        <h2 class="font-semibold text-slate-800">{{ t('settings_page.sections.fonts') }}</h2>
+                                        <p class="text-sm text-slate-500 mt-1">{{ t('settings_page.sections.fonts_hint') }}</p>
+                                    </div>
+                                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div class="flex flex-col gap-1.5">
+                                            <label for="font_bn" :class="labelCls">{{ t('settings_page.fields.font_bn') }}</label>
+                                            <Select inputId="font_bn" :options="fonts.bengali" optionLabel="label" optionValue="value"
+                                                v-model="form.settings.appearance_font_bn" fluid>
+                                                <template #option="{ option }">
+                                                    <span :style="{ fontFamily: option.family }">{{ option.label }} — আমার সোনার বাংলা</span>
+                                                </template>
+                                            </Select>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5">
+                                            <label for="font_latin" :class="labelCls">{{ t('settings_page.fields.font_latin') }}</label>
+                                            <Select inputId="font_latin" :options="fonts.latin" optionLabel="label" optionValue="value"
+                                                v-model="form.settings.appearance_font_latin" fluid>
+                                                <template #option="{ option }">
+                                                    <span :style="{ fontFamily: option.family }">{{ option.label }} — Invoice 2026</span>
+                                                </template>
+                                            </Select>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5 sm:col-span-2">
+                                            <label :class="labelCls">{{ t('settings_page.fields.bn_scale') }}: <strong>{{ form.settings.appearance_bn_font_scale }}%</strong></label>
+                                            <Slider v-model="form.settings.appearance_bn_font_scale" :min="90" :max="130" :step="5" class="mx-2 my-2" />
+                                            <small class="text-slate-500">{{ t('settings_page.fields.bn_scale_hint') }}</small>
+                                        </div>
+                                        <div class="sm:col-span-2 rounded-xl border border-slate-200 p-4 bg-slate-50 space-y-1"
+                                            :style="{ fontFamily: `${bnFamily}, ${latinFamily}, sans-serif`, fontSize: `${form.settings.appearance_bn_font_scale}%` }">
+                                            <div class="text-xs uppercase tracking-wide text-slate-400">{{ t('settings_page.fields.preview') }}</div>
+                                            <div class="text-lg font-semibold">ক্যাশ মেমো — রহিম ইলেকট্রনিক্স</div>
+                                            <div>পণ্য: স্যামসাং রেফ্রিজারেটর (৩২০ লিটার), পরিমাণ: ২, মোট: ৳ ১,২৫,০০০.০০</div>
+                                            <div :style="{ fontFamily: `${latinFamily}, sans-serif` }">Invoice #INV-000123 · Samsung Refrigerator 320L</div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-6 border-t border-slate-100">
+                                    <div>
+                                        <h2 class="font-semibold text-slate-800">{{ t('settings_page.sections.numbers') }}</h2>
+                                        <p class="text-sm text-slate-500 mt-1">{{ t('settings_page.sections.numbers_hint') }}</p>
+                                    </div>
+                                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div class="flex items-start gap-3 sm:col-span-2">
+                                            <ToggleSwitch inputId="bn_digits" v-model="form.settings.locale_bn_digits" />
+                                            <label for="bn_digits" class="text-sm">
+                                                <span class="font-medium text-slate-700">{{ t('settings_page.fields.bn_digits') }}</span>
+                                                <span class="block text-slate-500">{{ t('settings_page.fields.bn_digits_hint') }}</span>
+                                            </label>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5 sm:col-span-2">
+                                            <label :class="labelCls">{{ t('settings_page.fields.grouping') }}</label>
+                                            <SelectButton v-model="form.settings.locale_number_grouping" :options="groupings" optionLabel="label"
+                                                optionValue="value" :allowEmpty="false" />
+                                        </div>
+                                        <div class="flex flex-col gap-1.5">
+                                            <label for="currency_symbol" :class="labelCls">{{ t('settings_page.fields.currency_symbol') }}</label>
+                                            <InputText id="currency_symbol" v-model="form.settings.general_currency_symbol" maxlength="8" placeholder="৳" fluid
+                                                :invalid="!!err('general_currency_symbol')" />
+                                            <small class="text-slate-500">{{ t('settings_page.fields.currency_symbol_hint') }}</small>
+                                        </div>
+                                        <div class="flex flex-col gap-1.5">
+                                            <span :class="labelCls">{{ t('settings_page.fields.preview') }}</span>
+                                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-lg font-semibold tabular-nums">{{ sampleNumber }}</div>
                                         </div>
                                     </div>
                                 </section>

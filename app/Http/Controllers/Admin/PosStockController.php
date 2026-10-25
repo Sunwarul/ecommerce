@@ -25,7 +25,7 @@ class PosStockController extends Controller
 
         // Use StockService to adjust
         $stockService->adjust([
-            'type' => 'adjustment',
+            'type' => 'adjust',
             'product_id' => $data['product_id'],
             'variation_id' => $data['variation_id'] ?? null,
             'branch_id' => $data['branch_id'],

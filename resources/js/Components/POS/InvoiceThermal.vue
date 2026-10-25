@@ -141,6 +141,7 @@ const hasCharge = (key) => Number(props.order[key] || 0) > 0;
 
         <div class="sep"></div>
         <div class="center bold">{{ t("invoice.thank_you_short") }}</div>
+        <div v-if="shop.footer" class="center small" style="white-space: pre-line">{{ shop.footer }}</div>
     </div>
 </template>
 
@@ -154,7 +155,7 @@ const hasCharge = (key) => Number(props.order[key] || 0) > 0;
     background: #fff;
     color: #000;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-        "Noto Sans Bengali", "Noto Sans Arabic", "Noto Sans Devanagari", monospace;
+        var(--font-bengali, "Noto Sans Bengali"), "Noto Sans Arabic", "Noto Sans Devanagari", monospace;
     font-size: 13px;
 }
 .center {

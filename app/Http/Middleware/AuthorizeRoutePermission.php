@@ -99,6 +99,7 @@ class AuthorizeRoutePermission
         'branch.switch',          // users switch between branches they work in
         'installments.preview',   // pure calculation used by POS
         'emi.quote',              // pure calculation used by POS
+        'docs.index',             // the user manual is readable by every staff member
     ];
 
     /** Every permission name the map can require (used by the seeder / migration). */

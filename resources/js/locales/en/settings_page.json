@@ -4,7 +4,8 @@
     "tabs": {
         "general": "General",
         "email": "Email (SMTP)",
-        "sms": "SMS"
+        "sms": "SMS",
+        "appearance": "Bangla & appearance"
     },
     "sections": {
         "business": "Business",
@@ -13,7 +14,11 @@
         "localization_hint": "Defaults for new users and printed dates",
         "smtp": "Outgoing mail server",
         "smtp_hint": "Used for password reset and notification emails",
-        "sender": "Sender"
+        "sender": "Sender",
+        "fonts": "Fonts",
+        "fonts_hint": "The Bangla font is used for every Bangla letter in the app, on invoices and on the website.",
+        "numbers": "Numbers & currency",
+        "numbers_hint": "How amounts look on screens and invoices."
     },
     "fields": {
         "app_name": "Business name",
@@ -34,7 +39,19 @@
         "encryption": "Encryption",
         "none": "None",
         "from_address": "From address",
-        "from_name": "From name"
+        "from_name": "From name",
+        "font_bn": "Bangla font",
+        "font_latin": "English font",
+        "bn_scale": "Bangla text size",
+        "bn_scale_hint": "Bangla letters look smaller than English ones. Increase this if Bangla text is hard to read.",
+        "preview": "Preview",
+        "bn_digits": "Show Bangla digits (০১২৩) in Bangla",
+        "bn_digits_hint": "Amounts, quantities and dates use Bangla digits while the interface language is বাংলা.",
+        "grouping": "Digit grouping",
+        "grouping_international": "1,234,567 (international)",
+        "grouping_indian": "12,34,567 (lakh / crore)",
+        "currency_symbol": "Currency symbol",
+        "currency_symbol_hint": "For example ৳ or Tk."
     },
     "sms_moved_title": "SMS has its own module now",
     "sms_moved_body": "Gateways, templates, on/off switches, history and reports are managed in SMS Settings.",

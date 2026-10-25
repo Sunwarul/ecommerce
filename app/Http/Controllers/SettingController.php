@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\Setting;
+use App\Support\Fonts;
 use Inertia\Inertia;
 
 class SettingController extends Controller
@@ -22,6 +23,14 @@ class SettingController extends Controller
             'general_timezone' => Setting::get('general_timezone', '(GMT/UTC 05:30)Kolkata'),
             'general_date_format' => Setting::get('general_date_format', 'd-m-Y'),
             'general_time_format' => Setting::get('general_time_format', '24 Hours'),
+            'general_currency_symbol' => Setting::get('general_currency_symbol') ?: config('app.currency_symbol'),
+
+            // Bangla & appearance
+            'appearance_font_bn' => Fonts::bengali(),
+            'appearance_font_latin' => Fonts::latin(),
+            'appearance_bn_font_scale' => Fonts::bengaliScale(),
+            'locale_bn_digits' => (bool) Setting::get('locale_bn_digits', false),
+            'locale_number_grouping' => Setting::get('locale_number_grouping') ?: 'international',
 
             // Mail
             'mail_host' => Setting::get('mail_host'),
@@ -42,8 +51,14 @@ class SettingController extends Controller
             'sms_vonage_from' => Setting::get('sms_vonage_from'),
         ];
 
-        // dd($settings);
-        return Inertia::render('Admin/Settings/General', compact('settings'));
+        return Inertia::render('Admin/Settings/General', [
+            'settings' => $settings,
+            'fonts' => [
+                'bengali' => Fonts::options(Fonts::BENGALI),
+                'latin' => Fonts::options(Fonts::LATIN),
+                'preview_stylesheet' => Fonts::previewStylesheetUrl(),
+            ],
+        ]);
     }
 
     public function update(UpdateSettingsRequest $request)
@@ -55,7 +70,7 @@ class SettingController extends Controller
             ) {
                 continue;
             }
-            Setting::set($key, $value);
+            Setting::set($key, is_bool($value) ? ($value ? '1' : '0') : $value);
         }
 
         // Check if request expects JSON

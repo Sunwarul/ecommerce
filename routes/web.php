@@ -16,8 +16,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WarrantyGuaranteeController;
 use App\Http\Controllers\BaseUnitController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\Frontend\WelcomePageController;
+use App\Http\Controllers\Frontend\WebsiteController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\Sales\EmiController;
@@ -30,6 +31,10 @@ use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\Website\BlogPostController;
+use App\Http\Controllers\Website\ContactMessageController;
+use App\Http\Controllers\Website\FaqController;
+use App\Http\Controllers\Website\WebsiteSettingController;
 use App\Utils\CrudRouter;
 use Illuminate\Support\Facades\Route;
 
@@ -39,7 +44,16 @@ Route::get('locale', [LocaleController::class, 'get'])->name('locale.get');
 Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
 Route::get('set-locale/{locale}', [LocaleController::class, 'setFromUrl'])->name('locale.setFromUrl')->where('locale', 'en|bn|ar|es|hi');
 
-Route::get('/', WelcomePageController::class)->name('welcome');
+// =======================
+// Public website
+// =======================
+Route::get('/', [WebsiteController::class, 'home'])->name('welcome');
+Route::get('/blog', [WebsiteController::class, 'blog'])->name('website.blog');
+Route::get('/blog/{slug}', [WebsiteController::class, 'post'])->name('website.post');
+Route::get('/faq', [WebsiteController::class, 'faq'])->name('website.faq');
+Route::get('/contact', [WebsiteController::class, 'contact'])->name('website.contact');
+Route::post('/contact', [WebsiteController::class, 'sendContact'])->middleware('throttle:contact')->name('website.contact.send');
+Route::get('/sitemap.xml', [WebsiteController::class, 'sitemap'])->name('website.sitemap');
 
 // AUTH & VERIFIED
 
@@ -88,6 +102,11 @@ Route::middleware(['auth', 'verified', 'route.permission'])->prefix('admin')->gr
     CrudRouter::setFor('currencies', App\Http\Controllers\CurrencyController::class);
     CrudRouter::setFor('customers', App\Http\Controllers\CustomerController::class);
     CrudRouter::setFor('warranty-guarantees', WarrantyGuaranteeController::class);
+
+    // =======================
+    // Help / user manual
+    // =======================
+    Route::get('/docs/{section?}', DocsController::class)->name('docs.index');
 
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -240,5 +259,36 @@ Route::middleware(['auth', 'verified', 'route.permission'])->prefix('admin')->gr
             Route::post('/gateways/{gateway}/balance', [SmsSettingController::class, 'balance'])->name('gateways.balance');
             Route::post('/gateways/{gateway}/test', [SmsSettingController::class, 'test'])->name('gateways.test')->middleware('throttle:sms');
         });
+    });
+
+    // =======================
+    // Website (CMS) & contact messages
+    // =======================
+    Route::prefix('website')->name('website.')->middleware('can:Website Manage')->group(function () {
+        Route::get('/settings', [WebsiteSettingController::class, 'index'])->name('settings');
+        // POST (not PUT) because the form carries file uploads
+        Route::post('/settings', [WebsiteSettingController::class, 'update'])->name('settings.update');
+
+        Route::get('/faqs', [FaqController::class, 'index'])->name('faqs.index');
+        Route::post('/faqs', [FaqController::class, 'store'])->name('faqs.store');
+        Route::post('/faqs/reorder', [FaqController::class, 'reorder'])->name('faqs.reorder');
+        Route::put('/faqs/{faq}', [FaqController::class, 'update'])->name('faqs.update');
+        Route::delete('/faqs/{faq}', [FaqController::class, 'destroy'])->name('faqs.destroy');
+
+        Route::get('/posts', [BlogPostController::class, 'index'])->name('posts.index');
+        Route::get('/posts/create', [BlogPostController::class, 'create'])->name('posts.create');
+        Route::post('/posts', [BlogPostController::class, 'store'])->name('posts.store');
+        Route::get('/posts/{post}/edit', [BlogPostController::class, 'edit'])->name('posts.edit');
+        Route::post('/posts/{post}', [BlogPostController::class, 'update'])->name('posts.update');
+        Route::delete('/posts/{post}', [BlogPostController::class, 'destroy'])->name('posts.destroy');
+        Route::post('/posts/{id}/restore', [BlogPostController::class, 'restore'])->whereNumber('id')->name('posts.restore');
+        Route::delete('/posts/{id}/force', [BlogPostController::class, 'forceDelete'])->whereNumber('id')->name('posts.force-delete');
+    });
+
+    Route::middleware('can:Contact Message Index')->group(function () {
+        Route::get('/contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');
+        Route::post('/contact-messages/bulk', [ContactMessageController::class, 'bulk'])->name('contact-messages.bulk');
+        Route::post('/contact-messages/{message}/read', [ContactMessageController::class, 'read'])->name('contact-messages.read');
+        Route::put('/contact-messages/{message}', [ContactMessageController::class, 'update'])->name('contact-messages.update');
     });
 });

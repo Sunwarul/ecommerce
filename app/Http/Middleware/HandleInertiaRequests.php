@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ContactMessage;
+use App\Models\Setting;
+use App\Support\Website;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -31,6 +34,8 @@ class HandleInertiaRequests extends Middleware
         }
 
         $currentLocale = app()->getLocale();
+        $logo = Setting::get('general_logo');
+        $favicon = Setting::get('general_favicon');
 
         return array_merge(parent::share($request), [
             'auth' => [
@@ -40,11 +45,17 @@ class HandleInertiaRequests extends Middleware
             ],
             'configs' => [
                 'app_name' => config('app.name'),
-                'shop_name' => \App\Models\Setting::get('general_application_name') ?: config('app.name'),
-                'logo' => asset('images/logo.jpeg'),
+                'shop_name' => Setting::get('general_application_name') ?: config('app.name'),
+                'logo' => $logo ? asset('storage/'.$logo) : asset('images/logo.jpeg'),
+                'favicon' => $favicon ? asset('storage/'.$favicon) : asset('images/favicon.svg'),
                 'currency' => config('app.currency'),
-                'currency_symbol' => config('app.currency_symbol'),
+                'currency_symbol' => Setting::get('general_currency_symbol') ?: config('app.currency_symbol'),
+                // number display: Bangla digits (০১২) while the UI is Bangla, and lakh/crore grouping (12,34,567)
+                'bn_digits' => (bool) Setting::get('locale_bn_digits', false),
+                'number_grouping' => Setting::get('locale_number_grouping') ?: 'international',
+                'website_enabled' => Website::raw()['enabled'],
             ],
+            'unread_contact_messages' => fn () => $user?->can('Contact Message Index') ? ContactMessage::unread()->count() : 0,
             'locale' => [
                 'current' => $currentLocale,
                 'supported' => config('app.supported_locales'),

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\Fonts;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -25,6 +27,15 @@ class UpdateSettingsRequest extends FormRequest
             'settings.general_timezone' => ['required', 'string', 'max:100'],
             'settings.general_date_format' => ['required', 'string', 'max:20'],
             'settings.general_time_format' => ['required', 'string', 'max:20'],
+
+            'settings.general_currency_symbol' => ['nullable', 'string', 'max:8'],
+
+            // Bangla & appearance
+            'settings.appearance_font_bn' => ['nullable', Rule::in(array_keys(Fonts::BENGALI))],
+            'settings.appearance_font_latin' => ['nullable', Rule::in(array_keys(Fonts::LATIN))],
+            'settings.appearance_bn_font_scale' => ['nullable', 'integer', 'min:90', 'max:130'],
+            'settings.locale_bn_digits' => ['nullable', 'boolean'],
+            'settings.locale_number_grouping' => ['nullable', 'in:international,indian'],
 
             // Email / SMTP
             'settings.mail_host' => ['nullable', 'string', 'max:191'],

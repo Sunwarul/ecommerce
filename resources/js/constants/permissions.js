@@ -304,4 +304,13 @@ export const PERMISSIONS = Object.freeze({
         SEND: "SMS Send",
         SETTINGS: "SMS Settings",
     },
+
+    WEBSITE: {
+        MANAGE: "Website Manage",
+    },
+
+    CONTACT_MESSAGE: {
+        INDEX: "Contact Message Index",
+        DELETE: "Contact Message Delete",
+    },
 });
