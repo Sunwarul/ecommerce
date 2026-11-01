@@ -32,25 +32,25 @@ class BrandController extends Controller
     public function store(Request $request)
     {
         $this->ensureModelClass();
-        $validatedData = app($this->storeRequestClass)->validated();
+        $validatedData = $this->withUploadedPhoto($request, app($this->storeRequestClass)->validated());
         $model = new $this->modelClass;
         $model->fill($validatedData);
         $model->save();
 
         cache()->increment('brands_version', 1);
 
-        return to_route('brands.index')->with('success', 'Created successfully');
+        return to_route('brands.index')->with('success', __('Created successfully'));
     }
 
     public function update(Request $request, $id)
     {
         $validatedData = app($this->updateRequestClass)->validated();
         $model = $this->modelClass::findOrFail($id);
-        $model->update($validatedData);
+        $model->update($this->withUploadedPhoto($request, $validatedData, $model));
 
         cache()->increment('brands_version', 1);
 
-        return to_route('brands.index')->with('success', 'Updated successfully');
+        return to_route('brands.index')->with('success', __('Updated successfully'));
     }
 
     public function destroy($id)
@@ -60,6 +60,6 @@ class BrandController extends Controller
 
         cache()->increment('brands_version', 1);
 
-        return to_route('brands.index')->with('success', 'Deleted successfully');
+        return to_route('brands.index')->with('success', __('Deleted successfully'));
     }
 }

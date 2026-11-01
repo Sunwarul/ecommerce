@@ -1,85 +1,76 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { router } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import Button from "primevue/button";
+import SelectButton from "primevue/selectbutton";
 import { computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
+import { useFlashToast } from "@/Composables/useFlashToast";
 
 import InvoiceA4 from "@/Components/POS/InvoiceA4.vue";
 import InvoiceThermal from "@/Components/POS/InvoiceThermal.vue";
 
 const props = defineProps({
     order: { type: Object, required: true },
-    shop: {
-        type: Object,
-        default: () => ({ name: "Your Shop", address: "", phone: "" }),
-    },
-
-    // "a4" | "thermal"
-    mode: { type: String, default: "a4" },
-
-    // 58 | 80 (thermal width)
-    thermalWidth: { type: Number, default: 80 },
+    shop: { type: Object, default: () => ({ name: "", address: "", phone: "" }) },
+    mode: { type: String, default: "a4" }, // "a4" | "thermal"
+    thermalWidth: { type: Number, default: 80 }, // 58 | 80
 });
 
+const { t } = useI18n();
+useFlashToast();
+
 const isThermal = computed(() => props.mode === "thermal");
-const mode = props.mode;
-function printInvoice() {
-    // print thermal design only (even if user is viewing A4)
-    // Option A: switch to thermal in same page for printing
-    const url =
-        route("pos.orders.invoice", props.order.id) +
-        `?mode=${mode}&autoprint=1`;
-    window.open(url, "_blank");
+const modeOptions = computed(() => [
+    { label: t("invoice.mode_a4"), value: "a4", icon: "pi pi-file" },
+    { label: t("invoice.mode_thermal"), value: "thermal", icon: "pi pi-receipt" },
+]);
+
+function switchMode(mode) {
+    if (!mode || mode === props.mode) return;
+    router.visit(route("pos.orders.invoice", props.order.id), {
+        data: { mode },
+        replace: true,
+        preserveScroll: true,
+    });
 }
 
-function openThermalPreview() {
-    router.visit(route("pos.orders.invoice", props.order.id), {
-        data: { mode: "thermal" },
-        replace: true,
-        preserveScroll: true,
-    });
-}
-function openA4Preview() {
-    router.visit(route("pos.orders.invoice", props.order.id), {
-        data: { mode: "a4" },
-        replace: true,
-        preserveScroll: true,
-    });
+function printInvoice() {
+    window.print();
 }
 
 onMounted(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("autoprint") === "1") {
-        setTimeout(() => window.print(), 300);
+    if (new URLSearchParams(window.location.search).get("autoprint") === "1") {
+        setTimeout(() => window.print(), 400);
     }
 });
 </script>
 
 <template>
+    <Head :title="`${t('shared.terms.invoice')} ${order.invoice_no || '#' + order.id}`" />
+
     <AuthenticatedLayout>
-        <div class="p-4 md:p-6">
-            <!-- Top actions (hidden on print) -->
+        <div class="p-2 sm:p-4">
+            <!-- Actions (hidden on print) -->
             <div class="flex flex-wrap gap-2 items-center justify-between mb-4 print:hidden">
-                <div class="flex gap-2">
-                    <Button label="Back" icon="pi pi-arrow-left" severity="secondary"
+                <div class="flex flex-wrap gap-2">
+                    <Button :label="t('shared.terms.back')" icon="pi pi-arrow-left" severity="secondary" outlined
                         @click="router.visit(route('pos.orders.index'))" />
-                    <Button label="Print Receipt" icon="pi pi-print" severity="success" @click="printInvoice" />
+                    <Button :label="t('invoice.new_sale')" icon="pi pi-plus" severity="secondary" outlined
+                        @click="router.visit(route('pos.index'))" />
+                    <Button :label="t('pos.print_receipt')" icon="pi pi-print" @click="printInvoice" />
                 </div>
-
-                <div class="flex gap-2">
-                    <Button :label="isThermal ? 'Thermal (active)' : 'Thermal'" icon="pi pi-receipt"
-                        :severity="isThermal ? 'info' : 'secondary'" @click="openThermalPreview" />
-                    <Button :label="!isThermal ? 'A4 (active)' : 'A4'" icon="pi pi-file"
-                        :severity="!isThermal ? 'info' : 'secondary'" @click="openA4Preview" />
-                </div>
+                <SelectButton :modelValue="mode" :options="modeOptions" optionLabel="label" optionValue="value" :allowEmpty="false"
+                    @update:modelValue="switchMode">
+                    <template #option="{ option }">
+                        <i :class="option.icon" class="text-xs" /> <span>{{ option.label }}</span>
+                    </template>
+                </SelectButton>
             </div>
 
-            <!-- Render selected layout -->
-            <div id="print-area" v-if="!isThermal">
-                <InvoiceA4 :order="order" :shop="shop" />
-            </div>
-            <div v-else id="print-area">
-                <InvoiceThermal :order="order" :shop="shop" :width="thermalWidth" />
+            <div id="print-area" class="bg-slate-100 rounded-xl p-2 sm:p-4 print:p-0 print:bg-white">
+                <InvoiceThermal v-if="isThermal" :order="order" :shop="shop" :width="thermalWidth" />
+                <InvoiceA4 v-else :order="order" :shop="shop" />
             </div>
         </div>
     </AuthenticatedLayout>
@@ -87,24 +78,20 @@ onMounted(() => {
 
 <style>
 @media print {
-
-    /* hide everything */
+    /* hide everything except the invoice */
     body * {
         visibility: hidden !important;
     }
-
-    /* show only invoice */
     #print-area,
     #print-area * {
         visibility: visible !important;
     }
-
-    /* place invoice at top-left */
     #print-area {
         position: absolute !important;
-        left: 0 !important;
+        inset-inline-start: 0 !important;
         top: 0 !important;
         width: 100% !important;
+        background: #fff !important;
     }
 }
 </style>

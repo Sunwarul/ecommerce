@@ -22,7 +22,7 @@ class ProductAttributeValueController extends Controller
             storeRequestClass: ProductAttributeValueStoreRequest::class,
             updateRequestClass: ProductAttributeValueUpdateRequest::class,
             componentPath: 'ProductAttributeValues/Index',
-            searchColumns: [],
+            searchColumns: ['value', 'display_value'],
             // exportClass: ProductAttributeValueExport::class,
             withRelations: ['attribute'],
         ));

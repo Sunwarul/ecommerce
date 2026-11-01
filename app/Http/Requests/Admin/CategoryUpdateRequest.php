@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\IgnoresStoredFilePaths;
 use App\Rules\FileUploadRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CategoryUpdateRequest extends FormRequest
 {
+    use IgnoresStoredFilePaths;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -25,7 +28,7 @@ class CategoryUpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|unique:categories,name,'.$this->id,
+            'name' => 'required|string|unique:categories,name,'.$this->route('category'),
             'parent_id' => ['nullable', 'exists:categories,id', 'not_in:'.$this->id],
             'photo' => $this->hasFile('photo') ? ['nullable', new FileUploadRule] : 'nullable|string',
             'is_active' => 'nullable|boolean',

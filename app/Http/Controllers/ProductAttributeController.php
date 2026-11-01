@@ -21,7 +21,7 @@ class ProductAttributeController extends Controller
             storeRequestClass: ProductAttributeStoreRequest::class,
             updateRequestClass: ProductAttributeUpdateRequest::class,
             componentPath: 'ProductAttributes/Index',
-            searchColumns: [],
+            searchColumns: ['name', 'display_name'],
             // exportClass: ProductAttributeExport::class,
             withRelations: [],
         ));

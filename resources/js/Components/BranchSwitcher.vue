@@ -1,39 +1,26 @@
 <script setup>
 import { router, usePage } from "@inertiajs/vue3";
+import Select from "primevue/select";
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const page = usePage();
 
-// branches passed from Laravel (shared)
 const branches = computed(() => page.props.branches || []);
-const currentBranchId = computed(() => page.props.auth.user.branch_id);
+const currentBranchId = computed(() => page.props.auth?.user?.branch_id ?? null);
 
-const changeBranch = (e) => {
-    router.post(
-        route("branch.switch"),
-        { branch_id: e.target.value },
-        {
-            preserveScroll: true,
-            preserveState: true,
-        }
-    );
-};
+function changeBranch(id) {
+    if (!id || id === currentBranchId.value) return;
+    router.post(route("branch.switch"), { branch_id: id }, { preserveScroll: true });
+}
 </script>
 
 <template>
-    <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 font-medium hidden md:block">
-            Branch
-        </label>
-
-        <select
-            class="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-indigo-400 transition min-w-[120px]"
-            :value="currentBranchId" @change="changeBranch">
-            <option disabled value="">Select Branch</option>
-
-            <option v-for="branch in branches" :key="branch.id" :value="branch.id">
-                {{ branch.name }}
-            </option>
-        </select>
+    <div v-if="branches.length" class="flex items-center gap-2">
+        <i class="pi pi-building text-slate-500" :title="t('layout.branch')" />
+        <Select :modelValue="currentBranchId" @update:modelValue="changeBranch" :options="branches" optionLabel="name"
+            optionValue="id" :placeholder="t('layout.select_branch')" size="small" class="min-w-[9rem] max-w-[14rem]"
+            :aria-label="t('layout.branch')" />
     </div>
 </template>

@@ -42,24 +42,26 @@ class CategoryController extends Controller
     {
         $this->ensureModelClass();
         $validatedData = app($this->storeRequestClass)->validated();
+        $validatedData = $this->withUploadedPhoto($request, $validatedData);
         $model = new $this->modelClass;
         $model->fill($validatedData);
         $model->save();
 
         cache()->increment('categories_version', 1);
 
-        return to_route('categories.index')->with('success', 'Created successfully');
+        return to_route('categories.index')->with('success', __('Created successfully'));
     }
 
     public function update(Request $request, $id)
     {
         $validatedData = app($this->updateRequestClass)->validated();
         $model = $this->modelClass::findOrFail($id);
+        $validatedData = $this->withUploadedPhoto($request, $validatedData, $model);
         $model->update($validatedData);
 
         cache()->increment('categories_version', 1);
 
-        return to_route('categories.index')->with('success', 'Updated successfully');
+        return to_route('categories.index')->with('success', __('Updated successfully'));
     }
 
     public function destroy($id)
@@ -69,6 +71,6 @@ class CategoryController extends Controller
 
         cache()->increment('categories_version', 1);
 
-        return to_route('categories.index')->with('success', 'Deleted successfully');
+        return to_route('categories.index')->with('success', __('Deleted successfully'));
     }
 }

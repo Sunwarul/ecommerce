@@ -1,0 +1,40 @@
+{
+    "users": {
+        "name": "Full name",
+        "email": "Email",
+        "phone": "Phone",
+        "password": "Password",
+        "password_confirmation": "Confirm password",
+        "password_edit_note": "Leave the password fields empty to keep the current password.",
+        "roles": "Roles",
+        "select_roles": "Select roles",
+        "no_role": "No role",
+        "branch": "Branch",
+        "select_branch": "Select branch",
+        "avatar": "Profile photo",
+        "account": "Account",
+        "access": "Access"
+    },
+    "roles": {
+        "name": "Role name",
+        "name_placeholder": "e.g. Cashier",
+        "permissions": "Permissions",
+        "permissions_count": "{count} permissions",
+        "selected_count": "{selected} of {total} selected",
+        "search_permissions": "Filter permissions…",
+        "select_all": "Select all",
+        "clear_all": "Clear all",
+        "group_all": "All",
+        "no_match": "No permissions match this filter.",
+        "super_admin_note": "Super Admin always has every permission and cannot be deleted."
+    },
+    "permissions": {
+        "name": "Permission name",
+        "name_hint": "Format: Module Action, e.g. \"Product Export\". The code checks permissions by this exact name.",
+        "locked_note": "Permissions are referenced by name in the code, so editing and deleting them is disabled.",
+        "module": "Module"
+    },
+    "expenses": {
+        "receipt_hint": "Image or PDF of the receipt (optional)"
+    }
+}

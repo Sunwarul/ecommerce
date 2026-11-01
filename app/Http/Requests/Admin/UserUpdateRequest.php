@@ -26,10 +26,12 @@ class UserUpdateRequest extends FormRequest
             'name' => ['required', 'min:3', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$this->route('user')],
             'branch_id' => ['nullable', 'exists:branches,id'],
-            // 'password' => ['nullable'],
-            'roles' => ['nullable', 'array', 'exists:roles,id'],
+            // leave empty to keep the current password
+            'password' => ['nullable', 'confirmed', Password::default()],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['integer', 'exists:roles,id'],
 
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone,'.$this->route('user')],
         ];
     }
 }

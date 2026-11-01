@@ -1,0 +1,45 @@
+{
+    "title": "Ajustes",
+    "subtitle": "Datos del negocio, idioma y hora, y envío de correo",
+    "tabs": {
+        "general": "General",
+        "email": "Correo (SMTP)",
+        "sms": "SMS"
+    },
+    "sections": {
+        "business": "Negocio",
+        "business_hint": "Se muestra en facturas, recibos y SMS",
+        "localization": "Idioma y hora",
+        "localization_hint": "Valores predeterminados para usuarios nuevos y fechas impresas",
+        "smtp": "Servidor de correo saliente",
+        "smtp_hint": "Se usa para restablecer contraseñas y notificaciones",
+        "sender": "Remitente"
+    },
+    "fields": {
+        "app_name": "Nombre del negocio",
+        "address": "Dirección",
+        "phone": "Teléfono",
+        "footer_text": "Texto al pie de la factura",
+        "language": "Idioma predeterminado",
+        "timezone": "Zona horaria",
+        "date_format": "Formato de fecha",
+        "time_format": "Formato de hora",
+        "h24": "24 horas",
+        "h12": "12 horas (AM/PM)",
+        "host": "Servidor",
+        "port": "Puerto",
+        "username": "Usuario",
+        "password": "Contraseña",
+        "password_hint": "Deje ****** para conservar la contraseña guardada",
+        "encryption": "Cifrado",
+        "none": "Ninguno",
+        "from_address": "Dirección del remitente",
+        "from_name": "Nombre del remitente"
+    },
+    "sms_moved_title": "Los SMS ahora tienen su propio módulo",
+    "sms_moved_body": "Las pasarelas, plantillas, interruptores, historial e informes se gestionan en Ajustes de SMS.",
+    "open_sms_settings": "Abrir ajustes de SMS",
+    "save": "Guardar ajustes",
+    "saved": "Ajustes guardados",
+    "unsaved": "Tiene cambios sin guardar"
+}

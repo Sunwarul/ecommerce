@@ -1,0 +1,32 @@
+{
+    "subtitle": "العملاء الذين تبيع لهم مع بيانات الاتصال والائتمان",
+    "search_hint": "ابحث بالاسم أو الهاتف أو البريد أو واتساب — يكفي جزء من الرقم (1712345 يجد 01712-345678).",
+    "customer": "العميل",
+    "type": "نوع العميل",
+    "select_type": "اختر نوع العميل",
+    "types": {
+        "retailer": "تجزئة",
+        "wholesaler": "جملة"
+    },
+    "since": "عميل منذ",
+    "section_basic": "بيانات الاتصال",
+    "section_account": "الحساب والائتمان",
+    "section_documents": "الصورة والمستندات",
+    "whatsapp": "رقم واتساب",
+    "active_customer": "عميل نشط",
+    "currency": "العملة المفضلة",
+    "select_currency": "اختر العملة",
+    "opening_balance": "الرصيد الافتتاحي",
+    "opening_balance_date": "تاريخ الرصيد الافتتاحي",
+    "opening_balance_is": "الرصيد الافتتاحي",
+    "to_pay": "مستحق الدفع (علينا)",
+    "to_receive": "مستحق القبض (عليهم)",
+    "has_credit_limit": "تحديد حد ائتماني",
+    "credit_limit": "الحد الائتماني",
+    "photo": "الصورة",
+    "choose_photo": "اختر صورة",
+    "photo_hint": "JPG أو PNG، حتى 7 ميغابايت",
+    "document": "وثيقة الهوية (بطاقة وطنية، جواز سفر، رخصة قيادة)",
+    "document_on_file": "يوجد مستند محفوظ مسبقًا",
+    "document_hint": "PDF أو Word أو JPG أو PNG، حتى 7 ميغابايت"
+}

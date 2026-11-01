@@ -1,0 +1,32 @@
+{
+    "subtitle": "Clientes a los que vende, con sus datos de contacto y crédito",
+    "search_hint": "Busque por nombre, teléfono, correo o WhatsApp; vale una parte del número (1712345 encuentra 01712-345678).",
+    "customer": "Cliente",
+    "type": "Tipo de cliente",
+    "select_type": "Seleccione un tipo de cliente",
+    "types": {
+        "retailer": "Minorista",
+        "wholesaler": "Mayorista"
+    },
+    "since": "Cliente desde",
+    "section_basic": "Datos de contacto",
+    "section_account": "Cuenta y crédito",
+    "section_documents": "Foto y documentos",
+    "whatsapp": "Número de WhatsApp",
+    "active_customer": "Cliente activo",
+    "currency": "Moneda preferida",
+    "select_currency": "Seleccione una moneda",
+    "opening_balance": "Saldo inicial",
+    "opening_balance_date": "Fecha del saldo inicial",
+    "opening_balance_is": "El saldo inicial es",
+    "to_pay": "A pagar (debemos)",
+    "to_receive": "A cobrar (nos deben)",
+    "has_credit_limit": "Fijar límite de crédito",
+    "credit_limit": "Límite de crédito",
+    "photo": "Foto",
+    "choose_photo": "Elegir foto",
+    "photo_hint": "JPG o PNG, hasta 7 MB",
+    "document": "Documento de identidad (DNI, pasaporte, licencia)",
+    "document_on_file": "Ya hay un documento guardado",
+    "document_hint": "PDF, Word, JPG o PNG, hasta 7 MB"
+}

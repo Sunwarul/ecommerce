@@ -152,6 +152,24 @@ trait HasCrud
         return Excel::download(new $this->exportClass($search), $filename);
     }
 
+    /**
+     * Replace an uploaded "photo" in validated data with its stored path (deleting the old file),
+     * or drop the key so an update without a new file keeps the current photo.
+     */
+    protected function withUploadedPhoto(Request $request, array $data, $existing = null): array
+    {
+        if ($request->file('photo')) {
+            $data['photo'] = $request->file('photo')->store($this->resource);
+            if ($existing?->photo && Storage::exists($existing->photo)) {
+                Storage::delete($existing->photo);
+            }
+        } else {
+            unset($data['photo']);
+        }
+
+        return $data;
+    }
+
     protected function ensureModelClass()
     {
         if (! $this->modelClass) {

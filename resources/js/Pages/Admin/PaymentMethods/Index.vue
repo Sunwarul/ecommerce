@@ -1,31 +1,42 @@
 <template>
-    <div>
-        <CrudComponent :form="form">
-            <template #columns>
-                <Column field="name" header="Name"></Column>
-                <Column field="is_active" header="Is Active" sortable>
-                    <template #body="{ data }">
-                        <span v-if="data.is_active" class="text-green-400 font-bold">Active</span>
-                        <span v-else class="text-red-400 font-bold">In-Active</span>
-                    </template>
-                </Column>
-            </template>
+    <CrudComponent :form="form" icon="pi pi-credit-card">
+        <template #columns>
+            <Column field="photo" :header="t('crud.fields.photo')" style="width: 4.5rem">
+                <template #body="{ data }">
+                    <img v-if="data.photo" :src="$resolveImagePath(data.photo)" alt=""
+                        class="w-10 h-10 rounded-lg object-contain border border-slate-200 bg-white" />
+                    <span v-else class="w-10 h-10 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center">
+                        <i class="pi pi-wallet" />
+                    </span>
+                </template>
+            </Column>
+            <Column field="name" :header="t('crud.fields.name')" bodyClass="font-medium text-slate-800"></Column>
+            <Column field="is_active" :header="t('crud.fields.status')">
+                <template #body="{ data }">
+                    <Tag :value="data.is_active ? t('crud.fields.active') : t('crud.fields.inactive')"
+                        :severity="data.is_active ? 'success' : 'secondary'" />
+                </template>
+            </Column>
+        </template>
 
-            <template #form="{ submitted, handlePhotoUpload, photoPreview, resolveImagePath }">
-                <Form :form="form" :handlePhotoUpload :photoPreview :resolveImagePath />
-            </template>
-        </CrudComponent>
-    </div>
+        <template #form="{ handlePhotoUpload, photoPreview, resolveImagePath }">
+            <Form :form="form" :handlePhotoUpload="handlePhotoUpload" :photoPreview="photoPreview" :resolveImagePath="resolveImagePath" />
+        </template>
+    </CrudComponent>
 </template>
 <script setup>
 import CrudComponent from '@/Components/CrudComponent.vue';
 import Form from './Form.vue';
 import { useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
+import Column from 'primevue/column';
+import Tag from 'primevue/tag';
+
+const { t } = useI18n();
 
 const form = useForm({
     name: '',
-    is_active: false,
-    photo: null
+    is_active: true,
+    photo: null,
 });
-
 </script>

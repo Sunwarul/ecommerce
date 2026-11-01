@@ -1,0 +1,38 @@
+{
+    "title": "Movimiento de stock",
+    "simple_product": "Producto simple",
+    "variable_product": "Producto con variantes",
+    "movement_type": "Tipo de movimiento",
+    "types": {
+        "in": "Entrada",
+        "out": "Salida",
+        "transfer": "Traslado",
+        "adjust": "Fijar cantidad"
+    },
+    "type_hints": {
+        "in": "Añada stock recibido a un almacén (compra, devolución).",
+        "out": "Retire stock de un almacén (daños, uso interno).",
+        "transfer": "Mueva stock de un almacén a otro.",
+        "adjust": "Corrija tras un inventario: la cantidad del almacén pasa a ser la que indique."
+    },
+    "variation": "Variante",
+    "variation_n": "Variante #{id}",
+    "select_variation": "Seleccione la variante",
+    "variation_required": "Seleccione la variante de este movimiento",
+    "new_quantity": "Nueva cantidad",
+    "adjust_hint": "El stock actual de este almacén se sustituirá por este número.",
+    "quantity_required": "Introduzca una cantidad mayor que 0",
+    "select_branch": "Seleccione sucursal (opcional)",
+    "from_warehouse": "Desde almacén",
+    "to_warehouse": "Hacia almacén",
+    "warehouse": "Almacén",
+    "select_warehouse": "Seleccione el almacén",
+    "warehouse_required": "Seleccione un almacén",
+    "reference": "Referencia (opcional)",
+    "reference_placeholder": "p. ej. PO-102, INV-55, TRF-09",
+    "note": "Nota (opcional)",
+    "same_warehouse": "Los almacenes de origen y destino deben ser distintos.",
+    "fix_errors": "Corrija los campos marcados.",
+    "save_and_add": "Guardar y añadir otro",
+    "save_and_back": "Guardar y volver al producto"
+}

@@ -1,81 +1,61 @@
-import { ref, computed, watch, onMounted } from 'vue';
+import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { setLocale, getLocale } from '../Plugins/i18n';
-import { localeStore } from '../Stores/localeStore';
+import axios from 'axios';
+import { useToast } from 'primevue/usetoast';
+import { setLocale, getLocale, isRtl as isRtlLocale, i18n } from '../Plugins/i18n';
+import { localeStore, LOCALE_NAMES } from '../Stores/localeStore';
 
 export function useLocale() {
     const page = usePage();
-    
+    const toast = useToast();
+
     const currentLocale = computed({
         get: () => localeStore.current,
-        set: (val) => localeStore.setLocale(val)
+        set: (val) => localeStore.setLocale(val),
     });
-    
-    const supportedLocales = computed(() => {
-        return page.props.locale?.supported || localeStore.supported;
-    });
+
+    const supportedLocales = computed(() => page.props.locale?.supported || localeStore.supported);
 
     const initLocale = () => {
         const serverLocale = page.props.locale?.current;
-        
+
         if (!localeStore.initialized) {
             localeStore.init(serverLocale);
         }
-        
+
         const storedLocale = localeStore.current;
         if (storedLocale && storedLocale !== getLocale()) {
             setLocale(storedLocale);
         }
     };
 
+    /**
+     * Persist the language on the server (session, cookie and user profile), switch the UI and
+     * direction immediately, then reload so server-rendered texts (flash, validation) follow.
+     */
     const changeLocale = async (locale) => {
-        if (!supportedLocales.value.includes(locale)) {
-            console.warn('[useLocale] Unsupported locale:', locale);
+        if (!supportedLocales.value.includes(locale) || locale === localeStore.current) {
             return;
         }
 
         try {
-            const csrfToken = page.props.csrf_token;
-            if (!csrfToken) {
-                console.error('[useLocale] CSRF token not found');
-                return;
-            }
-
-            const response = await fetch(route('locale.set'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({ locale }),
+            const { data } = await axios.post(route('locale.set'), { locale }, { headers: { Accept: 'application/json' } });
+            if (!data?.success) throw new Error('Locale not saved');
+            setLocale(locale);
+            window.location.reload();
+        } catch (e) {
+            toast.add({
+                severity: 'error',
+                summary: i18n.global.t('shared.terms.error'),
+                detail: i18n.global.t('layout.language_failed'),
+                life: 4000,
             });
-
-            const data = await response.json();
-            if (data.success) {
-                setLocale(locale);
-                localeStore.setLocale(locale);
-                
-                window.location.reload();
-            }
-        } catch (error) {
-            console.error('[useLocale] Failed to change locale:', error);
         }
     };
 
-    const isRtl = computed(() => {
-        return currentLocale.value === 'ar';
-    });
+    const isRtl = computed(() => isRtlLocale(currentLocale.value));
 
-    const localeName = computed(() => {
-        const names = {
-            en: 'English',
-            bn: 'বাংলা',
-            ar: 'العربية',
-            es: 'Español',
-            hi: 'हिन्दी',
-        };
-        return names[currentLocale.value] || currentLocale.value;
-    });
+    const localeName = computed(() => LOCALE_NAMES[currentLocale.value] || currentLocale.value);
 
     return {
         currentLocale,

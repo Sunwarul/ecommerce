@@ -1,0 +1,32 @@
+{
+    "subtitle": "आपके ग्राहक, उनके संपर्क और उधार विवरण के साथ",
+    "search_hint": "नाम, फ़ोन, ईमेल या व्हाट्सऐप से खोजें — नंबर का हिस्सा भी चलेगा (1712345 से 01712-345678 मिलेगा)।",
+    "customer": "ग्राहक",
+    "type": "ग्राहक का प्रकार",
+    "select_type": "ग्राहक का प्रकार चुनें",
+    "types": {
+        "retailer": "खुदरा",
+        "wholesaler": "थोक"
+    },
+    "since": "ग्राहक कब से",
+    "section_basic": "संपर्क विवरण",
+    "section_account": "खाता और उधार",
+    "section_documents": "फ़ोटो और दस्तावेज़",
+    "whatsapp": "व्हाट्सऐप नंबर",
+    "active_customer": "सक्रिय ग्राहक",
+    "currency": "पसंदीदा मुद्रा",
+    "select_currency": "मुद्रा चुनें",
+    "opening_balance": "प्रारंभिक शेष",
+    "opening_balance_date": "प्रारंभिक शेष की तारीख",
+    "opening_balance_is": "प्रारंभिक शेष है",
+    "to_pay": "देय (हमें देना है)",
+    "to_receive": "प्राप्य (उन्हें देना है)",
+    "has_credit_limit": "उधार सीमा तय करें",
+    "credit_limit": "उधार सीमा",
+    "photo": "फ़ोटो",
+    "choose_photo": "फ़ोटो चुनें",
+    "photo_hint": "JPG या PNG, अधिकतम 7 MB",
+    "document": "पहचान दस्तावेज़ (एनआईडी, पासपोर्ट, ड्राइविंग लाइसेंस)",
+    "document_on_file": "एक दस्तावेज़ पहले से सहेजा है",
+    "document_hint": "PDF, Word, JPG या PNG, अधिकतम 7 MB"
+}

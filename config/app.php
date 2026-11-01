@@ -16,7 +16,8 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
     'currency' => env('APP_CURRENCY', 'BDT'),
     'currency_symbol' => env('APP_CURRENCY_SYMBOL', '৳'),
-    'user_registration_allowed' => env('USER_REGISTRATION_ALLOWED', true),
+    // Public sign-up is off by default: staff accounts are created by an admin under Users.
+    'user_registration_allowed' => (bool) env('USER_REGISTRATION_ALLOWED', false),
     /*
     |--------------------------------------------------------------------------
     | Application Environment

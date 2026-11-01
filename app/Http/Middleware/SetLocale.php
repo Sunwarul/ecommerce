@@ -47,6 +47,20 @@ class SetLocale
             }
         }
 
-        return config('app.locale', 'en');
+        return $this->defaultLocale();
+    }
+
+    /** The shop's "Default language" setting (General settings), else APP_LOCALE. */
+    protected function defaultLocale(): string
+    {
+        try {
+            $value = \App\Models\Setting::get('general_language');
+        } catch (\Throwable) {
+            $value = null; // settings table missing before the first migrate
+        }
+        $legacy = ['English' => 'en', 'Bangla' => 'bn', 'Bengali' => 'bn', 'Arabic' => 'ar', 'Spanish' => 'es', 'Hindi' => 'hi'];
+        $value = $legacy[$value] ?? $value;
+
+        return in_array($value, config('app.supported_locales', ['en', 'bn']), true) ? $value : config('app.locale', 'en');
     }
 }

@@ -1,0 +1,83 @@
+{
+    "status": {
+        "completed": "مكتمل",
+        "draft": "مسودة",
+        "void": "ملغى",
+        "paid": "مدفوع",
+        "partial": "جزئي",
+        "unpaid": "غير مدفوع",
+        "pending": "قيد الانتظار",
+        "overdue": "متأخر",
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "cancelled": "ملغى",
+        "defaulted": "متعثر",
+        "settled": "تمت التسوية",
+        "sent": "مرسل",
+        "failed": "فشل",
+        "queued": "في الطابور",
+        "open": "مفتوح",
+        "closed": "مغلق"
+    },
+    "sale_type": {
+        "regular": "عادي",
+        "installment": "تقسيط",
+        "emi": "تقسيط بنكي"
+    },
+    "frequency": {
+        "monthly": "شهري",
+        "weekly": "أسبوعي",
+        "biweekly": "كل أسبوعين",
+        "custom": "مخصص (أيام)"
+    },
+    "interest": {
+        "none": "بدون فائدة",
+        "flat": "نسبة ثابتة (كامل المدة)",
+        "reducing": "رصيد متناقص (% سنوي)"
+    },
+    "fee_type": {
+        "fixed": "ثابت",
+        "percent": "نسبة %"
+    },
+    "terms": {
+        "walk_in": "عميل مباشر",
+        "due": "المستحق",
+        "paid": "المدفوع",
+        "total": "الإجمالي",
+        "balance": "الرصيد",
+        "change": "الباقي",
+        "down_payment": "الدفعة المقدمة",
+        "invoice": "فاتورة",
+        "customer": "العميل",
+        "phone": "الهاتف",
+        "cashier": "أمين الصندوق",
+        "branch": "الفرع",
+        "date": "التاريخ",
+        "amount": "المبلغ",
+        "method": "الطريقة",
+        "notes": "ملاحظات",
+        "reference": "المرجع",
+        "from": "من",
+        "to": "إلى",
+        "apply": "تطبيق",
+        "reset": "إعادة تعيين",
+        "export": "تصدير",
+        "print": "طباعة",
+        "search": "بحث",
+        "search_hint": "البحث الجزئي مدعوم: 1712345 يجد 01712-345678. استخدم * كحرف بدل.",
+        "no_data": "لا توجد بيانات لهذه الفترة",
+        "previous": "السابق",
+        "next": "التالي",
+        "showing": "عرض {from}–{to} من {total}",
+        "confirm_title": "يرجى التأكيد",
+        "yes": "نعم",
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "close": "إغلاق",
+        "back": "رجوع",
+        "table": "جدول",
+        "chart": "رسم بياني",
+        "success": "تم بنجاح",
+        "error": "خطأ"
+    }
+}

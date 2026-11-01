@@ -1,49 +1,68 @@
 <template>
+    <Head :title="t('menu.tags')" />
     <div>
         <CrudComponent :form>
             <template #columns>
-                <Column field="name" header="Name"></Column>
-                <Column field="is_active" header="Status">
+                <Column field="name" :header="t('common.name')">
                     <template #body="{ data }">
-                        <Badge :severity="data.is_active ? 'success' : 'danger'">
-                            {{ data.is_active ? 'Active' : 'Inactive' }}
-                        </Badge>
+                        <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                            <i class="pi pi-hashtag text-slate-400 !text-xs" />{{ data.name }}
+                        </span>
                     </template>
                 </Column>
-
-                <Column field="created_at" header="Created At" sortable></Column>
-                <Column field="updated_at" header="Updated At" sortable></Column>
+                <Column field="is_active" :header="t('common.status')">
+                    <template #body="{ data }">
+                        <Tag :severity="data.is_active ? 'success' : 'secondary'"
+                            :value="data.is_active ? t('shared.status.active') : t('shared.status.inactive')" />
+                    </template>
+                </Column>
+                <Column field="created_at" :header="t('catalog.common.created')" sortable>
+                    <template #body="{ data }"><span class="text-sm text-slate-500">{{ date(data.created_at) }}</span></template>
+                </Column>
+                <Column field="updated_at" :header="t('catalog.common.updated')" sortable>
+                    <template #body="{ data }"><span class="text-sm text-slate-500">{{ date(data.updated_at) }}</span></template>
+                </Column>
             </template>
 
-            <template #form="{ submitted, statuses }">
-                <div class="flex flex-col gap-6">
+            <template #form="{ submitted }">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="name" class="block font-bold mb-2">Name</label>
-                        <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                            :invalid="submitted && !form.name" fluid />
-                        <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
+                        <label for="name" class="block text-sm font-medium text-slate-700 mb-1.5">{{ t("common.name") }} <span class="text-rose-600">*</span></label>
+                        <InputText id="name" v-model.trim="form.name" autofocus :invalid="(submitted && !form.name) || !!form.errors.name" fluid />
+                        <small v-if="form.errors.name" class="p-error">{{ form.errors.name }}</small>
+                        <small v-else-if="submitted && !form.name" class="p-error">{{ t("catalog.validation.name_required") }}</small>
                     </div>
-                </div>
-                <div class="flex flex-col gap-6 mt-3">
                     <div>
-                        <label for="is_active" class="block font-bold mb-2">Status</label>
-                        <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                            placeholder="Select a status" class="w-full" :required="true" />
-                        <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                            Status is required.
-                        </small>
+                        <label for="is_active" class="block text-sm font-medium text-slate-700 mb-1.5">{{ t("common.status") }} <span class="text-rose-600">*</span></label>
+                        <Select inputId="is_active" v-model="form.is_active" :options="statusOptions" optionLabel="label" optionValue="value"
+                            class="w-full" :invalid="submitted && form.is_active == null" />
                     </div>
                 </div>
             </template>
         </CrudComponent>
     </div>
 </template>
+
 <script setup>
-import CrudComponent from '@/Components/CrudComponent.vue';
-import { useForm } from '@inertiajs/vue3';
+import CrudComponent from "@/Components/CrudComponent.vue";
+import { Head, useForm } from "@inertiajs/vue3";
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
+import Column from "primevue/column";
+import InputText from "primevue/inputtext";
+import Select from "primevue/select";
+import Tag from "primevue/tag";
+import { date } from "@/Helpers/format";
+
+const { t } = useI18n();
 
 const form = useForm({
-    name: '',
+    name: "",
     is_active: 1,
 });
+
+const statusOptions = computed(() => [
+    { label: t("shared.status.active"), value: 1 },
+    { label: t("shared.status.inactive"), value: 0 },
+]);
 </script>

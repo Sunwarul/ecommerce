@@ -1,0 +1,40 @@
+{
+    "users": {
+        "name": "পূর্ণ নাম",
+        "email": "ইমেইল",
+        "phone": "ফোন",
+        "password": "পাসওয়ার্ড",
+        "password_confirmation": "পাসওয়ার্ড নিশ্চিত করুন",
+        "password_edit_note": "বর্তমান পাসওয়ার্ড রাখতে পাসওয়ার্ডের ঘর খালি রাখুন।",
+        "roles": "রোল",
+        "select_roles": "রোল নির্বাচন করুন",
+        "no_role": "কোনো রোল নেই",
+        "branch": "শাখা",
+        "select_branch": "শাখা নির্বাচন করুন",
+        "avatar": "প্রোফাইল ছবি",
+        "account": "অ্যাকাউন্ট",
+        "access": "অ্যাক্সেস"
+    },
+    "roles": {
+        "name": "রোলের নাম",
+        "name_placeholder": "যেমন: ক্যাশিয়ার",
+        "permissions": "অনুমতি",
+        "permissions_count": "{count}টি অনুমতি",
+        "selected_count": "{total}টির মধ্যে {selected}টি নির্বাচিত",
+        "search_permissions": "অনুমতি খুঁজুন…",
+        "select_all": "সব নির্বাচন",
+        "clear_all": "সব বাদ দিন",
+        "group_all": "সব",
+        "no_match": "এই খোঁজে কোনো অনুমতি নেই।",
+        "super_admin_note": "সুপার অ্যাডমিনের সব অনুমতি থাকে এবং এটি মুছে ফেলা যায় না।"
+    },
+    "permissions": {
+        "name": "অনুমতির নাম",
+        "name_hint": "ফরম্যাট: মডিউল অ্যাকশন, যেমন \"Product Export\"। কোড ঠিক এই নামে অনুমতি যাচাই করে।",
+        "locked_note": "কোডে অনুমতিগুলো নাম দিয়ে ব্যবহার হয়, তাই সম্পাদনা ও মুছে ফেলা বন্ধ রাখা হয়েছে।",
+        "module": "মডিউল"
+    },
+    "expenses": {
+        "receipt_hint": "রসিদের ছবি বা PDF (ঐচ্ছিক)"
+    }
+}

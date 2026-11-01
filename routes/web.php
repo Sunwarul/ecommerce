@@ -16,31 +16,60 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WarrantyGuaranteeController;
 use App\Http\Controllers\BaseUnitController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\Frontend\WelcomePageController;
+use App\Http\Controllers\Frontend\WebsiteController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\Reports\SalesReportController;
+use App\Http\Controllers\Sales\EmiController;
+use App\Http\Controllers\Sales\InstallmentController;
+use App\Http\Controllers\Sales\InstallmentPlanController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Sms\SmsController;
+use App\Http\Controllers\Sms\SmsSettingController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\Website\BlogPostController;
+use App\Http\Controllers\Website\ContactMessageController;
+use App\Http\Controllers\Website\FaqController;
+use App\Http\Controllers\Website\WebsiteSettingController;
 use App\Utils\CrudRouter;
 use Illuminate\Support\Facades\Route;
 
-require_once __DIR__.'/auth.php';
+require __DIR__.'/auth.php';
 
 Route::get('locale', [LocaleController::class, 'get'])->name('locale.get');
 Route::post('locale', [LocaleController::class, 'set'])->name('locale.set');
 Route::get('set-locale/{locale}', [LocaleController::class, 'setFromUrl'])->name('locale.setFromUrl')->where('locale', 'en|bn|ar|es|hi');
 
-Route::get('/', WelcomePageController::class)->name('welcome');
+// =======================
+// Public website
+// =======================
+Route::get('/', [WebsiteController::class, 'home'])->name('welcome');
+Route::get('/blog', [WebsiteController::class, 'blog'])->name('website.blog');
+Route::get('/blog/{slug}', [WebsiteController::class, 'post'])->name('website.post');
+Route::get('/faq', [WebsiteController::class, 'faq'])->name('website.faq');
+Route::get('/contact', [WebsiteController::class, 'contact'])->name('website.contact');
+Route::post('/contact', [WebsiteController::class, 'sendContact'])->middleware('throttle:contact')->name('website.contact.send');
+Route::get('/sitemap.xml', [WebsiteController::class, 'sitemap'])->name('website.sitemap');
 
 // AUTH & VERIFIED
 
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'verified', 'route.permission'])->prefix('admin')->group(function () {
     // =======================
     // Products - Custom routes first (before CrudRouter)
     // =======================
+    // static paths first so "bulk-destroy" etc. are never captured as a {product} id
+    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulk-restore');
+    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
+    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulk-force-delete');
+    Route::get('/products/action/export-excel', [ProductController::class, 'export'])->name('products.export');
+    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
+    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.update-stock');
+
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
@@ -48,15 +77,6 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-
-    // Custom product routes
-    Route::get('/products/{product}/edit-data', [ProductController::class, 'editData'])->name('products.edit-data');
-    Route::post('/products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
-    Route::post('/products/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulk-restore');
-    Route::delete('/products/bulk-destroy', [ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
-    Route::post('/products/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulk-force-delete');
-    Route::put('/products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.update-stock');
-    Route::get('/products/action/export-excel', [ProductController::class, 'export'])->name('products.export');
 
     CrudRouter::setFor('taxes', App\Http\Controllers\TaxController::class);
     CrudRouter::setFor('categories', CategoryController::class);
@@ -82,6 +102,11 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     CrudRouter::setFor('currencies', App\Http\Controllers\CurrencyController::class);
     CrudRouter::setFor('customers', App\Http\Controllers\CustomerController::class);
     CrudRouter::setFor('warranty-guarantees', WarrantyGuaranteeController::class);
+
+    // =======================
+    // Help / user manual
+    // =======================
+    Route::get('/docs/{section?}', DocsController::class)->name('docs.index');
 
     Route::get('/settings', [SettingController::class, 'general'])->name('settings.general');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -161,4 +186,109 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
 
     CrudRouter::setFor('product-attributes', App\Http\Controllers\ProductAttributeController::class);
     CrudRouter::setFor('product-attribute-values', App\Http\Controllers\ProductAttributeValueController::class);
+
+    // =======================
+    // Reports
+    // =======================
+    Route::get('/reports/sales', [SalesReportController::class, 'index'])
+        ->middleware('can:Report Index')->name('reports.sales');
+
+    // =======================
+    // Installments (hire purchase)
+    // =======================
+    Route::post('/installments/preview', [InstallmentController::class, 'preview'])->name('installments.preview');
+    Route::middleware('can:Installment Index')->group(function () {
+        Route::get('/installments', [InstallmentController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{installment}', [InstallmentController::class, 'show'])->whereNumber('installment')->name('installments.show');
+    });
+    Route::post('/installments', [InstallmentController::class, 'store'])
+        ->middleware('can:Installment Create')->name('installments.store');
+    Route::put('/installments/{installment}', [InstallmentController::class, 'update'])
+        ->middleware('can:Installment Create')->name('installments.update');
+    Route::post('/installments/{installment}/collect', [InstallmentController::class, 'collect'])
+        ->middleware('can:Installment Collect')->name('installments.collect');
+    Route::post('/installments/schedules/{schedule}/waive-late-fee', [InstallmentController::class, 'waiveLateFee'])
+        ->middleware('can:Installment Collect')->name('installments.waive-late-fee');
+    Route::put('/installments/{installment}/status', [InstallmentController::class, 'updateStatus'])
+        ->middleware('can:Installment Cancel')->name('installments.status');
+
+    Route::middleware('can:Installment Plan Manage')->group(function () {
+        Route::get('/installment-plans', [InstallmentPlanController::class, 'index'])->name('installment-plans.index');
+        Route::post('/installment-plans', [InstallmentPlanController::class, 'store'])->name('installment-plans.store');
+        Route::put('/installment-plans/{plan}', [InstallmentPlanController::class, 'update'])->name('installment-plans.update');
+        Route::delete('/installment-plans/{plan}', [InstallmentPlanController::class, 'destroy'])->name('installment-plans.destroy');
+    });
+
+    // =======================
+    // Bank EMI
+    // =======================
+    Route::post('/emi/quote', [EmiController::class, 'quote'])->name('emi.quote');
+    Route::get('/emi', [EmiController::class, 'index'])->middleware('can:EMI Index')->name('emi.index');
+    Route::middleware('can:EMI Manage')->group(function () {
+        Route::post('/emi/settle', [EmiController::class, 'settle'])->name('emi.settle');
+        Route::post('/emi/{transaction}/unsettle', [EmiController::class, 'unsettle'])->name('emi.unsettle');
+        Route::post('/emi/banks', [EmiController::class, 'storeBank'])->name('emi.banks.store');
+        Route::put('/emi/banks/{bank}', [EmiController::class, 'updateBank'])->name('emi.banks.update');
+        Route::delete('/emi/banks/{bank}', [EmiController::class, 'destroyBank'])->name('emi.banks.destroy');
+    });
+
+    // =======================
+    // SMS
+    // =======================
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::middleware('can:SMS Index')->group(function () {
+            Route::get('/', [SmsController::class, 'dashboard'])->name('dashboard');
+            Route::get('/logs', [SmsController::class, 'logs'])->name('logs');
+        });
+        Route::middleware('can:SMS Send')->group(function () {
+            Route::get('/send', [SmsController::class, 'compose'])->name('compose');
+            Route::post('/send', [SmsController::class, 'send'])->name('send')->middleware('throttle:sms');
+            Route::get('/customers', [SmsController::class, 'customers'])->name('customers');
+            Route::post('/resend', [SmsController::class, 'resend'])->name('resend')->middleware('throttle:sms');
+            Route::post('/retry-stuck', [SmsController::class, 'retryStuck'])->name('retry-stuck');
+        });
+        Route::middleware('can:SMS Settings')->group(function () {
+            Route::get('/settings', [SmsSettingController::class, 'index'])->name('settings');
+            Route::put('/settings', [SmsSettingController::class, 'update'])->name('settings.update');
+            Route::post('/templates', [SmsSettingController::class, 'storeTemplate'])->name('templates.store');
+            Route::put('/templates/{template}', [SmsSettingController::class, 'updateTemplate'])->name('templates.update');
+            Route::delete('/templates/{template}', [SmsSettingController::class, 'destroyTemplate'])->name('templates.destroy');
+            Route::post('/gateways', [SmsSettingController::class, 'storeGateway'])->name('gateways.store');
+            Route::put('/gateways/{gateway}', [SmsSettingController::class, 'updateGateway'])->name('gateways.update');
+            Route::delete('/gateways/{gateway}', [SmsSettingController::class, 'destroyGateway'])->name('gateways.destroy');
+            Route::post('/gateways/{gateway}/balance', [SmsSettingController::class, 'balance'])->name('gateways.balance');
+            Route::post('/gateways/{gateway}/test', [SmsSettingController::class, 'test'])->name('gateways.test')->middleware('throttle:sms');
+        });
+    });
+
+    // =======================
+    // Website (CMS) & contact messages
+    // =======================
+    Route::prefix('website')->name('website.')->middleware('can:Website Manage')->group(function () {
+        Route::get('/settings', [WebsiteSettingController::class, 'index'])->name('settings');
+        // POST (not PUT) because the form carries file uploads
+        Route::post('/settings', [WebsiteSettingController::class, 'update'])->name('settings.update');
+
+        Route::get('/faqs', [FaqController::class, 'index'])->name('faqs.index');
+        Route::post('/faqs', [FaqController::class, 'store'])->name('faqs.store');
+        Route::post('/faqs/reorder', [FaqController::class, 'reorder'])->name('faqs.reorder');
+        Route::put('/faqs/{faq}', [FaqController::class, 'update'])->name('faqs.update');
+        Route::delete('/faqs/{faq}', [FaqController::class, 'destroy'])->name('faqs.destroy');
+
+        Route::get('/posts', [BlogPostController::class, 'index'])->name('posts.index');
+        Route::get('/posts/create', [BlogPostController::class, 'create'])->name('posts.create');
+        Route::post('/posts', [BlogPostController::class, 'store'])->name('posts.store');
+        Route::get('/posts/{post}/edit', [BlogPostController::class, 'edit'])->name('posts.edit');
+        Route::post('/posts/{post}', [BlogPostController::class, 'update'])->name('posts.update');
+        Route::delete('/posts/{post}', [BlogPostController::class, 'destroy'])->name('posts.destroy');
+        Route::post('/posts/{id}/restore', [BlogPostController::class, 'restore'])->whereNumber('id')->name('posts.restore');
+        Route::delete('/posts/{id}/force', [BlogPostController::class, 'forceDelete'])->whereNumber('id')->name('posts.force-delete');
+    });
+
+    Route::middleware('can:Contact Message Index')->group(function () {
+        Route::get('/contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');
+        Route::post('/contact-messages/bulk', [ContactMessageController::class, 'bulk'])->name('contact-messages.bulk');
+        Route::post('/contact-messages/{message}/read', [ContactMessageController::class, 'read'])->name('contact-messages.read');
+        Route::put('/contact-messages/{message}', [ContactMessageController::class, 'update'])->name('contact-messages.update');
+    });
 });

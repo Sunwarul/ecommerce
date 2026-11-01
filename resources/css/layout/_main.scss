@@ -4,7 +4,7 @@
     min-height: 100vh;
     justify-content: space-between;
     padding: 4rem 1rem 0 1rem;
-    transition: margin-left var(--layout-section-transition-duration);
+    transition: margin-inline-start var(--layout-section-transition-duration);
 }
 
 .layout-main {

@@ -29,7 +29,12 @@ class PosPayment extends BaseModel
 
     public function order()
     {
-        return $this->belongsTo(PosOrder::class);
+        return $this->belongsTo(PosOrder::class, 'order_id');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function paymentMethod()

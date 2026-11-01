@@ -1,63 +1,26 @@
 <template>
-  <div>
-    <div class="mb-4">
-        <label for="title" class="">Title</label>
-        <InputText id="title" v-model="form.title" class="mt-1 block w-full" />
-        <div v-if="form?.errors?.title" class="text-red-500 text-sm mt-1">{{ form?.errors?.title }}</div>
-    </div>
+    <div class="grid grid-cols-1 gap-4">
+        <div class="flex flex-col gap-1.5">
+            <label for="title" class="text-sm font-medium text-slate-700">{{ t('crud.fields.title') }} <span class="text-red-500">*</span></label>
+            <InputText id="title" v-model.trim="form.title" fluid autofocus :invalid="!!form.errors.title" />
+            <small v-if="form.errors.title" class="text-red-600">{{ form.errors.title }}</small>
+        </div>
 
-    <div class="mb-4">
-        <div class="flex items-center">
-            <Checkbox id="is_completed" v-model="form.is_completed" class="h-4 w-4" binary />
-            <label for="is_completed" class="ml-2 ">Is Completed</label>
-        </div>
-        <div v-if="form?.errors?.is_completed" class="text-red-500 text-sm mt-1">{{ form?.errors?.is_completed }}</div>
-    </div>
-
-    <!--
-    <div class="flex flex-col gap-6">
-        <div>
-            <label for="name" class="block font-bold mb-2">Name</label>
-            <InputText id="name" v-model.trim="form.name" required="true" autofocus
-                :invalid="submitted && !form.name" fluid />
-            <small v-if="submitted && !form.name" class="text-red-500">Name is required.</small>
+        <div class="flex items-center gap-3">
+            <ToggleSwitch inputId="is_completed" :modelValue="!!Number(form.is_completed)" @update:modelValue="(v) => (form.is_completed = v ? 1 : 0)" />
+            <label for="is_completed" class="text-sm text-slate-700">{{ t('crud.fields.is_completed') }}</label>
         </div>
     </div>
-    -->
-    <!--
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="photo" class="block font-bold mb-2">Photo</label>
-            <FileUpload mode="basic" name="photo" customUpload @select="handlePhotoUpload" :auto="true"
-                accept="image/*" chooseLabel="Choose Image" class="w-full" />
-        </div>
-        <div>
-            <img v-if="form.photo || photoPreview" :src="photoPreview ?? resolveImagePath(form.photo)"
-                alt="Image" class="shadow-md rounded-xl w-full" style="filter: grayscale(100%)" />
-        </div>
-    </div>
-    <div class="flex flex-col gap-6 mt-3">
-        <div>
-            <label for="is_active" class="block font-bold mb-2">Status</label>
-            <Select v-model="form.is_active" :options="statuses" optionLabel="label" optionValue="value"
-                placeholder="Select a status" class="w-full" :required="true" />
-            <small v-if="submitted && (form.is_active == null)" class="text-red-500">
-                Status is required.
-            </small>
-        </div>
-    </div>
-    -->
-
-  </div>
 </template>
 
 <script setup>
-import { resolveImagePath } from '@/Helpers/imageHelper.js';
+import { useI18n } from 'vue-i18n';
+import InputText from 'primevue/inputtext';
+import ToggleSwitch from 'primevue/toggleswitch';
 
 defineProps({
-  form: {
-    type: Object,
-    required: true
-  }
+    form: { type: Object, required: true },
 });
+
+const { t } = useI18n();
 </script>

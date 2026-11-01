@@ -1,16 +1,21 @@
 <script setup>
 import { useLayout } from '@/Layouts/Partials/LayoutComposable';
 import { useLocale } from '@/Composables/useLocale';
-import { computed, ref, watch } from 'vue';
+import { useFlashToast } from '@/Composables/useFlashToast';
+import { router } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppFooter from '@/Layouts/Partials/AppFooter.vue';
 import AppSidebar from '@/Layouts/Partials/AppSidebar.vue';
 import AppTopbar from '@/Layouts/Partials/AppTopbar.vue';
 import FavIcons from '@/Layouts/Partials/FavIcons.vue';
 
-const { layoutConfig, layoutState, isSidebarActive } = useLayout();
+const { layoutConfig, layoutState, isSidebarActive, closeMenus } = useLayout();
 const { initLocale } = useLocale();
 
 initLocale();
+
+// Server-side errors (->with('error', ...)) were never shown anywhere; pages toast their own successes.
+useFlashToast({ success: false, error: true });
 
 const outsideClickListener = ref(null);
 
@@ -47,7 +52,8 @@ function bindOutsideClickListener() {
 
 function unbindOutsideClickListener() {
     if (outsideClickListener.value) {
-        document.removeEventListener('click', outsideClickListener);
+        // must remove the same function reference that was added
+        document.removeEventListener('click', outsideClickListener.value);
         outsideClickListener.value = null;
     }
 }
@@ -56,13 +62,21 @@ function isOutsideClicked(event) {
     const sidebarEl = document.querySelector('.layout-sidebar');
     const topbarEl = document.querySelector('.layout-menu-button');
 
-    return !(sidebarEl.isSameNode(event.target) || sidebarEl.contains(event.target) || topbarEl.isSameNode(event.target) || topbarEl.contains(event.target));
+    return !(sidebarEl?.contains(event.target) || topbarEl?.contains(event.target));
 }
+
+// Close the overlay / mobile sidebar after every page visit
+const removeNavigateListener = router.on('navigate', () => closeMenus());
+
+onBeforeUnmount(() => {
+    unbindOutsideClickListener();
+    removeNavigateListener();
+});
 </script>
 
 <template>
     <FavIcons />
-    <div class="layout-wrapper bg-blue-50" :class="containerClass">
+    <div class="layout-wrapper" :class="containerClass">
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">

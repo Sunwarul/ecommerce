@@ -3,9 +3,11 @@ import { useToast } from 'primevue/usetoast';
 import { router } from '@inertiajs/vue3';
 import { FilterMatchMode } from '@primevue/core/api';
 import debounce from 'lodash/debounce';
+import { useI18n } from 'vue-i18n';
 
 export function useCrud(config) {
     const toast = useToast();
+    const { t } = useI18n();
     const items = ref([]);
     const selectedItems = ref([]);
     const form = ref({});
@@ -63,7 +65,7 @@ export function useCrud(config) {
 
         router[method](url, form.value, {
             onSuccess: () => {
-                toast.add({ severity: 'success', summary: 'Saved', detail: 'Item saved successfully!', life: 3000 });
+                toast.add({ severity: 'success', summary: t('crud.success'), detail: t('crud.created'), life: 3000 });
                 if (!continueEditing) {
                     hideDialog();
                 }
@@ -100,7 +102,7 @@ export function useCrud(config) {
     const deleteItem = async () => {
         router.delete(config.endpoints.delete.replace('__ID__', form.value.id), {
             onSuccess: () => {
-                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Item deleted successfully!', life: 3000 });
+                toast.add({ severity: 'success', summary: t('crud.success'), detail: t('crud.deleted'), life: 3000 });
                 fetchItems();
                 deleteItemDialog.value = false;
                 form.value = {};
@@ -122,8 +124,8 @@ export function useCrud(config) {
 
         toast.add({
             severity: 'success',
-            summary: 'Export Started',
-            detail: 'Your export will download shortly.',
+            summary: t('crud.export'),
+            detail: t('crud.export_started'),
             life: 3000
         });
     };
@@ -136,7 +138,7 @@ export function useCrud(config) {
         const itemIds = selectedItems.value.map(item => item.id);
         router.post(config.endpoints.bulkDelete, { ids: itemIds }, {
             onSuccess: () => {
-                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Selected items deleted successfully!', life: 3000 });
+                toast.add({ severity: 'success', summary: t('crud.success'), detail: t('crud.deleted_many', { count: itemIds.length }), life: 3000 });
                 fetchItems();
                 deleteItemsDialog.value = false;
                 selectedItems.value = [];
@@ -147,6 +149,7 @@ export function useCrud(config) {
     const handlePagination = (event, route, entity) => {
         router.get(route, {
             page: event.page + 1,
+            per_page: event.rows,
             search: filters.value.global.value || ''
         }, {
             preserveState: true,

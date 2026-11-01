@@ -1,0 +1,21 @@
+{
+    "login_title": "Welcome back",
+    "login_subtitle": "Sign in to manage your store",
+    "register_title": "Create your account",
+    "register_subtitle": "An administrator will assign your access",
+    "forgot_title": "Forgot password?",
+    "forgot_subtitle": "Enter your email and we'll send you a reset link",
+    "reset_subtitle": "Choose a new password for your account",
+    "confirm_title": "Confirm password",
+    "confirm_subtitle": "This is a secure area. Please confirm your password to continue.",
+    "back_to_login": "Back to login",
+    "no_account": "Don't have an account?",
+    "name": "Full name",
+    "new_password": "New password",
+    "password_prompt": "Use 8+ characters with letters and numbers",
+    "weak": "Weak",
+    "medium": "Medium",
+    "strong": "Strong",
+    "verify_intro": "Thanks for signing up! Please verify your email address by clicking the link we just sent. Didn't get it? We can send another.",
+    "resend_verification": "Resend verification email"
+}

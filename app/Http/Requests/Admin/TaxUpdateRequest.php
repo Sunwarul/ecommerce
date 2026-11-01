@@ -24,7 +24,7 @@ class TaxUpdateRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|unique:taxes,name,'.$this->id,
+            'name' => 'required|string|unique:taxes,name,'.$this->route('tax'),
             'type' => 'required|integer',
             'is_active' => 'nullable|boolean',
         ];

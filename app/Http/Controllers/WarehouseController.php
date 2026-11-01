@@ -36,7 +36,7 @@ class WarehouseController extends Controller
 
         cache()->increment('warehouses_version', 1);
 
-        return to_route('warehouses.index')->with('success', 'Created successfully');
+        return to_route('warehouses.index')->with('success', __('Created successfully'));
     }
 
     public function update(Request $request, $id)
@@ -47,7 +47,7 @@ class WarehouseController extends Controller
 
         cache()->increment('warehouses_version', 1);
 
-        return to_route('warehouses.index')->with('success', 'Updated successfully');
+        return to_route('warehouses.index')->with('success', __('Updated successfully'));
     }
 
     public function destroy($id)
@@ -57,6 +57,6 @@ class WarehouseController extends Controller
 
         cache()->increment('warehouses_version', 1);
 
-        return to_route('warehouses.index')->with('success', 'Deleted successfully');
+        return to_route('warehouses.index')->with('success', __('Deleted successfully'));
     }
 }

@@ -1,0 +1,83 @@
+{
+    "status": {
+        "completed": "Completado",
+        "draft": "Borrador",
+        "void": "Anulado",
+        "paid": "Pagado",
+        "partial": "Parcial",
+        "unpaid": "No pagado",
+        "pending": "Pendiente",
+        "overdue": "Vencido",
+        "active": "Activo",
+        "inactive": "Inactivo",
+        "cancelled": "Cancelado",
+        "defaulted": "En mora",
+        "settled": "Liquidado",
+        "sent": "Enviado",
+        "failed": "Fallido",
+        "queued": "En cola",
+        "open": "Abierto",
+        "closed": "Cerrado"
+    },
+    "sale_type": {
+        "regular": "Normal",
+        "installment": "Cuotas",
+        "emi": "Cuotas bancarias"
+    },
+    "frequency": {
+        "monthly": "Mensual",
+        "weekly": "Semanal",
+        "biweekly": "Cada 2 semanas",
+        "custom": "Personalizado (días)"
+    },
+    "interest": {
+        "none": "Sin interés",
+        "flat": "% fijo (todo el plazo)",
+        "reducing": "Saldo decreciente (% anual)"
+    },
+    "fee_type": {
+        "fixed": "Fijo",
+        "percent": "Porcentaje %"
+    },
+    "terms": {
+        "walk_in": "Cliente ocasional",
+        "due": "Pendiente",
+        "paid": "Pagado",
+        "total": "Total",
+        "balance": "Saldo",
+        "change": "Cambio",
+        "down_payment": "Pago inicial",
+        "invoice": "Factura",
+        "customer": "Cliente",
+        "phone": "Teléfono",
+        "cashier": "Cajero",
+        "branch": "Sucursal",
+        "date": "Fecha",
+        "amount": "Importe",
+        "method": "Método",
+        "notes": "Notas",
+        "reference": "Referencia",
+        "from": "Desde",
+        "to": "Hasta",
+        "apply": "Aplicar",
+        "reset": "Restablecer",
+        "export": "Exportar",
+        "print": "Imprimir",
+        "search": "Buscar",
+        "search_hint": "Funciona la coincidencia parcial: 1712345 encuentra 01712-345678. Use * como comodín.",
+        "no_data": "No hay datos para este período",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "showing": "Mostrando {from}–{to} de {total}",
+        "confirm_title": "Confirme por favor",
+        "yes": "Sí",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "close": "Cerrar",
+        "back": "Volver",
+        "table": "Tabla",
+        "chart": "Gráfico",
+        "success": "Éxito",
+        "error": "Error"
+    }
+}

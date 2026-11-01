@@ -2,9 +2,12 @@
 import { resolveImagePath } from "@/Helpers/imageHelper";
 import { useForm } from "@inertiajs/vue3";
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { useToast } from "primevue/usetoast";
 
 // PrimeVue
 import Button from "primevue/button";
+import Message from "primevue/message";
 import Select from "primevue/select";
 import Editor from "primevue/editor";
 import FileUpload from "primevue/fileupload";
@@ -29,10 +32,13 @@ const props = defineProps({
 
 const emit = defineEmits(["cancel", "saved"]);
 
-const productTypes = [
-    { label: "Simple Product", value: "simple" },
-    { label: "Variable Product", value: "variable" },
-];
+const { t } = useI18n();
+const toast = useToast();
+
+const productTypes = computed(() => [
+    { label: t("catalog.products.type_simple_long"), value: "simple", hint: t("catalog.form.type_simple_hint") },
+    { label: t("catalog.products.type_variable_long"), value: "variable", hint: t("catalog.form.type_variable_hint") },
+]);
 
 // -----------------------------
 // FORM BASE (warehouse stock)
@@ -232,17 +238,22 @@ watch(materialsInput, (value) => {
 // -----------------------------
 // AUTO SLUG FROM NAME
 // -----------------------------
+const slugify = (value) =>
+    (value || "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\p{L}\p{N}\-]+/gu, "")
+        .replace(/-{2,}/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+// Keep the slug in sync with the name until the user edits the slug by hand
+const slugTouched = ref(false);
 watch(
     () => form.name,
-    (newValue) => {
-        if (!form.slug) {
-            form.slug = (newValue || "")
-                .toLowerCase()
-                .replace(/\s+/g, "-")
-                .replace(/[^\w\-]+/g, "")
-                .replace(/\-\-+/g, "-")
-                .replace(/^-+/, "")
-                .replace(/-+$/, "");
+    (newValue, oldValue) => {
+        if (!slugTouched.value && (!form.slug || form.slug === slugify(oldValue))) {
+            form.slug = slugify(newValue);
         }
     }
 );
@@ -252,9 +263,15 @@ watch(
 // -----------------------------
 const photoPreview = ref(null);
 
+const MAX_THUMBNAIL_BYTES = 7 * 1024 * 1024; // matches the server rule (max:7048 KB)
+
 const handlePhotoUpload = (event) => {
     const file = event.files?.[0];
     if (!file) return;
+    if (file.size > MAX_THUMBNAIL_BYTES) {
+        toast.add({ severity: "warn", summary: t("catalog.form.image_too_large"), detail: t("catalog.form.image_hint"), life: 4000 });
+        return;
+    }
 
     form.thumbnail = file;
 
@@ -355,6 +372,8 @@ const addVariation = () => {
 
 const removeVariation = (index) => form.variations.splice(index, 1);
 
+const warehouseName = (id) => props.warehouses.find((w) => w.id === id)?.name || t("catalog.stock.warehouse");
+
 const generateVariations = () => {
     const groups = Object.values(selectedAttrValues.value).filter(
         (arr) => Array.isArray(arr) && arr.length
@@ -411,18 +430,15 @@ watch(
 const resetFromProps = () => {
     const mapped = mapProductToForm(props.product);
     form.defaults(mapped);
-    form.reset(mapped);
+    form.reset();
     form.clearErrors();
+    slugTouched.value = !!props.product?.slug;
 
-    materialsInput.value = Array.isArray(mapped.materials)
-        ? mapped.materials.join(", ")
-        : "";
+    materialsInput.value = Array.isArray(mapped.materials) ? mapped.materials.join(", ") : "";
 
     initCategory();
 
-    photoPreview.value = props.product?.thumbnail
-        ? resolveImagePath(props.product.thumbnail)
-        : null;
+    photoPreview.value = props.product?.thumbnail ? resolveImagePath(props.product.thumbnail) : null;
 
     selectedAttrValues.value = {};
     props.attributes.forEach((a) => (selectedAttrValues.value[a.id] = []));
@@ -432,493 +448,421 @@ onMounted(resetFromProps);
 watch(() => props.product, resetFromProps);
 
 // -----------------------------
+// VALIDATION (client side, mirrors the server rules)
+// -----------------------------
+const err = (key) => form.errors[key];
+
+const discountInvalid = (price, discount) =>
+    discount !== null && discount !== undefined && discount !== "" && Number(discount) > 0 && Number(discount) >= Number(price || 0);
+
+const clientErrors = computed(() => {
+    const list = [];
+    if (!form.name) list.push(t("catalog.form.errors.name"));
+    if (!form.category_id) list.push(t("catalog.form.errors.category"));
+    if (form.base_price === null || form.base_price === undefined || form.base_price === "") list.push(t("catalog.form.errors.price"));
+    if (discountInvalid(form.base_price, form.base_discount_price)) list.push(t("catalog.form.errors.discount"));
+    if (form.type === "variable") {
+        if (!form.variations.length) list.push(t("catalog.form.errors.variations"));
+        form.variations.forEach((v, i) => {
+            if (!v.sku || v.price === null || v.price === undefined || !v.attribute_value_ids?.length)
+                list.push(t("catalog.form.errors.variation_incomplete", { n: i + 1 }));
+            if (discountInvalid(v.price, v.discount_price)) list.push(t("catalog.form.errors.variation_discount", { n: i + 1 }));
+        });
+    }
+    return list;
+});
+
+const serverErrorList = computed(() => [...new Set(Object.values(form.errors || {}))]);
+
+// -----------------------------
 // SUBMIT
 // -----------------------------
 const submitForm = () => {
     submitted.value = true;
 
-    const url = props.isEditing
-        ? route("products.update", props.product.id)
-        : route("products.store");
+    if (clientErrors.value.length) {
+        toast.add({ severity: "warn", summary: t("catalog.form.check_fields"), detail: clientErrors.value[0], life: 4000 });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+    }
+
+    const url = props.isEditing ? route("products.update", props.product.id) : route("products.store");
 
     const options = {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => emit("saved"),
-        onFinish: () => (submitted.value = false),
+        onError: (errors) => {
+            toast.add({ severity: "error", summary: t("catalog.form.check_fields"), detail: Object.values(errors)[0], life: 5000 });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        },
     };
 
     if (props.isEditing) {
-        form.transform((data) => ({ ...data, _method: "put" })).post(
-            url,
-            options
-        );
+        form.transform((data) => ({ ...data, _method: "put" })).post(url, options);
     } else {
         form.post(url, options);
     }
 };
 
 const cancel = () => emit("cancel");
+
+const showSeo = ref(false);
+const labelCls = "block text-sm font-medium text-slate-700 mb-1.5";
+const sectionCls = "rounded-xl border border-slate-200 bg-white p-4 md:p-5";
 </script>
 
 <template>
-    <form @submit.prevent="submitForm" class="space-y-6">
-        <!-- Basic Information Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                Basic Information
-            </h3>
+    <form @submit.prevent="submitForm" class="space-y-4" novalidate>
+        <!-- Error summary -->
+        <Message v-if="submitted && (clientErrors.length || serverErrorList.length)" severity="error" :closable="false">
+            <div class="font-semibold mb-1">{{ t("catalog.form.check_fields") }}</div>
+            <ul class="list-disc ps-5 text-sm space-y-0.5">
+                <li v-for="(e, i) in (clientErrors.length ? clientErrors : serverErrorList).slice(0, 8)" :key="i">{{ e }}</li>
+            </ul>
+        </Message>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Name -->
-                <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="name" class="block font-bold mb-2">Name *</label>
-                    <InputText id="name" v-model.trim="form.name" required class="w-full"
-                        :class="{ 'p-invalid': submitted && !form.name }" />
-                    <small v-if="form.errors.name" class="p-error">{{
-                        form.errors.name
-                    }}</small>
-                </div>
-
-                <!-- Slug -->
-                <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="slug" class="block font-bold mb-2">Slug *</label>
-                    <InputText id="slug" v-model.trim="form.slug" required class="w-full"
-                        :class="{ 'p-invalid': submitted && !form.slug }" />
-                    <small v-if="form.errors.slug" class="p-error">{{
-                        form.errors.slug
-                    }}</small>
-                </div>
-
-                <!-- SKU -->
-                <div class="field col-12 md:col-4 mb-4 pr-md-2">
-                    <label for="sku" class="block font-bold mb-2">SKU</label>
-                    <InputText id="sku" v-model.trim="form.sku" class="w-full" />
-                    <small v-if="form.errors.sku" class="p-error">{{
-                        form.errors.sku
-                    }}</small>
-                </div>
-
-                <!-- Barcode -->
-                <div class="field col-12 md:col-4 mb-4 px-md-2">
-                    <label for="barcode" class="block font-bold mb-2">Barcode</label>
-                    <InputText id="barcode" v-model.trim="form.barcode" class="w-full" />
-                    <small v-if="form.errors.barcode" class="p-error">{{
-                        form.errors.barcode
-                    }}</small>
-                </div>
-
-                <!-- Product Code -->
-                <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="code" class="block font-bold mb-2">Product Code</label>
-                    <InputText id="code" v-model.trim="form.code" class="w-full" />
-                    <small v-if="form.errors.code" class="p-error">{{
-                        form.errors.code
-                    }}</small>
-                </div>
-
-                <!-- Product Type -->
-                <div class="field col-12 md:col-4 mb-4 pr-md-2">
-                    <label for="type" class="block font-bold mb-2">Product Type *</label>
-                    <Select id="type" v-model="form.type" :options="productTypes" optionLabel="label"
-                        optionValue="value" placeholder="Select Type" class="w-full"
-                        :class="{ 'p-invalid': form.errors.type }" />
-                    <small v-if="form.errors.type" class="p-error">{{
-                        form.errors.type
-                    }}</small>
-                </div>
-
-                <!-- Active / Inactive -->
-                <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="status" class="block font-bold mb-2">Status</label>
-                    <div class="pt-2 flex items-center">
-                        <ToggleSwitch v-model="form.is_active" />
-                        <span class="ml-2">{{
-                            form.is_active ? "Active" : "Inactive"
-                        }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pricing & Inventory Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                Pricing & Inventory
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Base Price -->
-                <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="base_price" class="block font-bold mb-2">Base Price *</label>
-                    <InputNumber id="base_price" v-model.number="form.base_price" class="w-full" :min="0"
-                        :class="{ 'p-invalid': form.errors.base_price }" />
-                    <small v-if="form.errors.base_price" class="p-error">{{
-                        form.errors.base_price
-                    }}</small>
-                </div>
-
-                <!-- Discount Price -->
-                <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="base_discount_price" class="block font-bold mb-2">Discount Price</label>
-                    <InputNumber id="base_discount_price" v-model.number="form.base_discount_price" class="w-full"
-                        :min="0" :max="form.base_price || null" />
-                    <small v-if="form.errors.base_discount_price" class="p-error">
-                        {{ form.errors.base_discount_price }}
-                    </small>
-                </div>
-
-                <!-- SIMPLE: Warehouse Stock Table -->
-                <div v-if="form.type === 'simple'" class="col-span-full">
-                    <h4 class="font-semibold mb-2">Warehouse Stock (Simple)</h4>
-
-                    <div class="overflow-x-auto border rounded">
-                        <table class="min-w-full text-sm">
-                            <thead>
-                                <tr class="border-b">
-                                    <th class="p-2 text-left">Warehouse</th>
-                                    <th class="p-2 text-left">Quantity</th>
-                                    <th class="p-2 text-left">Alert Qty</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(s, i) in form.stocks" :key="s.warehouse_id" class="border-b">
-                                    <td class="p-2">
-                                        {{
-                                            warehouses.find(
-                                                (w) => w.id === s.warehouse_id
-                                            )?.name || "Warehouse"
-                                        }}
-                                    </td>
-                                    <td class="p-2">
-                                        <InputNumber v-model="s.quantity" class="w-full" :min="0" />
-                                    </td>
-                                    <td class="p-2">
-                                        <InputNumber v-model="s.alert_quantity" class="w-full" :min="0" />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <small v-if="form.errors.stocks" class="p-error">{{
-                        form.errors.stocks
-                    }}</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Categories & Tags Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                Categories & Tags
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Category (TreeSelect) -->
-                <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="category_id" class="block font-bold mb-2">Category *</label>
-
-                    <TreeSelect id="category_id" v-model="selectedCategoryKey" :options="categoryTreeNodes"
-                        placeholder="Select Category" class="w-full" selectionMode="single"
-                        :class="{ 'p-invalid': submitted && !form.category_id }" />
-
-                    <small v-if="submitted && !form.category_id" class="p-error">
-                        Category is required.
-                    </small>
-                </div>
-
-                <!-- Brand -->
-                <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="brand_id" class="block font-bold mb-2">Brand</label>
-                    <Select id="brand_id" v-model="form.brand_id" :options="brands" optionLabel="name"
-                        optionValue="id" placeholder="Select Brand" filter showClear class="w-full" />
-                </div>
-
-                <!-- Tax -->
-                <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="tax_id" class="block font-bold mb-2">Tax</label>
-                    <Select id="tax_id" v-model="form.tax_id" :options="taxes" optionLabel="name" optionValue="id"
-                        placeholder="Select Tax" filter showClear class="w-full" />
-                </div>
-
-                <!-- Tags -->
-                <div class="field col-12 mb-4 col-span-full">
-                    <label for="tag_ids" class="block font-bold mb-2">Tags</label>
-                    <MultiSelect id="tag_ids" v-model="form.tag_ids" :options="tags" optionLabel="name" optionValue="id"
-                        display="chip" placeholder="Select Tags" class="w-full" />
-                </div>
-            </div>
-        </div>
-
-        <!-- Physical Properties Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                Physical Properties
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Weight -->
-                <div class="field col-12 md:col-4 mb-4 pr-md-2">
-                    <label for="weight" class="block font-bold mb-2">Weight (kg)</label>
-                    <InputNumber id="weight" v-model.number="form.weight" class="w-full" :min="0"
-                        placeholder="e.g. 1.5" />
-                </div>
-
-                <!-- Dimensions -->
-                <div class="field col-span-2 mb-4 px-md-2">
-                    <label class="block font-bold mb-2">Dimensions (cm)</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <InputNumber v-model.number="form.dimensions.length" :min="0" placeholder="L" />
-                        <InputNumber v-model.number="form.dimensions.width" :min="0" placeholder="W" />
-                        <InputNumber v-model.number="form.dimensions.height" :min="0" placeholder="H" />
-                    </div>
-                    <small class="text-gray-500">Stored as JSON: { length, width, height }</small>
-                </div>
-
-                <!-- Materials -->
-                <div class="field col-12 md:col-4 mb-4 pl-md-2">
-                    <label for="materials" class="block font-bold mb-2">Materials</label>
-                    <InputText id="materials" v-model.trim="materialsInput" class="w-full"
-                        placeholder="e.g. Cotton, Polyester" />
-                    <small class="text-gray-500">Comma-separated, stored as array.</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Product Image Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">Product Image</h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="field col-12 mb-4">
-                    <label for="thumbnail" class="block font-bold mb-2">Thumbnail</label>
-
-                    <div class="flex items-center gap-4">
-                        <div v-if="photoPreview || form.thumbnail" class="thumbnail-preview mb-3">
-                            <img :src="photoPreview
-                                ? photoPreview
-                                : resolveImagePath(form.thumbnail)
-                                " alt="Product Thumbnail" class="w-20 h-20 object-cover rounded" />
-                        </div>
-
-                        <FileUpload mode="basic" name="thumbnail" accept="image/*" :maxFileSize="2000000"
-                            @select="handlePhotoUpload" :auto="true" chooseLabel="Browse" />
-                    </div>
-
-                    <small class="text-gray-500">Max size: 2MB. Accepted formats: JPEG, PNG, JPG,
-                        GIF</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Variations Section (for variable products) -->
-        <div v-if="form.type === 'variable'">
-            <h3 class="text-xl font-semibold uppercase mb-3">Variations</h3>
-
-            <!-- AUTO COMBINATION PICKERS -->
-            <div class="mb-4 border rounded p-3">
-                <h4 class="font-semibold mb-3">Variant Attributes</h4>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div v-for="attr in attributes" :key="attr.id" class="mb-3">
-                        <label class="block font-bold mb-2">{{
-                            attr.display_name || attr.name
-                        }}</label>
-
-                        <MultiSelect v-model="selectedAttrValues[attr.id]" :options="(attr.values || []).map((v) => ({
-                            id: v.id,
-                            label: v.display_value || v.value,
-                        }))
-                            " optionLabel="label" optionValue="id" display="chip" placeholder="Select values"
-                            class="w-full" />
-                    </div>
-                </div>
-
-                <div class="flex gap-2 mt-3">
-                    <Button label="Generate Variations" icon="pi pi-sitemap" class="p-button-sm"
-                        @click="generateVariations" />
-                    <Button label="Clear" icon="pi pi-times" class="p-button-sm p-button-secondary"
-                        @click="clearGeneratedVariations" />
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <Button label="Add Variation" icon="pi pi-plus" class="p-button-sm" @click="addVariation" />
-                <small v-if="
-                    submitted &&
-                    form.type === 'variable' &&
-                    !form.variations.length
-                " class="p-error ml-3">
-                    At least one variation is required for variable products.
-                </small>
-            </div>
-
-            <div v-if="form.variations.length" class="w-full overflow-x-auto">
-                <table class="min-w-[1100px] w-full text-sm table-fixed">
-                    <thead class="sticky top-0 bg-white z-10">
-                        <tr class="border-b">
-                            <th class="p-2 text-left w-[180px]">SKU *</th>
-                            <th class="p-2 text-left w-[120px]">Price *</th>
-                            <th class="p-2 text-left w-[120px]">Discount</th>
-                            <th class="p-2 text-left w-[280px]">
-                                Attribute Values *
-                            </th>
-                            <th class="p-2 text-left w-[320px]">
-                                Warehouse Alert Qty *
-                            </th>
-                            <th class="p-2 text-left w-[220px]">Image Path</th>
-                            <th class="p-2 text-left w-[70px]"></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <tr v-for="(variation, index) in form.variations" :key="index" class="border-b align-top">
-                            <!-- SKU -->
-                            <td class="p-2">
-                                <InputText v-model.trim="variation.sku" class="w-full" placeholder="Variation SKU"
-                                    :class="{
-                                        'p-invalid ':
-                                            submitted && !variation.sku,
-                                    }" />
-                            </td>
-
-                            <!-- Price -->
-                            <td class="p-2">
-                                <div class="grid grid-cols-4">
-                                    <InputNumber v-model.number="variation.price" :min="0" :class="{
-                                        'p-invalid':
-                                            submitted && !variation.price,
-                                    }" />
-                                </div>
-                            </td>
-
-                            <!-- Discount -->
-                            <td class="p-2">
-                                <InputNumber v-model.number="variation.discount_price" :min="0" />
-                            </td>
-
-                            <!-- Attribute Values -->
-                            <td class="p-2">
-                                <div class="max-w-[260px]">
-                                    <MultiSelect v-model="variation.attribute_value_ids"
-                                        :options="attributeValueOptions" optionLabel="label" optionValue="id"
-                                        display="chip" placeholder="Select attribute values" class="w-full" :class="{
-                                            'p-invalid':
-                                                submitted &&
-                                                (!variation.attribute_value_ids ||
-                                                    !variation
-                                                        .attribute_value_ids
-                                                        .length),
-                                        }" />
-                                </div>
-                            </td>
-
-                            <!-- Warehouse Stocks -->
-                            <td class="p-2">
-                                <div class="space-y-2">
-                                    <div v-for="(s, si) in variation.stocks" :key="s.warehouse_id ?? si"
-                                        class="grid grid-cols-12 gap-2 items-center">
-                                        <span class="col-span-5 text-xs truncate">
-                                            {{
-                                                warehouses.find(
-                                                    (w) =>
-                                                        w.id === s.warehouse_id
-                                                )?.name || "Warehouse"
-                                            }}
-                                        </span>
-
-                                        <!-- <div class="col-span-3">
-                                            <InputNumber
-                                                v-model.number="s.quantity"
-                                                class="w-full"
-                                                :min="0"
-                                            />
-                                        </div> -->
-
-                                        <div class="col-span-4">
-                                            <InputNumber v-model.number="s.alert_quantity
-                                                " class="w-full" :min="0" placeholder="Alert" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Image -->
-                            <td class="p-2">
-                                <InputText v-model.trim="variation.image" class="w-full"
-                                    placeholder="e.g. products/hoodie/red-s.jpg" />
-                            </td>
-
-                            <!-- Remove -->
-                            <td class="p-2 text-right">
-                                <Button icon="pi pi-trash"
-                                    class="p-button-rounded p-button-text p-button-danger p-button-sm"
-                                    @click="removeVariation(index)" />
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <small v-if="form.errors.variations" class="p-error">{{
-                form.errors.variations
-            }}</small>
-        </div>
-
-        <!-- Description Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                Description & Details
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-                <div class="field col-12 mb-4">
-                    <label for="description" class="block font-bold mb-2">Description</label>
-                    <Editor v-model="form.description" editorStyle="height: 250px" />
-                </div>
-
-                <div class="field col-12 mb-4">
-                    <label for="additional_info" class="block font-bold mb-2">Additional Information</label>
-                    <Editor v-model="form.additional_info" editorStyle="height: 150px" />
-                </div>
-            </div>
-        </div>
-
-        <!-- SEO Section -->
-        <div>
-            <h3 class="text-xl font-semibold uppercase mb-3">
-                SEO Information
-            </h3>
-
+        <!-- Basic information -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-info-circle" />{{ t("catalog.form.basic_info") }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="field col-12 sm:col-6 mb-4 pr-md-2">
-                    <label for="meta_title" class="block font-bold mb-2">Meta Title</label>
-                    <InputText id="meta_title" v-model.trim="form.meta_title" class="w-full" />
+                <div class="md:col-span-2">
+                    <label for="name" :class="labelCls">{{ t("products.product_name") }} <span class="text-rose-600">*</span></label>
+                    <InputText id="name" v-model.trim="form.name" class="w-full" :invalid="(submitted && !form.name) || !!err('name')" />
+                    <small v-if="err('name')" class="p-error">{{ err("name") }}</small>
                 </div>
 
-                <div class="field col-12 sm:col-6 mb-4 pl-md-2">
-                    <label for="meta_keywords" class="block font-bold mb-2">Meta Keywords</label>
-                    <InputText id="meta_keywords" v-model.trim="form.meta_keywords" class="w-full" />
+                <div>
+                    <label for="slug" :class="labelCls">{{ t("categories.slug") }}</label>
+                    <InputText id="slug" v-model.trim="form.slug" class="w-full ltr-nums" :invalid="!!err('slug')" @input="slugTouched = true" />
+                    <small v-if="err('slug')" class="p-error">{{ err("slug") }}</small>
+                    <small v-else class="text-slate-500">{{ t("catalog.form.slug_hint") }}</small>
                 </div>
 
-                <div class="field col-12 mb-4 col-span-full">
-                    <label for="meta_description" class="block font-bold mb-2">Meta Description</label>
-                    <Textarea id="meta_description" v-model="form.meta_description" rows="4" class="w-full" />
+                <div>
+                    <label :class="labelCls">{{ t("common.status") }}</label>
+                    <div class="flex items-center gap-2 h-[2.6rem]">
+                        <ToggleSwitch v-model="form.is_active" inputId="is_active" />
+                        <label for="is_active" class="text-sm text-slate-700">
+                            {{ form.is_active ? t("catalog.form.active_hint") : t("catalog.form.inactive_hint") }}
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="sku" :class="labelCls">{{ t("products.sku") }}</label>
+                    <InputText id="sku" v-model.trim="form.sku" class="w-full ltr-nums" :invalid="!!err('sku')" />
+                    <small v-if="err('sku')" class="p-error">{{ err("sku") }}</small>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="barcode" :class="labelCls">{{ t("products.barcode") }}</label>
+                        <InputText id="barcode" v-model.trim="form.barcode" class="w-full ltr-nums" :invalid="!!err('barcode')" />
+                        <small v-if="err('barcode')" class="p-error">{{ err("barcode") }}</small>
+                    </div>
+                    <div>
+                        <label for="code" :class="labelCls">{{ t("products.product_code") }}</label>
+                        <InputText id="code" v-model.trim="form.code" class="w-full ltr-nums" :invalid="!!err('code')" />
+                        <small v-if="err('code')" class="p-error">{{ err("code") }}</small>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label :class="labelCls">{{ t("catalog.products.type") }} <span class="text-rose-600">*</span></label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button v-for="opt in productTypes" :key="opt.value" type="button"
+                            class="text-start rounded-xl border p-3 transition-colors"
+                            :class="form.type === opt.value ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:bg-slate-50'"
+                            @click="form.type = opt.value">
+                            <div class="flex items-center gap-2 font-medium text-slate-800">
+                                <i :class="[opt.value === 'variable' ? 'pi pi-sitemap' : 'pi pi-box', form.type === opt.value ? 'text-emerald-600' : 'text-slate-400']" />
+                                {{ opt.label }}
+                            </div>
+                            <div class="text-xs text-slate-500 mt-0.5">{{ opt.hint }}</div>
+                        </button>
+                    </div>
+                    <small v-if="err('type')" class="p-error">{{ err("type") }}</small>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Buttons -->
-        <div class="flex justify-end gap-2 pt-2">
-            <Button type="button" label="Cancel" icon="pi pi-times" class="p-button-text" @click="cancel" />
-            <Button type="submit" :label="isEditing ? 'Update Product' : 'Create Product'" icon="pi pi-check" />
+        <!-- Pricing -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-tag" />{{ t("catalog.form.pricing") }}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="base_price" :class="labelCls">{{ t("catalog.form.base_price") }} <span class="text-rose-600">*</span></label>
+                    <InputNumber inputId="base_price" v-model="form.base_price" class="w-full" inputClass="w-full" :min="0" :maxFractionDigits="2"
+                        :invalid="(submitted && (form.base_price === null || form.base_price === '')) || !!err('base_price')" />
+                    <small v-if="err('base_price')" class="p-error">{{ err("base_price") }}</small>
+                </div>
+                <div>
+                    <label for="base_discount_price" :class="labelCls">{{ t("catalog.form.discount_price") }}</label>
+                    <InputNumber inputId="base_discount_price" v-model="form.base_discount_price" class="w-full" inputClass="w-full" :min="0"
+                        :maxFractionDigits="2" :invalid="discountInvalid(form.base_price, form.base_discount_price) || !!err('base_discount_price')" />
+                    <small v-if="err('base_discount_price')" class="p-error">{{ err("base_discount_price") }}</small>
+                    <small v-else-if="discountInvalid(form.base_price, form.base_discount_price)" class="p-error">{{ t("catalog.form.errors.discount") }}</small>
+                    <small v-else-if="form.base_discount_price > 0 && form.base_price > 0" class="text-emerald-700">
+                        {{ t("catalog.form.discount_off", { pct: Math.round((1 - form.base_discount_price / form.base_price) * 100) }) }}
+                    </small>
+                    <small v-else class="text-slate-500">{{ t("catalog.form.discount_hint") }}</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inventory (simple) -->
+        <section v-if="form.type === 'simple'" :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-warehouse" />{{ t("catalog.form.inventory") }}</h3>
+            <p class="text-xs text-slate-500 -mt-2 mb-3">{{ t("catalog.form.inventory_hint") }}</p>
+
+            <div v-if="!form.stocks.length" class="text-sm text-slate-500">{{ t("catalog.form.no_warehouses") }}</div>
+            <div v-else class="space-y-2">
+                <div class="hidden sm:grid grid-cols-12 gap-3 text-xs font-medium text-slate-500 px-1">
+                    <div class="col-span-6">{{ t("catalog.stock.warehouse") }}</div>
+                    <div class="col-span-3">{{ t("common.quantity") }}</div>
+                    <div class="col-span-3">{{ t("products.alert_quantity") }}</div>
+                </div>
+                <div v-for="(s, i) in form.stocks" :key="s.warehouse_id"
+                    class="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 items-center rounded-lg border border-slate-200 p-2 sm:p-1.5">
+                    <div class="col-span-2 sm:col-span-6 text-sm font-medium text-slate-700 flex items-center gap-2 px-1">
+                        <i class="pi pi-building text-slate-400" />{{ warehouseName(s.warehouse_id) }}
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="sm:hidden text-[11px] text-slate-500">{{ t("common.quantity") }}</label>
+                        <InputNumber v-model="s.quantity" class="w-full" inputClass="w-full" :min="0" :invalid="!!err(`stocks.${i}.quantity`)" />
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="sm:hidden text-[11px] text-slate-500">{{ t("products.alert_quantity") }}</label>
+                        <InputNumber v-model="s.alert_quantity" class="w-full" inputClass="w-full" :min="0" />
+                    </div>
+                </div>
+            </div>
+            <small v-if="err('stocks')" class="p-error">{{ err("stocks") }}</small>
+        </section>
+
+        <!-- Variations (variable) -->
+        <section v-if="form.type === 'variable'" :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-sitemap" />{{ t("products.variations") }}</h3>
+
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-4">
+                <div class="text-sm font-medium text-slate-700 mb-1">{{ t("catalog.form.variant_attributes") }}</div>
+                <p class="text-xs text-slate-500 mb-3">{{ t("catalog.form.variant_attributes_hint") }}</p>
+
+                <div v-if="!attributes.length" class="text-sm text-slate-500">{{ t("catalog.form.no_attributes") }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div v-for="attr in attributes" :key="attr.id">
+                        <label :class="labelCls">{{ attr.display_name || attr.name }}</label>
+                        <MultiSelect v-model="selectedAttrValues[attr.id]"
+                            :options="(attr.values || []).map((v) => ({ id: v.id, label: v.display_value || v.value }))"
+                            optionLabel="label" optionValue="id" display="chip" :placeholder="t('catalog.form.select_values')" class="w-full" />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <Button :label="t('catalog.form.generate_variations')" icon="pi pi-bolt" size="small" @click="generateVariations" />
+                    <Button :label="t('catalog.form.add_manually')" icon="pi pi-plus" size="small" severity="secondary" outlined @click="addVariation" />
+                    <Button v-if="form.variations.length" :label="t('catalog.form.clear_variations')" icon="pi pi-times" size="small"
+                        severity="secondary" text @click="clearGeneratedVariations" />
+                </div>
+            </div>
+
+            <small v-if="submitted && !form.variations.length" class="p-error block mb-2">{{ t("catalog.form.errors.variations") }}</small>
+            <small v-if="err('variations')" class="p-error block mb-2">{{ err("variations") }}</small>
+
+            <div class="space-y-3">
+                <div v-for="(variation, index) in form.variations" :key="index" class="rounded-xl border border-slate-200 p-3">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="text-sm font-semibold text-slate-700">{{ t("catalog.form.variation_n", { n: index + 1 }) }}</div>
+                        <Button icon="pi pi-trash" text rounded size="small" severity="danger" @click="removeVariation(index)"
+                            :aria-label="t('common.delete')" v-tooltip.top="t('common.delete')" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                            <label :class="labelCls">{{ t("products.sku") }} <span class="text-rose-600">*</span></label>
+                            <InputText v-model.trim="variation.sku" class="w-full ltr-nums"
+                                :invalid="(submitted && !variation.sku) || !!err(`variations.${index}.sku`)" />
+                            <small v-if="err(`variations.${index}.sku`)" class="p-error">{{ err(`variations.${index}.sku`) }}</small>
+                        </div>
+                        <div>
+                            <label :class="labelCls">{{ t("common.price") }} <span class="text-rose-600">*</span></label>
+                            <InputNumber v-model="variation.price" :min="0" :maxFractionDigits="2" class="w-full" inputClass="w-full"
+                                :invalid="(submitted && (variation.price === null || variation.price === undefined)) || !!err(`variations.${index}.price`)" />
+                        </div>
+                        <div>
+                            <label :class="labelCls">{{ t("catalog.form.discount_price") }}</label>
+                            <InputNumber v-model="variation.discount_price" :min="0" :maxFractionDigits="2" class="w-full" inputClass="w-full"
+                                :invalid="discountInvalid(variation.price, variation.discount_price) || !!err(`variations.${index}.discount_price`)" />
+                        </div>
+                        <div>
+                            <label :class="labelCls">{{ t("catalog.form.variation_image") }}</label>
+                            <InputText v-model.trim="variation.image" class="w-full ltr-nums" :placeholder="t('catalog.form.variation_image_placeholder')" />
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-4">
+                            <label :class="labelCls">{{ t("catalog.form.attribute_values") }} <span class="text-rose-600">*</span></label>
+                            <MultiSelect v-model="variation.attribute_value_ids" :options="attributeValueOptions" optionLabel="label" optionValue="id"
+                                display="chip" filter :placeholder="t('catalog.form.select_values')" class="w-full"
+                                :invalid="submitted && !(variation.attribute_value_ids || []).length" />
+                        </div>
+                    </div>
+
+                    <div v-if="variation.stocks?.length" class="mt-3">
+                        <div class="text-xs font-medium text-slate-500 mb-1">{{ t("catalog.form.alert_per_warehouse") }}</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <div v-for="(s, si) in variation.stocks" :key="s.warehouse_id ?? si"
+                                class="flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-2 py-1">
+                                <span class="text-xs text-slate-600 truncate flex-1">{{ warehouseName(s.warehouse_id) }}</span>
+                                <InputNumber v-model="s.alert_quantity" :min="0" size="small" inputClass="!w-20" :placeholder="t('catalog.form.alert')" />
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">{{ t("catalog.form.variation_stock_hint") }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Organization -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-folder" />{{ t("catalog.form.organization") }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="category_id" :class="labelCls">{{ t("products.category") }} <span class="text-rose-600">*</span></label>
+                    <TreeSelect inputId="category_id" v-model="selectedCategoryKey" :options="categoryTreeNodes" selectionMode="single"
+                        :placeholder="t('catalog.form.select_category')" class="w-full" filter
+                        :invalid="(submitted && !form.category_id) || !!err('category_id')" />
+                    <small v-if="err('category_id')" class="p-error">{{ err("category_id") }}</small>
+                    <small v-else-if="submitted && !form.category_id" class="p-error">{{ t("catalog.form.errors.category") }}</small>
+                </div>
+                <div>
+                    <label for="brand_id" :class="labelCls">{{ t("products.brand") }}</label>
+                    <Select inputId="brand_id" v-model="form.brand_id" :options="brands" optionLabel="name" optionValue="id"
+                        :placeholder="t('catalog.form.select_brand')" filter showClear class="w-full" />
+                </div>
+                <div>
+                    <label for="tax_id" :class="labelCls">{{ t("products.tax") }}</label>
+                    <Select inputId="tax_id" v-model="form.tax_id" :options="taxes" optionLabel="name" optionValue="id"
+                        :placeholder="t('catalog.form.select_tax')" filter showClear class="w-full" />
+                </div>
+                <div class="md:col-span-3">
+                    <label for="tag_ids" :class="labelCls">{{ t("menu.tags") }}</label>
+                    <MultiSelect inputId="tag_ids" v-model="form.tag_ids" :options="tags" optionLabel="name" optionValue="id" display="chip" filter
+                        :placeholder="t('catalog.form.select_tags')" class="w-full" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Media -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-image" />{{ t("catalog.form.media") }}</h3>
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="w-24 h-24 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+                    <img v-if="photoPreview" :src="photoPreview" :alt="form.name" class="w-full h-full object-cover" />
+                    <i v-else class="pi pi-image text-2xl text-slate-300" />
+                </div>
+                <div class="min-w-0">
+                    <FileUpload mode="basic" name="thumbnail" accept="image/jpeg,image/png,image/webp" customUpload :auto="true"
+                        @select="handlePhotoUpload" :chooseLabel="photoPreview ? t('catalog.form.change_image') : t('catalog.form.choose_image')"
+                        chooseIcon="pi pi-upload" />
+                    <small class="block text-slate-500 mt-1">{{ t("catalog.form.image_hint") }}</small>
+                    <small v-if="err('thumbnail')" class="p-error">{{ err("thumbnail") }}</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Physical properties -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-objects-column" />{{ t("catalog.form.physical") }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="weight" :class="labelCls">{{ t("catalog.form.weight") }}</label>
+                    <InputNumber inputId="weight" v-model="form.weight" class="w-full" inputClass="w-full" :min="0" :maxFractionDigits="3" placeholder="1.5" />
+                </div>
+                <div class="md:col-span-2">
+                    <label :class="labelCls">{{ t("catalog.form.dimensions") }}</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <InputNumber v-model="form.dimensions.length" :min="0" :maxFractionDigits="2" :placeholder="t('catalog.form.length')" inputClass="w-full" />
+                        <InputNumber v-model="form.dimensions.width" :min="0" :maxFractionDigits="2" :placeholder="t('catalog.form.width')" inputClass="w-full" />
+                        <InputNumber v-model="form.dimensions.height" :min="0" :maxFractionDigits="2" :placeholder="t('catalog.form.height')" inputClass="w-full" />
+                    </div>
+                </div>
+                <div>
+                    <label for="materials" :class="labelCls">{{ t("catalog.form.materials") }}</label>
+                    <InputText id="materials" v-model.trim="materialsInput" class="w-full" :placeholder="t('catalog.form.materials_placeholder')" />
+                    <small class="text-slate-500">{{ t("catalog.form.materials_hint") }}</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Description -->
+        <section :class="sectionCls">
+            <h3 class="section-title"><i class="pi pi-align-left" />{{ t("catalog.form.description_details") }}</h3>
+            <div class="space-y-4">
+                <div>
+                    <label :class="labelCls">{{ t("products.description") }}</label>
+                    <Editor v-model="form.description" editorStyle="height: 220px" />
+                </div>
+                <div>
+                    <label :class="labelCls">{{ t("catalog.form.additional_info") }}</label>
+                    <Editor v-model="form.additional_info" editorStyle="height: 140px" />
+                </div>
+            </div>
+        </section>
+
+        <!-- SEO (collapsible) -->
+        <section :class="sectionCls">
+            <button type="button" class="section-title w-full !mb-0 justify-between" @click="showSeo = !showSeo" :aria-expanded="showSeo">
+                <span class="flex items-center gap-2"><i class="pi pi-search" />{{ t("catalog.form.seo") }}</span>
+                <i :class="showSeo ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="text-slate-400 !text-sm" />
+            </button>
+            <div v-if="showSeo" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label for="meta_title" :class="labelCls">{{ t("catalog.form.meta_title") }}</label>
+                    <InputText id="meta_title" v-model.trim="form.meta_title" class="w-full" maxlength="255" />
+                </div>
+                <div>
+                    <label for="meta_keywords" :class="labelCls">{{ t("catalog.form.meta_keywords") }}</label>
+                    <InputText id="meta_keywords" v-model.trim="form.meta_keywords" class="w-full" maxlength="255" />
+                </div>
+                <div class="md:col-span-2">
+                    <label for="meta_description" :class="labelCls">{{ t("catalog.form.meta_description") }}</label>
+                    <Textarea id="meta_description" v-model="form.meta_description" rows="3" class="w-full" maxlength="255" />
+                    <small class="text-slate-500 ltr-nums">{{ (form.meta_description || "").length }}/255</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Actions -->
+        <div class="sticky bottom-0 z-10 -mx-1 px-1 py-3 bg-[var(--surface-ground)] flex flex-wrap justify-end gap-2 border-t border-slate-200">
+            <Button type="button" :label="t('shared.terms.cancel')" icon="pi pi-times" severity="secondary" text @click="cancel" />
+            <Button type="submit" :label="isEditing ? t('catalog.products.update') : t('catalog.products.create')" icon="pi pi-check"
+                :loading="form.processing" />
         </div>
     </form>
 </template>
 
 <style scoped>
-.p-editor-container .p-editor-content .ql-editor {
-    min-height: 150px;
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    margin-bottom: 1rem;
+}
+
+.section-title .pi {
+    color: var(--p-primary-color);
+}
+
+:deep(.p-editor-content .ql-editor) {
+    min-height: 140px;
+}
+</style>
+
+<style>
+[dir="rtl"] .ql-editor {
+    direction: rtl;
+    text-align: right;
 }
 </style>

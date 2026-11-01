@@ -1,0 +1,40 @@
+{
+    "users": {
+        "name": "Nombre completo",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "password": "Contraseña",
+        "password_confirmation": "Confirmar contraseña",
+        "password_edit_note": "Deje los campos de contraseña vacíos para conservar la contraseña actual.",
+        "roles": "Roles",
+        "select_roles": "Seleccione roles",
+        "no_role": "Sin rol",
+        "branch": "Sucursal",
+        "select_branch": "Seleccione sucursal",
+        "avatar": "Foto de perfil",
+        "account": "Cuenta",
+        "access": "Acceso"
+    },
+    "roles": {
+        "name": "Nombre del rol",
+        "name_placeholder": "p. ej. Cajero",
+        "permissions": "Permisos",
+        "permissions_count": "{count} permisos",
+        "selected_count": "{selected} de {total} seleccionados",
+        "search_permissions": "Filtrar permisos…",
+        "select_all": "Seleccionar todo",
+        "clear_all": "Quitar todo",
+        "group_all": "Todos",
+        "no_match": "Ningún permiso coincide con el filtro.",
+        "super_admin_note": "El Superadministrador siempre tiene todos los permisos y no se puede eliminar."
+    },
+    "permissions": {
+        "name": "Nombre del permiso",
+        "name_hint": "Formato: Módulo Acción, p. ej. \"Product Export\". El sistema comprueba el permiso por este nombre exacto.",
+        "locked_note": "Los permisos se usan por nombre en el código, por eso no se pueden editar ni eliminar.",
+        "module": "Módulo"
+    },
+    "expenses": {
+        "receipt_hint": "Imagen o PDF del recibo (opcional)"
+    }
+}

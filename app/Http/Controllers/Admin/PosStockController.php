@@ -25,7 +25,7 @@ class PosStockController extends Controller
 
         // Use StockService to adjust
         $stockService->adjust([
-            'type' => 'adjustment',
+            'type' => 'adjust',
             'product_id' => $data['product_id'],
             'variation_id' => $data['variation_id'] ?? null,
             'branch_id' => $data['branch_id'],
@@ -37,6 +37,6 @@ class PosStockController extends Controller
             'created_by' => Auth::id(),
         ]);
 
-        return back()->with('success', 'Stock adjusted successfully.');
+        return back()->with('success', __('Stock adjusted successfully.'));
     }
 }

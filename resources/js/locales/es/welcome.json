@@ -1,0 +1,22 @@
+{
+    "title": "Bienvenido",
+    "headline": "Punto de venta moderno para",
+    "headline_accent": "salas de exposición y minoristas",
+    "lead": "Venda más rápido, acepte pagos parciales, cuotas y EMI bancario, mantenga el stock al día y envíe mensajes a sus clientes, todo en un solo lugar.",
+    "open_pos": "Abrir TPV",
+    "see_features": "Ver funciones",
+    "banner_alt": "Vista previa del panel TPV",
+    "features_title": "Todo lo que su mostrador necesita",
+    "f_pos": "Cobro rápido",
+    "f_pos_text": "TPV con código de barras, borradores, pagos divididos y recibos A4 o térmicos.",
+    "f_installments": "Cuotas y EMI",
+    "f_installments_text": "Pago inicial, calendarios flexibles, recargos por mora y seguimiento de EMI.",
+    "f_inventory": "Stock multialmacén",
+    "f_inventory_text": "Sucursales, almacenes, variantes y movimientos de stock en tiempo real.",
+    "f_reports": "Informes claros",
+    "f_reports_text": "Ventas diarias a anuales, gráficos y exportación a PDF, CSV o Excel.",
+    "f_sms": "SMS a clientes",
+    "f_sms_text": "Recibos de venta, recordatorios de pago y felicitaciones con cualquier proveedor.",
+    "f_languages": "Su idioma",
+    "f_languages_text": "English, বাংলা, العربية, Español y हिन्दी con soporte de derecha a izquierda."
+}
